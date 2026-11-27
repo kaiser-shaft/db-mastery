@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 4.4: Архитектурная дуэль: PostgreSQL vs MySQL (движок InnoDB)</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_4/practice.html#sec-4-4">Практикум 4.4</a>
+        <a class="course-nav-btn" href="../slides/module-4.html#4.4">Слайды урока 4.4</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 4 · Транзакции, MVCC, блокировки и сравнение с MySQL/InnoDB</span>
+        <span class="pill pill-neutral">Урок 4.4</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Архитектурная дуэль: PostgreSQL vs MySQL (движок InnoDB)</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Поймёшь фундаментальную разницу в хранении данных на диске: <strong>куча (Heap)</strong> в PostgreSQL против <strong>кластерного индекса (Clustered Index)</strong> в MySQL/InnoDB.</li>
+          <li>Сравнишь два подхода к многоверсионности: мёртвые строки, <code>VACUUM</code> и <strong>HOT-обновления</strong> в PostgreSQL против перезаписи на месте и <strong>Undo Log</strong> в InnoDB.</li>
+          <li>Разберёшь, почему в MySQL по умолчанию <code>REPEATABLE READ</code> и откуда берутся <strong>Gap Locks</strong>, а в PostgreSQL их нет — зато есть <strong>транзакционный DDL</strong>!</li>
+          <li>Проверишь уникальные механики PostgreSQL на практике в <code>learning_db</code> и получишь понятную шпаргалку: какую СУБД выбирать под разные проекты и как не споткнуться на собеседовании.</li>
+        </ul>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. РАЗДЕЛ 01 ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Раунд 1: Куча (Heap) против Кластерного индекса</h2>
+      <p>
+        Если спросить двух разработчиков «PostgreSQL или MySQL?», спор может длиться до утра. Но на самом деле обе базы великолепны — просто они <strong>устроены по-разному внутри</strong>. И главное отличие начинается прямо с того, как строки лежат на диске.
+      </p>
+      <p>
+        Представь две большие библиотеки:
+      </p>
+      <ul>
+        <li>
+          <strong>Библиотека PostgreSQL — «Свободные полки» (Heap / Куча).</strong> Когда привозят новую книгу, библиотекарь ставит её на <em>любую свободную полку</em>, не тратя время на перестановку шкафов. А в каждом бумажном каталоге (и по ID, и по автору) записан точный адрес полки — тот самый <code>ctid</code> из урока 4.2! Ищешь по автору — сразу получаешь адрес полки и идёшь прямо туда за один шаг.
+        </li>
+        <li>
+          <strong>Библиотека MySQL/InnoDB — «Строгий порядок по номеру» (Clustered Index / Кластерный индекс).</strong> Все книги на стеллажах <em>физически расставлены строго по возрастанию номера <code>PRIMARY KEY</code></em> — сама таблица и есть огромное дерево B-Tree по первичному ключу! Поиск по <code>id</code> здесь молниеносный: нашёл узел — и вся строка уже в руках. Но зато во вторичном каталоге (например, по <code>email</code>) записан не адрес полки, а <strong>номер <code>id</code></strong>! Поэтому поиск по <code>email</code> делает двойной прыжок: сначала ищет <code>id</code> во вторичном индексе, а потом идёт за самой строкой в главный индекс по <code>id</code>.
+        </li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart TB
+            subgraph PG["PostgreSQL: Heap (Куча)"]
+              direction LR
+              P1["Вторичный индекс<br/>(по email)"] -->|"Хранит ctid (0,3)"| P2["Таблица Heap<br/>(строки вразнобой)"]
+            end
+            subgraph MY["MySQL / InnoDB: Clustered Index"]
+              direction LR
+              M1["Вторичный индекс<br/>(по email)"] -->|"Хранит PK (id=42)"| M2["Кластерный индекс PK<br/>(B-Tree + сами строки)"]
+            end
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Как происходит поиск строки по вторичному индексу (например, по email) в PostgreSQL и MySQL/InnoDB.</figcaption>
+      </figure>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Почему это важно на практике?</strong> В InnoDB <em>случайный</em> <code>PRIMARY KEY</code> (например, обычный UUID v4) заставляет базу постоянно расталкивать книги в середине плотно набитых полок — страницы расщепляются (<em>Page Split</em>), и вставка замедляется. В PostgreSQL вставка в Heap всегда дописывается в свободное место без перетряхивания всей таблицы — зато поиск по <code>id</code> требует одного шага из индекса в Heap.
+        </div>
+      </aside>
+
+      <h3>Проверяем Heap-хранение на практике в learning_db</h3>
+      <p>
+        Давай убедимся, что PostgreSQL действительно кладёт строки в порядке вставки (в кучу), а не пересортировывает их физически по <code>PRIMARY KEY</code>, как сделал бы InnoDB.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 1: Вставка id вразнобой и осмотр физического адреса ctid</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP TABLE IF EXISTS duel_users;
+
+CREATE TABLE duel_users (
+    id    INT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    name  TEXT NOT NULL
+);
+
+-- Вставляем пользователей с id НЕ по порядку!
+INSERT INTO duel_users (id, email, name) VALUES
+    (500, 'alice@example.com', 'Алиса'),
+    (10,  'bob@example.com',   'Боб'),
+    (250, 'charlie@example.com', 'Чарли');
+
+-- Смотрим, как строки РЕАЛЬНО лежат на странице диска (без ORDER BY)
+SELECT ctid, id, email, name
+FROM duel_users;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> ctid  | id  |        email        | name
+-------+-----+---------------------+-------
+ (0,1) | 500 | alice@example.com   | Алиса
+ (0,2) |  10 | bob@example.com     | Боб
+ (0,3) | 250 | charlie@example.com | Чарли
+(3 rows)</pre>
+      </div>
+
+      <p>
+        Смотри на <code>ctid</code>: строка <code>id = 500</code> лежит первой на слоте <code>(0,1)</code>, <code>id = 10</code> — второй на <code>(0,2)</code>, а <code>id = 250</code> — третьей на <code>(0,3)</code>. В MySQL/InnoDB они бы физически выстроились в порядке <code>10 → 250 → 500</code> прямо внутри дерева первичного ключа!
+      </p>
+    </section>
+
+    <!-- ==================== 3. РАЗДЕЛ 02 ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Раунд 2: MVCC — VACUUM и HOT против Undo Log</h2>
+      <p>
+        Обе базы поддерживают MVCC (читатели не блокируют писателей), но делают это с точностью до наоборот! Представь снова тетрадь и ручку:
+      </p>
+      <ul>
+        <li>
+          <strong>PostgreSQL (Append-Only + VACUUM):</strong> как ты уже знаешь из урока 4.2, при <code>UPDATE</code> Postgres оставляет старую версию прямо на странице таблицы, а рядом пишет новую. <strong>Плюс:</strong> <code>ROLLBACK</code> происходит <em>мгновенно</em> (достаточно поставить галочку «транзакция отменена», ничего переписывать не надо!). <strong>Минус:</strong> нужен <code>VACUUM</code>, а если у строки сменился адрес <code>ctid</code>, придётся обновить ссылки во всех индексах (если не сработал секретный приём <strong>HOT</strong>!).
+        </li>
+        <li>
+          <strong>MySQL / InnoDB (In-Place + Undo Log):</strong> при <code>UPDATE</code> InnoDB перезаписывает строку <strong>прямо на старом месте</strong>! А чтобы старые транзакции всё ещё могли видеть прежнее значение (MVCC), InnoDB выносит инструкцию «как вернуть прошлое значение» в отдельный блокнот — <strong>журнал отката (Undo Log)</strong>. <strong>Плюс:</strong> в самой таблице нет мёртвых строк и не нужен <code>VACUUM</code>, а индексы не надо обновлять, если не менялось индексированное поле. <strong>Минус:</strong> если транзакция обновила миллион строк, а потом сделала <code>ROLLBACK</code>, InnoDB придётся долго и упорно переписывать все миллион строк обратно по <em>Undo Log</em>!
+        </li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            subgraph PG["PostgreSQL UPDATE"]
+              A1["Таблица Heap"] -->|"Дописывает новую версию<br/>Старую помечает xmax"| A2["Убирает Autovacuum"]
+            end
+            subgraph MY["MySQL InnoDB UPDATE"]
+              B1["Кластерный индекс"] -->|"Перезаписывает на месте"| B2["Старое значение в Undo Log"]
+              B2 -->|"Очищает фоновый поток"| B3["Purge Thread"]
+            end
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Принципиальная разница MVCC: PostgreSQL хранит старые версии в самой таблице, а InnoDB — в отдельном Undo Log.</figcaption>
+      </figure>
+
+      <h3>Секретное оружие PostgreSQL: HOT-обновления (Heap-Only Tuples)</h3>
+      <p>
+        Погоди: неужели в PostgreSQL при каждом <code>UPDATE</code> счётчика просмотров приходится переписывать <em>все 5 индексов</em> таблицы только потому, что строка переехала на новый <code>ctid</code>? Раньше так и было, и это считалось слабостью Postgres перед InnoDB. Но инженеры PostgreSQL придумали гениальную оптимизацию — <strong>HOT (Heap-Only Tuple)</strong>!
+      </p>
+      <p>
+        Если ты обновляешь столбец, по которому <strong>нет индекса</strong>, и на той же 8-килобайтной странице таблицы есть чуть-чуть свободного места, PostgreSQL кладёт новую версию на ту же страницу и ставит короткую стрелочку от старой версии к новой. Индексы вообще <strong>не трогаются</strong>! Давай увидим работу HOT вживую в <code>learning_db</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 2: Наблюдаем HOT-обновления в pg_stat_user_tables</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP TABLE IF EXISTS duel_products;
+
+CREATE TABLE duel_products (
+    id    SERIAL PRIMARY KEY,
+    sku   TEXT NOT NULL,
+    views INT NOT NULL DEFAULT 0
+);
+
+-- Индексируем ТОЛЬКО sku. Поле views НЕ индексировано!
+CREATE INDEX idx_duel_products_sku ON duel_products (sku);
+
+INSERT INTO duel_products (sku, views) VALUES ('SWORD-01', 0);
+
+-- 1. Трижды обновляем НЕиндексированное поле views -&gt; сработает HOT!
+UPDATE duel_products SET views = views + 1 WHERE id = 1;
+UPDATE duel_products SET views = views + 1 WHERE id = 1;
+UPDATE duel_products SET views = views + 1 WHERE id = 1;
+
+-- 2. Один раз обновляем ИНДЕКСИРОВАННОЕ поле sku -&gt; HOT невозможен!
+UPDATE duel_products SET sku = 'SWORD-02' WHERE id = 1;
+
+-- Сбрасываем буфер статистики, чтобы увидеть свежие цифры немедленно
+SELECT pg_stat_force_next_flush();
+
+SELECT
+    relname,
+    n_tup_upd     AS total_updates,
+    n_tup_hot_upd AS hot_updates
+FROM pg_stat_user_tables
+WHERE relname = 'duel_products';</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>    relname    | total_updates | hot_updates
+---------------+---------------+-------------
+ duel_products |             4 |           3
+(1 row)</pre>
+      </div>
+
+      <p>
+        Точно в цель! Из 4 обновлений ровно <strong>3 прошли как HOT</strong> (индексы даже не шелохнулись!), и только 4-е обновление столбца <code>sku</code> потребовало залезть в индекс. Вот почему в PostgreSQL так вредно создавать лишние индексы на часто меняемые колонки вроде <code>updated_at</code> или <code>views</code>!
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Индекс «на всякий случай»
+-- на часто меняемый счётчик:
+CREATE INDEX idx_views
+ON duel_products (views);</code></pre>
+            </div>
+            <p>Полностью отключает <strong>HOT-обновления</strong> при каждом +1 к просмотрам! Нагрузка на диск и раздувание индексов резко растут.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Индексируем только поля
+-- поиска; для горячих таблиц
+-- оставляем запас места:
+ALTER TABLE duel_products
+SET (fillfactor = 80);</code></pre>
+            </div>
+            <p><code>fillfactor = 80</code> оставляет 20% пустого места на каждой странице специально под молниеносные HOT-обновления.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Проверяем молниеносный ROLLBACK в PostgreSQL</h3>
+      <p>
+        Давай проверим ещё одно преимущество архитектуры PostgreSQL: обновим сразу <strong>20 000 строк</strong> внутри транзакции, а потом передумаем и сделаем <code>ROLLBACK</code>. Засеки время командой <code>\timing on</code> в <code>psql</code>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 3: Мгновенный откат массового UPDATE в PostgreSQL</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP TABLE IF EXISTS duel_rollback_test;
+
+CREATE TABLE duel_rollback_test (
+    id  INT PRIMARY KEY,
+    val INT NOT NULL
+);
+
+INSERT INTO duel_rollback_test (id, val)
+SELECT g, 0 FROM generate_series(1, 20000) AS g;
+
+-- Включаем таймер в psql (работает в интерактивной консоли psql)
+\timing on
+
+BEGIN;
+UPDATE duel_rollback_test SET val = 999;
+-- Ой, передумали! Откатываем все 20 000 строк:
+ROLLBACK;
+
+\timing off</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>BEGIN
+Time: 0.214 ms
+UPDATE 20000
+Time: 34.812 ms
+ROLLBACK
+Time: 0.195 ms</pre>
+      </div>
+
+      <p>
+        Посмотри на последнюю строчку: <code>UPDATE 20000</code> занял ~35 мс, а <code>ROLLBACK</code> — всего <strong>0.195 миллисекунды</strong>! PostgreSQL вообще не трогал эти 20 000 строк на диске — он просто пометил транзакцию как отменённую (а мусор потом тихо уберёт Autovacuum). В MySQL/InnoDB откат огромного <code>UPDATE</code> может длиться дольше, чем сам <code>UPDATE</code>!
+      </p>
+    </section>
+
+    <!-- ==================== 4. РАЗДЕЛ 03 ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Раунд 3: Gap Locks и суперсила транзакционного DDL</h2>
+      <p>
+        Теперь переходим к двум самым неожиданным отличиям, на которых регулярно «горят» разработчики, переезжающие с MySQL на PostgreSQL (или обратно).
+      </p>
+
+      <h3>Отличие А: Уровень по умолчанию и Gap Locks (Замки на пустоту)</h3>
+      <p>
+        В PostgreSQL уровень изоляции по умолчанию — <strong><code>READ COMMITTED</code></strong>. В MySQL/InnoDB по умолчанию стоит <strong><code>REPEATABLE READ</code></strong>.
+      </p>
+      <p>
+        Чтобы на уровне <code>REPEATABLE READ</code> защищаться от фантомов при блокирующих запросах, InnoDB использует <strong>блокировки промежутков (Gap Locks)</strong>. Представь парковку, где стоят машины на местах <code>10</code> и <code>30</code>, а между ними — 19 пустых мест. Если в InnoDB выполнить <code>SELECT ... WHERE id BETWEEN 10 AND 30 FOR UPDATE</code>, база натянет красную ленту <strong>на все пустые места между 10 и 30</strong>: никто не сможет припарковать туда новую машину <code>id = 20</code>!
+      </p>
+      <p>
+        А вот в PostgreSQL <strong>Gap Locks не существует вообще</strong>! Он блокирует только те реальные строки, которые уже есть в таблице. Давай проверим это в двух терминалах <code>psql</code>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 4: Убеждаемся, что в PostgreSQL нет Gap Locks</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Подготовка (в любом терминале): создаём «дырку» между id = 10 и id = 30
+DROP TABLE IF EXISTS duel_parking;
+CREATE TABLE duel_parking (
+    id   INT PRIMARY KEY,
+    car  TEXT NOT NULL
+);
+INSERT INTO duel_parking VALUES (10, 'Седан'), (30, 'Джип');
+
+-- [ШАГ 1 — ТЕРМИНАЛ 1] Блокируем весь диапазон от 10 до 30
+BEGIN;
+SELECT * FROM duel_parking
+WHERE id BETWEEN 10 AND 30
+FOR UPDATE;
+-- Строки 10 и 30 заблокированы. НЕ закрываем транзакцию!
+
+-- [ШАГ 2 — ТЕРМИНАЛ 2] Вставляем новую машину прямо в «дырку» (id = 20)!
+BEGIN;
+INSERT INTO duel_parking VALUES (20, 'Спорткар');
+COMMIT;
+-- В PostgreSQL вставится МГНОВЕННО! (В MySQL/InnoDB здесь было бы зависание на Gap Lock!)
+
+-- [ШАГ 3 — ТЕРМИНАЛ 1] Закрываем транзакцию и смотрим таблицу
+COMMIT;
+SELECT * FROM duel_parking ORDER BY id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id |   car
+----+----------
+ 10 | Седан
+ 20 | Спорткар
+ 30 | Джип
+(3 rows)</pre>
+      </div>
+
+      <p>
+        Мгновенная вставка без единого тормоза и без неожиданных Deadlock на пустых промежутках!
+      </p>
+
+      <h3>Отличие Б: Транзакционный DDL — машина времени для миграций</h3>
+      <p>
+        Представь, что ты обновляешь базу работающего сайта: нужно добавить колонку, переименовать таблицу и поменять тип поля. Что случится, если 3-й шаг упадёт с ошибкой?
+      </p>
+      <ul>
+        <li><strong>В MySQL:</strong> любая команда изменения структуры (<code>CREATE TABLE</code>, <code>ALTER TABLE</code>, <code>DROP TABLE</code> — это называется <strong>DDL</strong>) автоматически делает <strong>неявный <code>COMMIT</code></strong>! Если миграция сломалась посередине, база застрянет в полуразрушенном состоянии — чинить придётся вручную!</li>
+        <li><strong>В PostgreSQL:</strong> почти весь DDL — <strong>полностью транзакционный</strong>! Ты можешь внутри <code>BEGIN</code> удалить таблицу, перекроить колонки, передумать, нажать <code>ROLLBACK</code> — и таблица вернётся целой и невредимой, будто ничего и не было!</li>
+      </ul>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 5: Машина времени — откатываем DROP TABLE через ROLLBACK</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Подготовка: проверяем, что таблица duel_parking на месте
+SELECT count(*) AS before_count FROM duel_parking;
+
+-- Запускаем «опасную» миграцию внутри транзакции
+BEGIN;
+
+ALTER TABLE duel_parking ADD COLUMN color TEXT DEFAULT 'синий';
+DROP TABLE duel_parking;
+
+-- ОЙ! Удалили таблицу целиком! Но транзакция ещё открыта -&gt; жмём ROLLBACK!
+ROLLBACK;
+
+-- Проверяем: таблица и все 3 машины чудесным образом спасены!
+SELECT * FROM duel_parking ORDER BY id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> before_count
+--------------
+            3
+(1 row)
+
+BEGIN
+ALTER TABLE
+DROP TABLE
+ROLLBACK
+
+ id |   car
+----+----------
+ 10 | Седан
+ 20 | Спорткар
+ 30 | Джип
+(3 rows)</pre>
+      </div>
+
+      <h3>Ловушка при переезде из MySQL: ошибка синтаксиса</h3>
+      <p>
+        Если разработчик по привычке из MySQL напишет в PostgreSQL обратные кавычки <code>`</code> или <code>AUTO_INCREMENT</code>, PostgreSQL сразу вежливо напомнит о стандарте SQL:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Попытка запустить MySQL-диалект в PostgreSQL</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">CREATE TABLE bad_mysql_style (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(100)
+);</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  syntax error at or near "AUTO_INCREMENT"
+LINE 2:     id INT AUTO_INCREMENT PRIMARY KEY,
+                   ^</pre>
+      </div>
+
+      <div class="compare-grid stacked">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо: тащить привычки MySQL в PostgreSQL</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- В PostgreSQL нет AUTO_INCREMENT, обратных кавычек `table` и ON DUPLICATE KEY:
+INSERT INTO `duel_users` (`id`, `email`, `name`)
+VALUES (10, 'bob@example.com', 'Боб 2.0')
+ON DUPLICATE KEY UPDATE `name` = 'Боб 2.0';</code></pre>
+            </div>
+            <p>Этот запрос завершится синтаксической ошибкой. Кроме того, в PostgreSQL для строк подходят <code>TEXT</code> (не нужно выдумывать <code>VARCHAR(255)</code> без причины).</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно: идиоматичный PostgreSQL (IDENTITY + ON CONFLICT + RETURNING)</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Стандарт SQL: GENERATED ALWAYS AS IDENTITY, ON CONFLICT и мощнейший RETURNING:
+INSERT INTO duel_users (id, email, name)
+VALUES (10, 'bob@example.com', 'Боб 2.0')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
+RETURNING id, name;</code></pre>
+            </div>
+            <p><code>RETURNING</code> сразу возвращает изменённую строку за один сетевой запрос — ещё одна фишка PostgreSQL, которую обожают бэкенд-разработчики!</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Бонус-эксперимент: как PostgreSQL ускоряет чтение без захода в Heap</h3>
+      <p>
+        Помнишь, в Раунде 1 мы говорили, что PostgreSQL приходится прыгать из индекса в таблицу Heap? Но Postgres умеет делать трюк <strong>Index-Only Scan</strong>: если все нужные столбцы есть в индексе, <strong>и</strong> <code>VACUUM</code> ранее отметил страницу в карте видимости (<em>Visibility Map</em>) как полностью видимую для всех транзакций, PostgreSQL вообще <strong>не заходит в таблицу Heap</strong> (<code>Heap Fetches: 0</code>)! Проверим на <code>EXPLAIN (ANALYZE, BUFFERS)</code>:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 6: Index-Only Scan с нулём обращений к таблице Heap</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP TABLE IF EXISTS duel_fast_read;
+
+CREATE TABLE duel_fast_read (
+    id    INT PRIMARY KEY,
+    email TEXT NOT NULL
+);
+
+INSERT INTO duel_fast_read (id, email)
+SELECT g, 'user' || g || '@example.com'
+FROM generate_series(1, 50000) AS g;
+
+-- VACUUM заполняет Visibility Map, разрешая Index-Only Scan без походов в Heap!
+VACUUM ANALYZE duel_fast_read;
+
+-- Выбираем ТОЛЬКО id (он уже есть в индексе Primary Key!)
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id FROM duel_fast_read WHERE id BETWEEN 1000 AND 1050;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL (EXPLAIN ANALYZE)</div>
+        <pre>                                                               QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------
+ Index Only Scan using duel_fast_read_pkey on duel_fast_read  (cost=0.29..5.19 rows=51 width=4) (actual time=0.028..0.041 rows=51 loops=1)
+   Index Cond: ((id &gt;= 1000) AND (id &lt;= 1050))
+   Heap Fetches: 0
+   Buffers: shared hit=3
+ Planning Time: 0.142 ms
+ Execution Time: 0.068 ms
+(6 rows)</pre>
+      </div>
+
+      <p>
+        Посмотри на строчку <code>Heap Fetches: 0</code> и время <strong>0.068 миллисекунды</strong>! Связка «индекс + <code>VACUUM</code> + Visibility Map» позволила PostgreSQL ответить на запрос, даже не открывая саму таблицу.
+      </p>
+    </section>
+
+    <!-- ==================== 5. РАЗДЕЛ 04 ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> Финальный счёт: сводная таблица и как выбрать СУБД</h2>
+      <p>
+        В архитектурной дуэли нет «плохого» и «хорошего» бойца — есть разные инструменты под разные задачи. Сведём всё, что мы разобрали за весь Модуль 4, в одну чёткую таблицу для памяти и собеседований:
+      </p>
+
+      <div class="table-wrapper">
+        <table class="table-wide">
+          <thead>
+            <tr>
+              <th>Критерий</th>
+              <th>PostgreSQL 16</th>
+              <th>MySQL 8 (движок InnoDB)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Хранение таблицы</strong></td>
+              <td><strong>Heap (Куча)</strong>: строки лежат в свободном месте, индексы хранят <code>ctid</code>.</td>
+              <td><strong>Clustered Index</strong>: таблица физически отсортирована в B-Tree по <code>PRIMARY KEY</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Поиск по PK vs вторичному индексу</strong></td>
+              <td>Вторичный индекс идёт сразу в Heap (1 шаг).</td>
+              <td>Поиск по PK идеален (0 лишних шагов); вторичный индекс делает 2 шага (через PK).</td>
+            </tr>
+            <tr>
+              <td><strong>Механика MVCC</strong></td>
+              <td>Старые версии лежат в таблице (<code>xmin</code>/<code>xmax</code>) + <strong>Autovacuum</strong> + <strong>HOT</strong>.</td>
+              <td>Перезапись на месте + старые версии в отдельном <strong>Undo Log</strong> + Purge Thread.</td>
+            </tr>
+            <tr>
+              <td><strong>Скорость ROLLBACK</strong></td>
+              <td><strong>Мгновенная</strong> (O(1) — пометка статуса транзакции).</td>
+              <td>Зависит от объёма: нужно физически откатывать изменения по Undo Log.</td>
+            </tr>
+            <tr>
+              <td><strong>Изоляция по умолчанию</strong></td>
+              <td><code>READ COMMITTED</code></td>
+              <td><code>REPEATABLE READ</code></td>
+            </tr>
+            <tr>
+              <td><strong>Gap Locks (замки на дырки)</strong></td>
+              <td><strong>Нет</strong> (меньше неожиданных Deadlocks на вставках).</td>
+              <td><strong>Есть</strong> на <code>REPEATABLE READ</code> (частый источник Deadlocks).</td>
+            </tr>
+            <tr>
+              <td><strong>Транзакционный DDL</strong></td>
+              <td><strong>Да</strong> (можно откатить <code>ALTER</code> и <code>DROP TABLE</code>!).</td>
+              <td><strong>Нет</strong> (DDL вызывает неявный <code>COMMIT</code>).</td>
+            </tr>
+            <tr>
+              <td><strong>Модель подключений</strong></td>
+              <td>Процесс ОС на каждое подключение (в проде нужен пулер вроде <strong>PgBouncer</strong>).</td>
+              <td>Лёгкий поток (Thread) на подключение — проще терпит тысячи прямых коннектов.</td>
+            </tr>
+            <tr>
+              <td><strong>Сильные фишки</strong></td>
+              <td><code>JSONB</code> + GIN, геоданные (PostGIS), векторы (pgvector), сложные аналитические запросы, расширения.</td>
+              <td>Высокая скорость простых чтений по PK, нет проблемы Table Bloat / XID Wraparound, простая репликация.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Как выбирать в реальных проектах?</strong>
+          <br />• <strong>Выбирай PostgreSQL</strong> как стандарт по умолчанию для новых проектов: финтех, аналитика, сложные связи, <code>JSONB</code>, поиск, геоданные, AI-векторы и безопасные миграции.
+          <br />• <strong>Выбирай MySQL (InnoDB)</strong>, если у команды уже есть сильная экспертиза в MySQL, нагрузка — это гигантский поток простых чтений/обновлений по <code>PRIMARY KEY</code> (например, профиль пользователя по <code>user_id</code>), и не хочется настраивать тонкий тюнинг <code>Autovacuum</code>.
+        </div>
+      </aside>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Главное ограничение PostgreSQL, о котором спросят на собеседовании:</strong> Не открывай 5 000 прямых соединений от микросервисов к PostgreSQL! Поскольку в Postgres каждое подключение — это отдельный процесс ОС (а не лёгкий поток, как в MySQL), тысячи соединений быстро съедят всю оперативную память и загрузят процессор. Решение стандартное: поставь перед PostgreSQL пулер соединений (<strong>PgBouncer</strong> или <strong>Odyssey</strong>).
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 6. ШПАРГАЛКА ПЕРЕД ПРАКТИКОЙ ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Шпаргалка урока перед практикой</h2>
+      <p>
+        Пять главных отличий дуэли, которые стоит держать в голове перед практикумом:
+      </p>
+      <ul>
+        <li><strong>Heap vs Clustered Index:</strong> PostgreSQL складывает строки в кучу (поиск по любому индексу идёт через <code>ctid</code>), а MySQL/InnoDB физически сортирует таблицу в дереве по <code>PRIMARY KEY</code>.</li>
+        <li><strong>MVCC + HOT vs Undo Log:</strong> PostgreSQL держит старые версии в таблице (мгновенный <code>ROLLBACK</code>, уборка <code>VACUUM</code>, ускорение <strong>HOT</strong> для неиндексированных полей), а InnoDB правит на месте и ведёт <em>Undo Log</em>.</li>
+        <li><strong>Нет Gap Locks:</strong> в отличие от MySQL на <code>REPEATABLE READ</code>, PostgreSQL не блокирует пустые промежутки между строками при <code>FOR UPDATE</code>.</li>
+        <li><strong>Транзакционный DDL:</strong> в PostgreSQL можно обернуть <code>ALTER TABLE</code> и даже <code>DROP TABLE</code> в <code>BEGIN ... ROLLBACK</code>; в MySQL любой DDL делает неявный <code>COMMIT</code>.</li>
+        <li><strong>Index-Only Scan:</strong> после <code>VACUUM</code> (заполнения Visibility Map) PostgreSQL может отвечать прямо из индекса с <code>Heap Fetches: 0</code>.</li>
+      </ul>
+    </section>
+
+    <!-- ==================== 7. МИНИ-ПРАКТИКУМ ==================== -->
+    <section>
+      <h2><span class="sec-num">06</span> Мини-практикум для закрепления</h2>
+      <p>
+        Выполни 4 автономных задания в базе <code>learning_db</code>, чтобы руками пощупать все ключевые архитектурные особенности PostgreSQL из сегодняшней дуэли.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый). Докажи, что PostgreSQL хранит таблицу в куче (Heap)</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>task1_heap (id INT PRIMARY KEY, label TEXT)</code> и вставь 4 строки с <code>id</code> в обратном порядке: <code>40, 30, 20, 10</code>. Выведи <code>ctid, id, label</code> <strong>без</strong> <code>ORDER BY</code> и убедись, что физически строки лежат именно в порядке вставки <code>40 → 30 → 20 → 10</code> (а не пересортированы по PK, как в MySQL/InnoDB). Затем удали <code>id = 30</code> и вставь <code>id = 25</code> — посмотри, какой <code>ctid</code> получила новая строка.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 1</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS task1_heap;
+
+CREATE TABLE task1_heap (
+    id    INT PRIMARY KEY,
+    label TEXT NOT NULL
+);
+
+INSERT INTO task1_heap VALUES
+    (40, 'четвёртая'),
+    (30, 'третья'),
+    (20, 'вторая'),
+    (10, 'первая');
+
+-- Физический порядок на диске: 40, 30, 20, 10 (ctid от (0,1) до (0,4))
+SELECT ctid, id, label FROM task1_heap;
+
+-- Удаляем середину и вставляем новую строку
+DELETE FROM task1_heap WHERE id = 30;
+INSERT INTO task1_heap VALUES (25, 'новая');
+
+-- Новая строка легла в хвост страницы на (0,5), а не между 20 и 30!
+SELECT ctid, id, label FROM task1_heap;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Средний). Сломай и почини HOT-обновление</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>task2_hot (id INT PRIMARY KEY, tag TEXT, score INT)</code> с индексом только по <code>tag</code> и вставь одну строку <code>(1, 'alpha', 10)</code>. Сделай <strong>5 обновлений</strong> поля <code>score</code> и <strong>2 обновления</strong> поля <code>tag</code>. Вызови <code>SELECT pg_stat_force_next_flush();</code> и проверь в <code>pg_stat_user_tables</code> значения <code>n_tup_upd</code> (должно быть 7) и <code>n_tup_hot_upd</code> (должно быть ровно 5!).
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 2</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS task2_hot;
+
+CREATE TABLE task2_hot (
+    id    INT PRIMARY KEY,
+    tag   TEXT NOT NULL,
+    score INT NOT NULL
+);
+
+CREATE INDEX idx_task2_hot_tag ON task2_hot (tag);
+INSERT INTO task2_hot VALUES (1, 'alpha', 10);
+
+-- 5 обновлений неиндексированного поля score -&gt; 5 HOT-обновлений!
+UPDATE task2_hot SET score = score + 1 WHERE id = 1;
+UPDATE task2_hot SET score = score + 1 WHERE id = 1;
+UPDATE task2_hot SET score = score + 1 WHERE id = 1;
+UPDATE task2_hot SET score = score + 1 WHERE id = 1;
+UPDATE task2_hot SET score = score + 1 WHERE id = 1;
+
+-- 2 обновления индексированного поля tag -&gt; НЕ HOT!
+UPDATE task2_hot SET tag = 'beta' WHERE id = 1;
+UPDATE task2_hot SET tag = 'gamma' WHERE id = 1;
+
+SELECT pg_stat_force_next_flush();
+
+SELECT relname, n_tup_upd, n_tup_hot_upd
+FROM pg_stat_user_tables
+WHERE relname = 'task2_hot';
+-- Ожидаемо: n_tup_upd = 7, n_tup_hot_upd = 5</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Продвинутый). Безопасная миграция с транзакционным DDL</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>task3_mig (id INT PRIMARY KEY, price NUMERIC(10,2))</code> и вставь две строки: <code>(1, 100.00)</code> и <code>(2, -50.00)</code>. Теперь попробуй в <strong>одной транзакции</strong>: 1) переименовать колонку <code>price</code> в <code>amount</code>, 2) добавить новую колонку <code>currency TEXT DEFAULT 'KZT'</code>, 3) навесить ограничение <code>ALTER TABLE task3_mig ADD CHECK (amount &gt; 0)</code>. Из-за строки <code>-50.00</code> третий шаг упадёт с ошибкой! Сделай <code>ROLLBACK</code> и проверь командой <code>\d task3_mig</code> (или <code>SELECT * FROM task3_mig</code>), что <strong>даже шаги 1 и 2 полностью откатились</strong> — колонка снова называется <code>price</code>, а <code>currency</code> исчезла!
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 3</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Подготовка
+DROP TABLE IF EXISTS task3_mig;
+CREATE TABLE task3_mig (
+    id    INT PRIMARY KEY,
+    price NUMERIC(10, 2) NOT NULL
+);
+INSERT INTO task3_mig VALUES (1, 100.00), (2, -50.00);
+
+-- Запускаем атомарную DDL-миграцию
+BEGIN;
+
+ALTER TABLE task3_mig RENAME COLUMN price TO amount;
+ALTER TABLE task3_mig ADD COLUMN currency TEXT NOT NULL DEFAULT 'KZT';
+
+-- Шаг 3 упадёт с ERROR: check constraint "task3_mig_amount_check" is violated by some row!
+ALTER TABLE task3_mig ADD CONSTRAINT task3_mig_amount_check CHECK (amount &gt; 0);
+
+-- Откатываем всю сломанную миграцию целиком (в MySQL так нельзя!)
+ROLLBACK;
+
+-- Проверяем: схема не сломана, колонка снова price, а currency нет!
+SELECT * FROM task3_mig ORDER BY id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Две сессии). Тест на отсутствие Gap Locks + Index-Only Scan</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>task4_slots (slot_no INT PRIMARY KEY, info TEXT)</code> и вставь <code>(100, 'занято')</code> и <code>(200, 'занято')</code>. В <strong>Терминале 1</strong> открой транзакцию и заблокируй диапазон <code>WHERE slot_no BETWEEN 100 AND 200 FOR UPDATE</code>. Не закрывая Терминал 1, в <strong>Терминале 2</strong> вставь строку <code>(150, 'успешно без Gap Lock')</code> и закоммить её — убедись, что она не зависла! Затем закрой Терминал 1, выполни <code>VACUUM ANALYZE task4_slots;</code> и с помощью <code>EXPLAIN ANALYZE SELECT slot_no FROM task4_slots WHERE slot_no = 150;</code> проверь план запроса.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 4 (Терминал 1 и Терминал 2)</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Подготовка (в любом терминале)
+DROP TABLE IF EXISTS task4_slots;
+CREATE TABLE task4_slots (
+    slot_no INT PRIMARY KEY,
+    info    TEXT NOT NULL
+);
+INSERT INTO task4_slots VALUES (100, 'занято'), (200, 'занято');
+
+-- [ШАГ 1 — ТЕРМИНАЛ 1] Блокируем диапазон 100..200
+BEGIN;
+SELECT * FROM task4_slots
+WHERE slot_no BETWEEN 100 AND 200
+FOR UPDATE;
+
+-- [ШАГ 2 — ТЕРМИНАЛ 2] Вставляем в пустой промежуток (slot_no = 150)
+BEGIN;
+INSERT INTO task4_slots VALUES (150, 'успешно без Gap Lock');
+COMMIT;
+-- Вставка прошла мгновенно — Gap Locks в PostgreSQL нет!
+
+-- [ШАГ 3 — ТЕРМИНАЛ 1] Закрываем транзакцию и проверяем Index-Only Scan
+COMMIT;
+VACUUM ANALYZE task4_slots;
+
+-- На маленькой таблице из 3 строк планировщик может выбрать Seq Scan,
+-- поэтому для демонстрации Index-Only Scan на 3 строках временно подскажем:
+SET enable_seqscan = off;
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT slot_no FROM task4_slots WHERE slot_no = 150;
+RESET enable_seqscan;</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_4/practice.html#sec-4-4"><strong>Практикум по Уроку 4.4 →</strong></a> — там 10 заданий на живую дуэль <strong>PostgreSQL 16 vs MySQL 8.4 (InnoDB)</strong>: Heap vs Clustered Index, HOT-обновления, Index-Only Scan, Gap Locks, транзакционный DDL и финальная боевая задача Модуля 4.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 8. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока и Модуля 4</span>
+      Поздравляю — ты прошёл весь <strong>Модуль 4</strong> до самого конца! Теперь для тебя база данных — не «чёрный ящик», а понятный и прозрачный инженерный механизм: ты знаешь, как транзакции и <strong>ACID</strong> защищают деньги от сбоев (урок 4.1), как <strong>MVCC</strong> и <strong>VACUUM</strong> дают читателям и писателям работать без пробок (урок 4.2), как управлять уровнями изоляции, <code>FOR UPDATE SKIP LOCKED</code> и побеждать <strong>Deadlocks</strong> (урок 4.3), а сегодня увидел, чем <strong>PostgreSQL</strong> фундаментально отличается от <strong>MySQL/InnoDB</strong> под капотом (Heap vs Clustered Index, HOT vs Undo Log, отсутствие Gap Locks и транзакционный DDL). С этим фундаментом ты готов двигаться дальше — к настоящей эксплуатации баз данных в продакшене: резервному копированию, репликации, отказоустойчивости и тонкому тюнингу производительности!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_4_3.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">4.3 · Уровни изоляции и блокировки (Row-level locks и D…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_5_1.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">5.1 · Физическая потоковая репликация (Streaming Replic…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

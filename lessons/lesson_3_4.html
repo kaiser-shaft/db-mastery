@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 3.4: Журнал предзаписи (WAL) и восстановление после сбоев (Crash Recovery)</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_3/practice.html#sec-3-4">Практикум 3.4</a>
+        <a class="course-nav-btn" href="../slides/module-3.html#3.4">Слайды урока 3.4</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 3 · Внутреннее устройство PostgreSQL</span>
+        <span class="pill pill-neutral">Урок 3.4</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Урок 3.4: Журнал предзаписи (WAL) и восстановление после сбоев (Crash Recovery)</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Как устроен <strong>Журнал предзаписи</strong> (<code>WAL — Write-Ahead Log</code>) и почему PostgreSQL сначала пишет маленькую строку в журнал, а не обновляет сразу файлы таблиц на диске.</li>
+          <li>Что такое <code>LSN</code>, 16-мегабайтные сегменты <code>pg_wal</code>, контрольные точки (<code>CHECKPOINT</code>) и статистика <code>pg_stat_wal</code>.</li>
+          <li>Как работает автоматическое восстановление после аварии (<code>Crash Recovery</code>) — проверим на живом краш-тесте с «выдёргиванием вилки» в Docker Compose!</li>
+          <li>Когда уместны <code>UNLOGGED</code>-таблицы, чем опасно отключение <code>fsync</code> и какие параметры WAL нельзя поменять без перезапуска сервера.</li>
+        </ul>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== РАЗДЕЛ 01 ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Зачем базе «чёрный ящик»: проблема грязных страниц и принцип WAL</h2>
+      <p>
+        Представь кассира в огромном гипермаркете. К нему стоит очередь из 100 покупателей. По правилам бухгалтерии каждый чек нужно подшить в нужную папку в архивной комнате в другом конце здания (папка «Молоко» на 2-м этаже, папка «Хлеб» в подвале, папка «Скидки» на 3-м этаже).
+      </p>
+      <p>
+        Если кассир будет бегать в архив после <strong>каждого</strong> покупателя, очередь растянется на три часа. А если он просто запомнит покупки в голове и пойдёт разносить папки в конце смены — при внезапной потере памяти (отключении электричества!) магазин потеряет данные обо всех продажах за день.
+      </p>
+      <p>
+        У PostgreSQL ровно та же дилемма! В Уроке 3.1 ты узнал, что при <code>INSERT</code> или <code>UPDATE</code> база меняет 8-килобайтные страницы в быстрой оперативной памяти (<code>Shared Buffers</code>), помечая их как «грязные» (<code>dirty pages</code>). Сбрасывать эти страницы по всему диску на каждый <code>COMMIT</code> чудовищно медленно (случайная запись в десятки разных файлов). А оставлять только в RAM — смертельно опасно: выдернули шнур питания — и все подтверждённые заказы испарились!
+      </p>
+      <p>
+        Инженеры придумали гениальное решение — <strong>Журнал предзаписи</strong> (<code>WAL — Write-Ahead Log</code>). Кассир кладёт рядом с собой одну простую тетрадку в линейку (кассовую ленту) и на каждого покупателя за доли секунды дописывает <strong>в конец</strong> короткую строчку: «12:01, клиент #42, оплатил 5 000». Писать подряд в конец одного файла на диске — в десятки раз быстрее, чем прыгать по разным файлам! А в архивные папки (файлы таблиц <code>Heap</code> и индексов) помощник разнесёт изменения спокойно позже, в фоне.
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            C["Клиент: UPDATE + COMMIT"] --> SB["Shared Buffers в RAM: страница стала грязной"]
+            C --> WB["WAL Buffers в RAM: короткая запись об изменении"]
+            WB -->|"1. Сначала на диск (последовательно!)"| WAL[("Диск: pg_wal — журнал предзаписи")]
+            WAL -->|"2. Только теперь клиенту: COMMIT OK!"| C
+            SB -.->|"3. Позже в фоне (Checkpointer / BGWriter)"| HEAP[("Диск: файлы Heap и Индексов")]
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Главное правило WAL: запись об изменении ВСЕГДА попадает на диск в pg_wal раньше, чем клиент получит COMMIT OK и раньше, чем страница уедет в Heap.</figcaption>
+      </figure>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Простая аналогия:</strong> <code>WAL</code> — это «чёрный ящик» самолёта. Даже если оперативная память (<code>Shared Buffers</code>) мгновенно обнулилась при сбое питания, на диске осталась точная поминутная хроника всех подтверждённых операций. По ней PostgreSQL за секунды восстановит всё до последнего байта!
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 02 ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Трогаем WAL руками: LSN, сегменты по 16 МБ и pg_stat_wal</h2>
+      <p>
+        Журнал предзаписи — не какая-то невидимая магия, а реальные файлы в папке <code>pg_wal/</code> на диске сервера. По умолчанию каждый файл-сегмент имеет строгий размер <strong>16 МБ</strong>. Когда один файл заполняется, PostgreSQL открывает следующий — как чистый лист в тетради.
+      </p>
+      <p>
+        Чтобы точно указывать место в этой бесконечной ленте, в PostgreSQL используется «километровый столбик» — <strong><code>LSN</code></strong> (<code>Log Sequence Number</code>, номер позиции в логе). Выглядит он как два шестнадцатеричных числа через слэш, например <code>0/1A4F8C0</code>. По сути, это просто смещение в байтах от самого момента создания базы данных!
+      </p>
+      <p>
+        Давай откроем <code>learning_db</code>, создадим учебную таблицу и вживую замерим, сколько байт WAL генерирует вставка 10 000 строк.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 1: замеряем LSN и объём WAL при вставке 10 000 строк</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Безопасный перезапуск: пересоздаём учебную таблицу
+DROP TABLE IF EXISTS wal_orders;
+
+CREATE TABLE wal_orders (
+    id         SERIAL PRIMARY KEY,
+    order_code TEXT NOT NULL,
+    amount     NUMERIC(10, 2) NOT NULL,
+    status     TEXT NOT NULL DEFAULT 'paid'
+);
+
+-- Смотрим текущую позицию в журнале (LSN) и имя активного файла в pg_wal/
+SELECT
+    pg_current_wal_lsn() AS current_lsn,
+    pg_walfile_name(pg_current_wal_lsn()) AS wal_file;
+
+-- Фиксируем LSN ДО вставки, вставляем 10 000 строк и считаем разницу в байтах
+WITH lsn_before AS (
+    SELECT pg_current_wal_lsn() AS pos
+),
+inserted AS (
+    INSERT INTO wal_orders (order_code, amount)
+    SELECT 'ORD-' || g, round((500 + (g * 13 % 9000))::numeric, 2)
+    FROM generate_series(1, 10000) AS g
+    RETURNING id
+)
+SELECT
+    count(*) AS rows_inserted,
+    (SELECT pos FROM lsn_before) AS lsn_start,
+    pg_current_wal_lsn() AS lsn_end,
+    pg_size_pretty(
+        pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM lsn_before))
+    ) AS wal_generated
+FROM inserted;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> current_lsn |         wal_file
+-------------+--------------------------
+ 0/4B210A8   | 000000010000000000000004
+(1 row)
+
+ rows_inserted | lsn_start |  lsn_end  | wal_generated
+---------------+-----------+-----------+---------------
+         10000 | 0/4B210A8 | 0/4C5E420 | 1269 kB
+(1 row)</pre>
+      </div>
+
+      <p>
+        Смотри, как наглядно! Вставка 10 000 строк (вместе с записями для первичного ключа <code>PRIMARY KEY</code>) продвинула наш «километровый столбик» с <code>0/4B210A8</code> до <code>0/4C5E420</code> — это ровно <strong>1269 КБ</strong> записей в файле <code>000000010000000000000004</code>.
+      </p>
+      <p>
+        В PostgreSQL 16 есть встроенное системное представление <code>pg_stat_wal</code> — своего рода бортовой компьютер, который считает все записи WAL с момента старта сервера. Давай посмотрим на него и заодно проверим, сколько WAL создаёт массовый <code>UPDATE</code>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 2: смотрим счётчики pg_stat_wal и вес операции UPDATE</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Смотрим общую статистику работы WAL на сервере
+SELECT
+    wal_records,
+    wal_fpi AS full_page_images,
+    pg_size_pretty(wal_bytes) AS total_wal_written,
+    wal_buffers_full
+FROM pg_stat_wal;
+
+-- А теперь обновляем половину таблицы и замеряем объём WAL
+WITH lsn_before AS (
+    SELECT pg_current_wal_lsn() AS pos
+),
+updated AS (
+    UPDATE wal_orders
+    SET amount = amount + 100
+    WHERE id &lt;= 5000
+    RETURNING id
+)
+SELECT
+    count(*) AS rows_updated,
+    pg_size_pretty(
+        pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM lsn_before))
+    ) AS wal_for_update
+FROM updated;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> wal_records | full_page_images | total_wal_written | wal_buffers_full
+-------------+------------------+-------------------+------------------
+      142810 |              612 | 48 MB             |                0
+(1 row)
+
+ rows_updated | wal_for_update
+--------------+----------------
+         5000 | 742 kB
+(1 row)</pre>
+      </div>
+
+      <p>
+        Обрати внимание на колонку <code>full_page_images</code> (<code>wal_fpi</code>) в <code>pg_stat_wal</code>! Что это за «полные снимки страниц»? Когда PostgreSQL меняет какую-то 8 КБ страницу <em>в первый раз после контрольной точки</em>, он на всякий случай кладёт в WAL целиком всю эту страницу (8 КБ), а не только маленькую правку. Зачем? Чтобы защититься от <strong>разорванной страницы</strong> (<code>torn page</code>): если свет погаснет в тот момент, когда операционная система успела записать на диск только 4 КБ из 8 КБ, PostgreSQL просто возьмёт целый снимок из WAL и восстановит страницу без единой царапины!
+      </p>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 03 ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Контрольные точки (Checkpoint) и живой краш-тест базы!</h2>
+      <p>
+        Если WAL-файлы будут копиться вечно, то через месяц их станет 500 гигабайт. И если сервер внезапно перезагрузится, базе придётся перечитывать и проигрывать миллионы записей за целый месяц — восстановление займёт часы!
+      </p>
+      <p>
+        Чтобы этого не случилось, в PostgreSQL (как и в любой видеоигре) есть <strong>сохранения — контрольные точки</strong> (<code>Checkpoint</code>). Каждые несколько минут (по умолчанию <code>checkpoint_timeout = 5min</code> или когда WAL вырастает до <code>max_wal_size = 1GB</code>) просыпается фоновый процесс <code>Checkpointer</code> и делает три вещи:
+      </p>
+      <ol>
+        <li>Аккуратно и плавно записывает <strong>все грязные страницы</strong> из <code>Shared Buffers</code> в реальные файлы таблиц (Heap) и индексов на диске.</li>
+        <li>Записывает в специальный служебный файл <code>global/pg_control</code> отметку <strong><code>Redo LSN</code></strong>: «Всё, что было до этого LSN, уже надёжно лежит в таблицах на диске».</li>
+        <li>Освобождает старые 16-мегабайтные WAL-сегменты (переиспользует или удаляет их), чтобы диск не переполнился.</li>
+      </ol>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            OLD["Старый WAL (уже в Heap, можно удалить)"] --> CP["CHECKPOINT: Redo LSN записан в pg_control"]
+            CP --> T1["Транзакция А: COMMIT"]
+            T1 --> T2["Транзакция Б: в процессе..."]
+            T2 --> CRASH["СБОЙ ПИТАНИЯ! RAM стёрта!"]
+            CRASH --> REC["Рестарт: PostgreSQL читает WAL от Redo LSN"]
+            REC --> RES["Транзакция А восстановлена, Б отброшена"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Восстановление после сбоя (Crash Recovery): базе не нужно читать весь журнал с начала времён — достаточно проиграть записи начиная с последнего Redo LSN.</figcaption>
+      </figure>
+
+      <h3>Смотрим текущую контрольную точку в SQL</h3>
+      <p>
+        Ты можешь прямо сейчас заглянуть в настройки контрольных точек и прочитать тот самый файл <code>pg_control</code> через встроенную функцию <code>pg_control_checkpoint()</code>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 3: проверяем настройки и вызываем CHECKPOINT вручную</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Смотрим главные параметры контрольных точек
+SELECT name, setting, unit
+FROM pg_settings
+WHERE name IN (
+    'checkpoint_timeout',
+    'max_wal_size',
+    'checkpoint_completion_target'
+);
+
+-- Принудительно делаем контрольную точку (в учебной базе!)
+CHECKPOINT;
+
+-- Читаем данные последней контрольной точки из файла pg_control
+SELECT
+    checkpoint_lsn,
+    redo_lsn,
+    redo_wal_file,
+    checkpoint_time
+FROM pg_control_checkpoint();</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>             name             | setting | unit
+------------------------------+---------+------
+ checkpoint_completion_target | 0.9     |
+ checkpoint_timeout           | 300     | s
+ max_wal_size                 | 1024    | MB
+(3 rows)
+
+CHECKPOINT
+
+ checkpoint_lsn | redo_lsn  |      redo_wal_file       |     checkpoint_time
+----------------+-----------+--------------------------+-------------------------
+ 0/4D12060      | 0/4D12028 | 000000010000000000000004 | 2026-11-26 09:20:11+05
+(1 row)</pre>
+      </div>
+
+      <h3>Настоящий краш-тест в Docker Compose: «выдёргиваем вилку»!</h3>
+      <p>
+        Хватит теории — давай проверим, действительно ли WAL спасёт наши деньги при внезапной аварии! Прежде чем запускать краш-тест, посмотри в таблице, что должно случиться с двумя разными заказами, если мгновенно убить процесс PostgreSQL сигналом <code>SIGKILL</code>:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Тестовый заказ</th>
+              <th>Состояние в момент сбоя</th>
+              <th>Что должно быть после Crash Recovery</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>CRASH-COMMITTED-101</code></td>
+              <td>Выполнен <code>COMMIT</code> (запись уже в <code>pg_wal</code>, но могла ещё не попасть в файл Heap!)</td>
+              <td><strong>Выживет на 100%!</strong> PostgreSQL восстановит её из WAL.</td>
+            </tr>
+            <tr>
+              <td><code>CRASH-UNCOMMITTED-999</code></td>
+              <td>Открыт <code>BEGIN</code>, сделан <code>INSERT</code>, но <code>COMMIT</code> <strong>не успели</strong> нажать</td>
+              <td><strong>Исчезнет без следа!</strong> Незавершённые изменения никогда не видны после сбоя.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Повторяй шаги аккуратно в двух окнах терминала (или последовательно, как показано ниже):
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 4 (Шаг 1): создаём один подтверждённый и один незавершённый заказ</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Подготовка: удаляем прошлые тестовые строки, если уже запускали краш-тест
+DELETE FROM wal_orders
+WHERE order_code IN ('CRASH-COMMITTED-101', 'CRASH-UNCOMMITTED-999');
+
+-- 1. Подтверждённый заказ (COMMIT ушёл в WAL на диск!)
+INSERT INTO wal_orders (order_code, amount, status)
+VALUES ('CRASH-COMMITTED-101', 99999.00, 'paid');
+
+-- 2. Начинаем вторую транзакцию, вставляем строку, НО НЕ ДЕЛАЕМ COMMIT!
+BEGIN;
+INSERT INTO wal_orders (order_code, amount, status)
+VALUES ('CRASH-UNCOMMITTED-999', 77777.00, 'draft');
+
+-- ОСТАВЬ это окно psql открытым и перейди во второе окно терминала!</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · Пример 4 (Шаг 2): жёстко убиваем контейнер (SIGKILL) и смотрим логи восстановления</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># 1. Имитируем внезапное отключение питания (SIGKILL не даёт базе спокойно закрыться!)
+docker compose kill -s SIGKILL pg_primary
+
+# 2. Включаем сервер обратно
+docker compose up -d pg_primary
+
+# 3. Ждём пару секунд и читаем отчёт о Crash Recovery в логах контейнера
+sleep 2
+docker logs --tail=20 course_pg_primary</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Вывод терминала (логи PostgreSQL 16 после аварии)</div>
+        <pre>LOG:  starting PostgreSQL 16.4 on x86_64-pc-linux-gnu
+LOG:  listening on IPv4 address "0.0.0.0", port 5432
+LOG:  database system was interrupted; last known up at 2026-11-26 09:21:04 UTC
+LOG:  database system was not properly shut down; automatic recovery in progress
+LOG:  redo starts at 0/4D12028
+LOG:  invalid record length at 0/4D134B8: expected at least 24, got 0
+LOG:  redo done at 0/4D13480 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.01 s
+LOG:  checkpoint starting: end-of-recovery immediate wait
+LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled
+LOG:  database system is ready to accept connections</pre>
+      </div>
+
+      <p>
+        Посмотри на эти легендарные строчки в логах: <code>automatic recovery in progress</code> → <code>redo starts at 0/4D12028</code> → <code>redo done at 0/4D13480</code> за <strong>0.01 секунды</strong>! Подключаемся обратно к <code>learning_db</code> и проверяем, что выжило:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 4 (Шаг 3): проверяем сохранность данных после «отключения света»</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Проверяем оба наших тестовых заказа
+SELECT order_code, amount, status
+FROM wal_orders
+WHERE order_code LIKE 'CRASH-%';</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>     order_code      |  amount  | status
+---------------------+----------+--------
+ CRASH-COMMITTED-101 | 99999.00 | paid
+(1 row)</pre>
+      </div>
+
+      <p>
+        Проблема из Раздела 01 решена блестяще! Заказ <code>CRASH-COMMITTED-101</code> пережил жёсткое убийство процесса без единой потери, а незавершённый <code>CRASH-UNCOMMITTED-999</code> аккуратно исчез, не оставив «мусора» в таблице. Именно так обеспечивается буква <strong>D (Durability — долговечность)</strong> из знаменитых свойств транзакций ACID.
+      </p>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 04 ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> UNLOGGED-таблицы, опасные настройки и реальные ошибки</h2>
+      <p>
+        Иногда в проекте есть временные данные, которые не жалко потерять при аварии: например, кеш поисковых подсказок, корзина анонимного гостя или промежуточная витрина, которую можно пересчитать за 10 секунд. Можно ли попросить PostgreSQL <strong>не тратить время на запись в WAL</strong> для такой таблицы?
+      </p>
+      <p>
+        Да! Для этого существуют <strong>нежурналируемые таблицы</strong> (<code>UNLOGGED TABLE</code>). Они работают в разы быстрее на запись, потому что вообще не пишут в <code>pg_wal</code>. Цена проста: если сервер упадёт (как в нашем краш-тесте с <code>SIGKILL</code>), при перезапуске PostgreSQL <strong>автоматически очистит такую таблицу до нуля</strong> (сделает ей <code>TRUNCATE</code>).
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 5: сравниваем объём WAL у обычной и UNLOGGED-таблицы (50 000 строк)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Безопасная подготовка двух одинаковых таблиц
+DROP TABLE IF EXISTS wal_regular_log, wal_fast_cache;
+
+CREATE TABLE wal_regular_log (
+    id      INT,
+    payload TEXT
+);
+
+CREATE UNLOGGED TABLE wal_fast_cache (
+    id      INT,
+    payload TEXT
+);
+
+-- 1. Замеряем WAL для 50 000 строк в ОБЫЧНОЙ таблице
+WITH p AS (SELECT pg_current_wal_lsn() AS start_lsn),
+ins AS (
+    INSERT INTO wal_regular_log
+    SELECT g, repeat('x', 80) FROM generate_series(1, 50000) AS g
+)
+SELECT
+    'Обычная таблица' AS table_type,
+    pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT start_lsn FROM p))) AS wal_used;
+
+-- 2. Замеряем WAL для 50 000 строк в UNLOGGED-таблице
+WITH p AS (SELECT pg_current_wal_lsn() AS start_lsn),
+ins AS (
+    INSERT INTO wal_fast_cache
+    SELECT g, repeat('x', 80) FROM generate_series(1, 50000) AS g
+)
+SELECT
+    'UNLOGGED-таблица' AS table_type,
+    pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT start_lsn FROM p))) AS wal_used;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>   table_type    | wal_used
+-----------------+----------
+ Обычная таблица | 6148 kB
+(1 row)
+
+    table_type    | wal_used
+------------------+----------
+ UNLOGGED-таблица | 0 bytes
+(1 row)</pre>
+      </div>
+
+      <p>
+        Разница колоссальная: <strong>6148 КБ против 0 байт</strong>! Главное — никогда не путать, какие данные можно доверять <code>UNLOGGED</code>-таблице, а какие — нет.
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">CREATE UNLOGGED TABLE payments (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    amount NUMERIC(10, 2)
+);</code></pre>
+            </div>
+            <p>После первого же сбоя питания таблица <code>payments</code> станет <strong>абсолютно пустой</strong>. Плюс <code>UNLOGGED</code>-таблицы не попадают на реплики!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">CREATE UNLOGGED TABLE page_cache (
+    cache_key TEXT PRIMARY KEY,
+    html_body TEXT,
+    expires_at TIMESTAMPTZ
+);</code></pre>
+            </div>
+            <p>Идеально для временного кеша, сессий или этапа загрузки (staging) сырых файлов, которые легко пересоздать.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Ошибки при работе с параметрами WAL и функциями LSN</h3>
+      <p>
+        У WAL есть важные параметры конфигурации — например, <code>wal_level</code> (сколько подробностей писать в журнал) и <code>fsync</code> (требовать ли от диска честного физического сохранения). Некоторые из них защищены от случайной смены «на лету». Посмотрим две реальные ошибки PostgreSQL, с которыми сталкиваются на практике:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 6: две типичные ошибки при работе с WAL</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Ошибка А: пытаемся поменять wal_level прямо в сессии
+SET wal_level = 'minimal';
+
+-- Ошибка Б: передаём обычное число вместо формата LSN в функцию pg_walfile_name
+SELECT pg_walfile_name('12345');</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL (запрос А)</div>
+        <pre>ERROR:  parameter "wal_level" cannot be changed without restarting the server</pre>
+      </div>
+
+      <div class="error-block standalone">
+        <div class="output-label">Ошибка PostgreSQL (запрос Б)</div>
+        <pre>ERROR:  invalid input syntax for type pg_lsn: "12345"
+LINE 1: SELECT pg_walfile_name('12345');
+                               ^
+</pre>
+      </div>
+
+      <p>
+        Первая ошибка напоминает: <code>wal_level</code> (бывает <code>minimal</code>, <code>replica</code> по умолчанию и <code>logical</code> для логической репликации) задаёт формат всего журнала целиком, поэтому меняется только в <code>postgresql.conf</code> (или через <code>ALTER SYSTEM</code>) с обязательным перезапуском сервера. А вторая ошибка показывает, что тип <code>pg_lsn</code> всегда требует строгий формат <code>X/Y</code> (два шестнадцатеричных числа через косую черту, например <code>'0/4D12028'</code>).
+      </p>
+
+      <h3>Смертельная ловушка тюнинга: <code>fsync = off</code> vs <code>synchronous_commit = off</code></h3>
+      <p>
+        На форумах иногда советуют: «Хочешь ускорить запись в 5 раз — выключи <code>fsync = off</code>!» Никогда не слушай этот вредный совет в боевом проекте. Вот в чём критическая разница:
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- В postgresql.conf:
+fsync = off</code></pre>
+            </div>
+            <p>При сбое питания <strong>ломается вся база целиком</strong> — повреждаются системные таблицы, индексы и Heap. Сервер может просто не запуститься!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Внутри некритичной транзакции:
+BEGIN;
+SET LOCAL synchronous_commit = off;
+INSERT INTO click_logs VALUES (1);
+COMMIT;</code></pre>
+            </div>
+            <p>База остаётся на 100% целой! В худшем случае при аварии пропадут последние ~0.5 сек кликов, но сама БД никогда не повредится.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Железное правило продакшена:</strong> Параметр <code>fsync = on</code> и <code>full_page_writes = on</code> — это ремень безопасности и подушка безопасности базы данных. Отключать их допустимо только на одноразовых тестовых стендах, которые ты готов удалить и пересоздать с нуля в любой момент.
+        </div>
+      </aside>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет на будущее:</strong> По умолчанию в PostgreSQL 16 стоит <code>wal_level = replica</code>. Это значит, что твой журнал предзаписи уже готов не только к восстановлению после сбоя, но и к двум суперсилам промышленных баз — <strong>потоковой репликации</strong> (отправка WAL в реальном времени на резервный сервер) и <strong>PITR</strong> (восстановлению базы на любую конкретную секунду до случайного <code>DROP TABLE</code>!).
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 05 ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Шпаргалка по WAL и мини-практикум</h2>
+      <p>
+        Перед практикой пробеги глазами короткий словарик урока — эти 5 терминов спрашивают на каждом втором собеседовании по PostgreSQL:
+      </p>
+
+      <div class="focus-box" style="margin-bottom: 1.75rem;">
+        <div class="focus-title">Шпаргалка перед практикой: 5 главных понятий WAL</div>
+        <ul>
+          <li><strong><code>WAL (Write-Ahead Log)</code></strong> — последовательный журнал изменений на диске (<code>pg_wal/</code>, сегменты по 16 МБ), куда запись попадает строго до подтверждения <code>COMMIT</code>.</li>
+          <li><strong><code>LSN (Log Sequence Number)</code></strong> — «километровый столбик» в журнале (вида <code>0/4D12028</code>), позволяющий точно измерить объём сгенерированного WAL через <code>pg_wal_lsn_diff()</code>.</li>
+          <li><strong><code>CHECKPOINT</code></strong> — контрольная точка, когда все грязные страницы из <code>Shared Buffers</code> сбрасываются в файлы таблиц, а в <code>pg_control</code> фиксируется новый <code>redo_lsn</code>.</li>
+          <li><strong><code>Crash Recovery</code></strong> — автоматическое проигрывание WAL от последнего <code>redo_lsn</code> после внезапного сбоя питания.</li>
+          <li><strong><code>UNLOGGED TABLE</code> vs <code>fsync</code></strong> — <code>UNLOGGED</code> безопасно ускоряет временный кеш (очищается при сбое), а <code>fsync = off</code> ломает всю базу и запрещён в продакшене.</li>
+        </ul>
+      </div>
+
+      <p>
+        Выполни 4 автономных задания в базе <code>learning_db</code>. Каждое задание само готовит нужные данные и не зависит от предыдущих.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый уровень). Измерь «след» в WAL от вставки 5 000 строк</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>task1_wal_events(id SERIAL PRIMARY KEY, message TEXT)</code> (с безопасным <code>DROP TABLE IF EXISTS</code>). Вставь в неё 5 000 строк и одним запросом выведи: LSN до вставки, LSN после вставки, имя текущего WAL-файла и размер сгенерированного WAL в человекочитаемом виде (<code>pg_size_pretty</code>).
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS task1_wal_events;
+
+CREATE TABLE task1_wal_events (
+    id      SERIAL PRIMARY KEY,
+    message TEXT NOT NULL
+);
+
+WITH lsn_before AS (
+    SELECT pg_current_wal_lsn() AS pos
+),
+ins AS (
+    INSERT INTO task1_wal_events (message)
+    SELECT 'Событие #' || g
+    FROM generate_series(1, 5000) AS g
+    RETURNING id
+)
+SELECT
+    count(*) AS inserted_rows,
+    (SELECT pos FROM lsn_before) AS lsn_start,
+    pg_current_wal_lsn() AS lsn_end,
+    pg_walfile_name(pg_current_wal_lsn()) AS active_wal_file,
+    pg_size_pretty(
+        pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM lsn_before))
+    ) AS wal_size
+FROM ins;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Средний уровень). Аудит настроек надёжности сервера</div>
+        <p style="margin-bottom: 0;">
+          Напиши два SQL-запроса для быстрого аудита твоего PostgreSQL 16: первый должен вывести значения и контекст (<code>context</code> — нужен ли рестарт для изменения) параметров <code>wal_level</code>, <code>fsync</code>, <code>full_page_writes</code>, <code>synchronous_commit</code> и <code>max_wal_size</code> из <code>pg_settings</code>; второй — показать <code>redo_lsn</code> и время последней контрольной точки из <code>pg_control_checkpoint()</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- 1. Проверяем ключевые параметры WAL и способ их изменения (context)
+SELECT name, setting, unit, context
+FROM pg_settings
+WHERE name IN (
+    'wal_level',
+    'fsync',
+    'full_page_writes',
+    'synchronous_commit',
+    'max_wal_size'
+)
+ORDER BY name;
+
+-- 2. Смотрим отметку последней контрольной точки
+SELECT
+    checkpoint_lsn,
+    redo_lsn,
+    redo_wal_file,
+    checkpoint_time
+FROM pg_control_checkpoint();</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Продвинутый уровень). Битва таблиц: Обычная vs UNLOGGED</div>
+        <p style="margin-bottom: 0;">
+          Создай две одинаковые таблицы <code>task3_logged</code> (обычную) и <code>task3_unlogged</code> (<code>UNLOGGED</code>) с колонками <code>(id INT, body TEXT)</code>. Вставь в каждую по 20 000 строк текста длиной 100 символов (<code>repeat('a', 100)</code>) и проверь через <code>pg_wal_lsn_diff()</code>, во сколько раз (или на сколько килобайт) меньше WAL записалось при вставке в <code>UNLOGGED</code>-таблицу.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS task3_logged, task3_unlogged;
+
+CREATE TABLE task3_logged (id INT, body TEXT);
+CREATE UNLOGGED TABLE task3_unlogged (id INT, body TEXT);
+
+-- Замер №1: обычная таблица
+WITH s AS (SELECT pg_current_wal_lsn() AS pos),
+ins AS (
+    INSERT INTO task3_logged
+    SELECT g, repeat('a', 100) FROM generate_series(1, 20000) AS g
+)
+SELECT
+    'task3_logged' AS tbl,
+    pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s)) AS wal_bytes,
+    pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s))) AS wal_pretty;
+
+-- Замер №2: UNLOGGED-таблица
+WITH s AS (SELECT pg_current_wal_lsn() AS pos),
+ins AS (
+    INSERT INTO task3_unlogged
+    SELECT g, repeat('a', 100) FROM generate_series(1, 20000) AS g
+)
+SELECT
+    'task3_unlogged' AS tbl,
+    pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s)) AS wal_bytes,
+    pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s))) AS wal_pretty;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Боевой сценарий). Поймай Full Page Image (FPI) после CHECKPOINT</div>
+        <p style="margin-bottom: 0;">
+          Докажи на практике работу защиты от «разорванных страниц» (<code>full_page_writes</code>): создай таблицу <code>task4_fpi(id INT, val TEXT)</code> и вставь 1 строку <code>(1, 'v1')</code>. Сделай <code>CHECKPOINT;</code>, затем выполни <strong>первый</strong> <code>UPDATE</code> этой строки и замерь объём WAL (он будет около 8 КБ из-за снимка всей страницы!). Сразу после этого (без нового чекпоинта) выполни <strong>второй</strong> <code>UPDATE</code> той же строки и снова замерь WAL — он окажется в десятки раз меньше (всего пара сотен байт!).
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS task4_fpi;
+CREATE TABLE task4_fpi (id INT PRIMARY KEY, val TEXT);
+INSERT INTO task4_fpi VALUES (1, 'v1');
+
+-- Делаем контрольную точку, чтобы следующая правка страницы вызвала Full Page Image
+CHECKPOINT;
+
+-- 1-й UPDATE сразу после CHECKPOINT (попадёт полный снимок страницы ~8 КБ!)
+WITH s AS (SELECT pg_current_wal_lsn() AS pos),
+u AS (UPDATE task4_fpi SET val = 'v2' WHERE id = 1)
+SELECT
+    '1-й UPDATE после CHECKPOINT (с FPI)' AS step,
+    pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s)) AS wal_bytes;
+
+-- 2-й UPDATE той же страницы (страница уже в WAL, пишется только маленькая дельта!)
+WITH s AS (SELECT pg_current_wal_lsn() AS pos),
+u AS (UPDATE task4_fpi SET val = 'v3' WHERE id = 1)
+SELECT
+    '2-й UPDATE без CHECKPOINT (без FPI)' AS step,
+    pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s)) AS wal_bytes;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_3/practice.html#sec-3-4"><strong>Практикум по Уроку 3.4 →</strong></a> — там 10 пошаговых заданий с ответами на <code>LSN</code>, <code>pg_stat_wal</code>, <code>CHECKPOINT</code>, <code>FPI</code>, <code>UNLOGGED</code>-таблицы, живой краш-тест <code>SIGKILL</code> и финальная задача Модуля 3.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока и Модуля 3</span>
+      Поздравляю — ты только что завершил один из самых важных модулей курса! Теперь PostgreSQL для тебя не «чёрный ящик», а прозрачный и понятный механизм: ты знаешь, как данные лежат на <strong>8-килобайтных страницах Heap и в Shared Buffers</strong> (Урок 3.1), как <strong>B-Tree, GIN и BRIN</strong> ускоряют поиск (Урок 3.2), как читать планы <strong>EXPLAIN (ANALYZE, BUFFERS)</strong> (Урок 3.3) и как <strong>WAL, LSN и Checkpoint</strong> гарантируют сохранность данных даже при внезапном отключении питания (Урок 3.4).
+      <br /><br />
+      Дальше эти знания сразу начнут приносить дивиденды: механизм <code>WAL</code> и версионность страниц станут фундаментом для тем следующего модуля — <strong>транзакций, многоверсионности (MVCC), блокировок</strong>, а затем и <strong>резервного копирования с репликацией</strong>, где тот самый журнал предзаписи позволяет восстанавливать базу на любую секунду в прошлом и держать живую копию сервера на другом континенте!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_3_3.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">3.3 · Чтение планов выполнения запросов: EXPLAIN и EXPL…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_4_1.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">4.1 · Транзакции, ACID и аномалии параллельного доступа</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

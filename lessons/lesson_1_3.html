@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 1.3: Чтение, фильтрация и сортировка — SELECT, WHERE, ORDER BY, пагинация и коварство NULL</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.8rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.85rem 1rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_1/practice.html#sec-1-3">Практикум 1.3</a>
+        <a class="course-nav-btn" href="../slides/module-1.html#1.3">Слайды урока 1.3</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 1 · Основы реляционных БД и SQL</span>
+        <span class="pill pill-neutral">Урок 1.3</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Урок 1.3: Чтение, фильтрация и сортировка — SELECT, WHERE, ORDER BY, пагинация и коварство NULL</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Научишься вытаскивать из таблицы только нужные колонки, считать формулы на лету и убирать дубликаты с помощью <code>SELECT</code>, <code>AS</code> и <code>DISTINCT</code>.</li>
+          <li>Освоишь точный поиск по условиям (<code>WHERE</code>, <code>BETWEEN</code>, <code>IN</code>, <code>ILIKE</code>) и узнаешь, в каком порядке PostgreSQL <em>на самом деле</em> читает твой запрос.</li>
+          <li>Поймёшь, как делать аккуратную сортировку и листание по страницам (<code>ORDER BY</code>, <code>NULLS LAST</code>, <code>LIMIT</code>, <code>OFFSET</code>), чтобы товары не терялись и не дублировались.</li>
+          <li>Разберёшься в главном «финальном боссе» новичков — значении <code>NULL</code>, его трёхзначной логике и защитной функции <code>COALESCE</code>.</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. ОСНОВНЫЕ РАЗДЕЛЫ ЛЕКЦИИ ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Подготовка данных и первый разговор с базой через SELECT</h2>
+      <p>
+        В прошлом уроке мы научились создавать таблицы и заполнять их данными. Но база, в которую только складывают строки и ничего не читают — как школьная библиотека, куда библиотекарь сносит книги, но никому их не выдаёт. Сегодня ты станешь тем самым читателем, который умеет за секунду достать с нужной полки ровно ту книгу, которая нужна.
+      </p>
+      <p>
+        Представь витрину интернет-магазина мерча для программистов. У каждого товара есть название, категория, цена, скидка, остаток на складе и рейтинг покупателей. Чтобы все примеры из этого урока гарантированно заработали у тебя в <code>learning_db</code>, сначала запусти этот блок подготовки таблицы <code>products</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Подготовка таблицы products в learning_db</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Пересоздаём таблицу товаров, чтобы у всех были одинаковые стартовые данные
+DROP TABLE IF EXISTS products;
+
+CREATE TABLE products (
+  id           INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  title        TEXT NOT NULL,
+  category     TEXT NOT NULL,
+  price        NUMERIC(10, 2) NOT NULL CHECK (price &gt; 0),
+  discount_pct INT CHECK (discount_pct BETWEEN 0 AND 90), -- NULL = скидка не задана
+  stock        INT NOT NULL DEFAULT 0 CHECK (stock &gt;= 0),
+  rating       NUMERIC(2, 1) CHECK (rating BETWEEN 1.0 AND 5.0) -- NULL = отзывов ещё нет
+);
+
+INSERT INTO products (title, category, price, discount_pct, stock, rating) VALUES
+  ('Худи «SQL Master»',      'Одежда',     14500.00, 10,   12,  4.9),
+  ('Футболка «SELECT *»',    'Одежда',      5900.00,  0,   25,  4.7),
+  ('Стикерпак «Postgres»',   'Аксессуары',  1200.00, NULL, 100, 4.8),
+  ('Термокружка кодера',     'Аксессуары',  6900.00, 15,    8,  4.6),
+  ('Книга «SQL за 7 дней»',  'Книги',       4200.00, NULL, 14,  4.9),
+  ('Коврик для мыши XL',     'Аксессуары',  3500.00,  5,    0,  4.4),
+  ('Клавиатура «MechPro»',   'Гаджеты',    18900.00, 20,    3,  4.9),
+  ('Кепка «NULL Safety»',    'Одежда',      3900.00, NULL, 19,  NULL),
+  ('USB-хаб «Docker Port»',  'Гаджеты',     7400.00,  0,    6,  4.5),
+  ('Блокнот архитектора',    'Книги',       2100.00, NULL, 30,  NULL);</code></pre>
+      </div>
+
+      <p>
+        Теперь давай зададим базе первый вопрос. Команда <code>SELECT</code> (в переводе «выбрать») — это твой заказ официанту: ты перечисляешь, какие именно колонки хочешь увидеть, а в <code>FROM</code> указываешь, из какой таблицы их нести. Более того, прямо внутри <code>SELECT</code> можно считать простые формулы и давать колонкам красивые временные имена — <strong>псевдонимы</strong> (aliases) через слово <code>AS</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 1: выбор колонок, вычисления и псевдонимы</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Берём только нужные колонки и сразу считаем цену за 2 штуки
+SELECT
+  title AS product_name,
+  price,
+  price * 2 AS price_for_two
+FROM products;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>     product_name      |  price   | price_for_two
+-----------------------+----------+---------------
+ Худи «SQL Master»     | 14500.00 |      29000.00
+ Футболка «SELECT *»   |  5900.00 |      11800.00
+ Стикерпак «Postgres»  |  1200.00 |       2400.00
+ Термокружка кодера    |  6900.00 |      13800.00
+ Книга «SQL за 7 дней» |  4200.00 |       8400.00
+ Коврик для мыши XL    |  3500.00 |       7000.00
+ Клавиатура «MechPro»  | 18900.00 |      37800.00
+ Кепка «NULL Safety»   |  3900.00 |       7800.00
+ USB-хаб «Docker Port» |  7400.00 |      14800.00
+ Блокнот архитектора   |  2100.00 |       4200.00
+(10 rows)</pre>
+      </div>
+
+      <h3>Как убрать повторы: DISTINCT</h3>
+      <p>
+        Допустим, дизайнер рисует боковое меню каталога и спрашивает: «А какие вообще категории товаров у нас есть?». Если просто написать <code>SELECT category FROM products</code>, база честно вернёт 10 строк, где «Одежда» и «Аксессуары» повторятся по 3 раза. Чтобы схлопнуть дубликаты в чистый список уникальных значений, добавь слово <code>DISTINCT</code> сразу после <code>SELECT</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 2: список уникальных категорий</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Оставляем только уникальные названия категорий
+SELECT DISTINCT category
+FROM products;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>  category
+------------
+ Гаджеты
+ Одежда
+ Аксессуары
+ Книги
+(4 rows)</pre>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет на будущее:</strong> Запись <code>SELECT *</code> («принеси все колонки») удобна, чтобы быстро заглянуть в таблицу в терминале <code>psql</code>. Но в реальном коде сайта или приложения всегда перечисляй нужные колонки явно — это экономит трафик, ускоряет запросы и не ломает программу, если завтра в таблицу добавят новую тяжёлую колонку вроде <code>description</code>.
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">02</span> Фильтрация строк: WHERE и скрытый порядок выполнения</h2>
+      <p>
+        Когда ты заходишь на маркетплейс, ты почти никогда не листаешь все миллион товаров подряд. Ты ставишь галочки в фильтрах: «в наличии», «цена от 2000 до 10 000», «категория Одежда или Книги». В SQL эту роль играет блок <code>WHERE</code> (пропускной пункт для строк): каждая строка таблицы проверяется на условие, и дальше проходят только те, для которых условие оказалось истинным (<code>TRUE</code>).
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Оператор</th>
+              <th>Что делает (на человеческом)</th>
+              <th>Пример в <code>WHERE</code></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>=</code>, <code>&lt;&gt;</code> (или <code>!=</code>)</td>
+              <td>Равно / не равно</td>
+              <td><code>category = 'Книги'</code></td>
+            </tr>
+            <tr>
+              <td><code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code></td>
+              <td>Больше, меньше, не меньше, не больше</td>
+              <td><code>stock &gt; 0</code></td>
+            </tr>
+            <tr>
+              <td><code>BETWEEN a AND b</code></td>
+              <td>Попадает в отрезок <strong>включая границы</strong> <code>a</code> и <code>b</code></td>
+              <td><code>price BETWEEN 2000 AND 10000</code></td>
+            </tr>
+            <tr>
+              <td><code>IN (...)</code></td>
+              <td>Совпадает с любым значением из списка</td>
+              <td><code>category IN ('Одежда', 'Книги')</code></td>
+            </tr>
+            <tr>
+              <td><code>LIKE</code> / <code>ILIKE</code></td>
+              <td>Поиск по шаблону (<code>%</code> — любые символы, <code>_</code> — 1 символ). <code>ILIKE</code> в PostgreSQL не различает регистр букв!</td>
+              <td><code>title ILIKE '%postgres%'</code></td>
+            </tr>
+            <tr>
+              <td><code>AND</code>, <code>OR</code>, <code>NOT</code></td>
+              <td>Логические «И», «ИЛИ», «НЕ» для связки условий</td>
+              <td><code>stock &gt; 0 AND price &lt; 5000</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Давай соберём живой поисковый запрос: найдём товары <strong>в наличии</strong>, которые либо относятся к одежде/книгам и стоят от 2000 до 10 000, либо содержат в названии слово <code>postgres</code> (в любом регистре).
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 3: комбинированная фильтрация с IN, BETWEEN и ILIKE</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Скобки гарантируют, что проверка stock &gt; 0 сработает для обеих веток OR
+SELECT id, title, category, price, stock
+FROM products
+WHERE stock &gt; 0
+  AND (
+    (category IN ('Одежда', 'Книги') AND price BETWEEN 2000 AND 10000)
+    OR title ILIKE '%postgres%'
+  );</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id |         title         |  category  |  price  | stock
+----+-----------------------+------------+---------+-------
+  2 | Футболка «SELECT *»   | Одежда     | 5900.00 |    25
+  3 | Стикерпак «Postgres»  | Аксессуары | 1200.00 |   100
+  5 | Книга «SQL за 7 дней» | Книги      | 4200.00 |    14
+  8 | Кепка «NULL Safety»   | Одежда     | 3900.00 |    19
+ 10 | Блокнот архитектора   | Книги      | 2100.00 |    30
+(5 rows)</pre>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT title, category, stock
+FROM products
+WHERE stock &gt; 0
+  AND category = 'Одежда'
+   OR category = 'Аксессуары';</code></pre>
+            </div>
+            <p>У <code>AND</code> приоритет выше, чем у <code>OR</code> (как у умножения перед сложением!). В результат просочится «Коврик для мыши XL» с <code>stock = 0</code>, потому что условие <code>OR category = 'Аксессуары'</code> сработает без проверки остатка.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT title, category, stock
+FROM products
+WHERE stock &gt; 0
+  AND (category = 'Одежда'
+    OR category = 'Аксессуары');</code></pre>
+            </div>
+            <p>Всегда ставь скобки, когда смешиваешь <code>AND</code> и <code>OR</code> (или заменяй цепочку <code>OR</code> на аккуратный <code>category IN ('Одежда', 'Аксессуары')</code>).</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Почему WHERE «не видит» псевдонимы из SELECT?</h3>
+      <p>
+        Вот здесь спотыкается каждый второй новичок. Мы пишем запрос сверху вниз: сначала <code>SELECT</code>, потом <code>FROM</code>, потом <code>WHERE</code>. Кажется логичным придумать псевдоним <code>promo_price</code> в <code>SELECT</code> и сразу отфильтровать по нему в <code>WHERE</code>. Попробуем запустить такой запрос!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Попытка использовать псевдоним из SELECT внутри WHERE</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">SELECT
+  title,
+  price * 0.9 AS promo_price
+FROM products
+WHERE promo_price &lt; 5000;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  column "promo_price" does not exist
+LINE 5: WHERE promo_price &lt; 5000;
+              ^</pre>
+      </div>
+
+      <p>
+        Почему база ругается, что колонки <code>promo_price</code> не существует, хотя мы сами объявили её тремя строчками выше? Дело в том, что <strong>порядок записи SQL и реальный порядок его выполнения внутри PostgreSQL не совпадают</strong>. Представь конвейер на заводе: сначала рабочие достают коробки со склада (<code>FROM</code>), потом отбраковывают неподходящие (<code>WHERE</code>), и <em>только после этого</em> клеят красивые этикетки на оставшиеся товары (<code>SELECT</code>).
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            F["1. FROM<br/>Берём таблицу"] --> W["2. WHERE<br/>Отсеиваем строки"]
+            W --> S["3. SELECT<br/>Считаем колонки и AS"]
+            S --> D["4. DISTINCT<br/>Убираем дубликаты"]
+            D --> O["5. ORDER BY<br/>Сортируем результат"]
+            O --> L["6. LIMIT / OFFSET<br/>Режем на страницы"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Логический конвейер выполнения SQL-запроса: шаг WHERE происходит ДО шага SELECT, а ORDER BY — ПОСЛЕ него.</figcaption>
+      </figure>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Запомни простое правило:</strong> В <code>WHERE</code> нужно повторять саму формулу (<code>WHERE price * 0.9 &lt; 5000</code>), потому что псевдонимов из <code>SELECT</code> на этом шаге ещё нет. А вот в <code>ORDER BY</code> псевдоним <code>promo_price</code> использовать уже можно — сортировка идёт позже!
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">03</span> Сортировка (ORDER BY) и пагинация (LIMIT / OFFSET)</h2>
+      <p>
+        Важнейшее правило реляционных баз данных, о котором часто забывают: <strong>таблица — это мешок со строками, а не пронумерованный список</strong>. Если ты не указал <code>ORDER BY</code>, PostgreSQL имеет полное право возвращать строки в любом удобном ему порядке (сегодня в одном, а завтра после обновления записи — в другом).
+      </p>
+      <p>
+        Чтобы навести порядок, как в таблице лидеров любимой игры, используется <code>ORDER BY</code>. Направление задаётся словами <code>ASC</code> (по возрастанию — от меньшего к большему, стоит по умолчанию) и <code>DESC</code> (по убыванию — от большего к меньшему). Можно указывать сразу несколько критериев через запятую: если по первому полю вышла ничья, база сравнит строки по второму!
+      </p>
+
+      <h3>Скрытая особенность PostgreSQL: куда деваются NULL при сортировке?</h3>
+      <p>
+        В PostgreSQL при сортировке по убыванию (<code>DESC</code>) пустые значения <code>NULL</code> считаются «самыми большими» и внезапно вылезают на самую вершину списка! Представь, что ты сортируешь товары «сначала с лучшим рейтингом», а на первом месте оказываются новинки вообще без оценок. Чтобы отправить пустоту в подвал, в PostgreSQL есть элегантная команда <code>NULLS LAST</code> (или наоборот — <code>NULLS FIRST</code>).
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 4: многоуровневая сортировка с NULLS LAST</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Сначала лучший рейтинг (без рейтинга — в конец),
+-- при равном рейтинге — кто дешевле, а на крайний случай — по id
+SELECT id, title, rating, price
+FROM products
+ORDER BY rating DESC NULLS LAST, price ASC, id ASC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id |         title         | rating |  price
+----+-----------------------+--------+----------
+  5 | Книга «SQL за 7 дней» |    4.9 |  4200.00
+  1 | Худи «SQL Master»     |    4.9 | 14500.00
+  7 | Клавиатура «MechPro»  |    4.9 | 18900.00
+  3 | Стикерпак «Postgres»  |    4.8 |  1200.00
+  2 | Футболка «SELECT *»   |    4.7 |  5900.00
+  4 | Термокружка кодера    |    4.6 |  6900.00
+  9 | USB-хаб «Docker Port» |    4.5 |  7400.00
+  6 | Коврик для мыши XL    |    4.4 |  3500.00
+ 10 | Блокнот архитектора   |        |  2100.00
+  8 | Кепка «NULL Safety»   |        |  3900.00
+(10 rows)</pre>
+      </div>
+
+      <p>
+        Обрати внимание на две нижние строки в колонке <code>rating</code>: по умолчанию терминал <code>psql</code> рисует <code>NULL</code> как обычную пустоту! Чтобы всегда отличать <code>NULL</code> от пустой строки, можешь ввести в <code>psql</code> удобную мета-команду <code>\pset null 'NULL'</code> — тогда на месте пустых ячеек будет чётко печататься слово <code>NULL</code>.
+      </p>
+
+      <h3>Пагинация: как нарезать каталог на страницы</h3>
+      <p>
+        Когда в магазине 50 000 товаров, сайт никогда не загружает их разом — браузер бы просто завис. Вместо этого каталог делят на страницы, например по 3 или по 20 карточек. В SQL это называется <strong>пагинацией</strong> (pagination), и за неё отвечают два слова:
+      </p>
+      <ul>
+        <li><code>LIMIT N</code> — сколько максимум строк отдать на этой странице;</li>
+        <li><code>OFFSET K</code> — сколько первых строк пропустить от начала списка.</li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            subgraph S1["OFFSET 3 (пропускаем стр. 1)"]
+              direction TB
+              R1["1. Стикерпак — 1200"]
+              R2["2. Блокнот — 2100"]
+              R3["3. Коврик — 3500"]
+            end
+            subgraph S2["LIMIT 3 (отдаём стр. 2)"]
+              direction TB
+              R4["4. Кепка — 3900"]
+              R5["5. Книга SQL — 4200"]
+              R6["6. Футболка — 5900"]
+            end
+            subgraph S3["Остаток (стр. 3 и 4)"]
+              direction TB
+              R7["7–10. Более дорогие товары"]
+            end
+            S1 --> S2 --> S3
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Работа окна пагинации для 2-й страницы при сортировке по цене: формула пропуска OFFSET = (номер_страницы - 1) × размер_страницы.</figcaption>
+      </figure>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 5: получаем 2-ю страницу каталога (по 3 товара на странице)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Стр. 1: LIMIT 3 OFFSET 0
+-- Стр. 2: LIMIT 3 OFFSET 3
+SELECT id, title, price
+FROM products
+ORDER BY price ASC, id ASC
+LIMIT 3 OFFSET 3;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id |         title         |  price
+----+-----------------------+---------
+  8 | Кепка «NULL Safety»   | 3900.00
+  5 | Книга «SQL за 7 дней» | 4200.00
+  2 | Футболка «SELECT *»   | 5900.00
+(3 rows)</pre>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT id, title, price
+FROM products
+LIMIT 3 OFFSET 3;</code></pre>
+            </div>
+            <p>Пагинация без <code>ORDER BY</code> — лотерея! Пользователь перейдёт на 2-ю страницу и увидит товар, который уже видел на 1-й, а какой-то другой товар вообще пропадёт.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT id, title, price
+FROM products
+ORDER BY price ASC, id ASC
+LIMIT 3 OFFSET 3;</code></pre>
+            </div>
+            <p>Жёсткая сортировка плюс уникальный «разбиватель ничьих» <code>id ASC</code> в конце гарантируют, что порядок страниц всегда будет стабильным.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Частая ошибка на больших проектах:</strong> Не используй огромный <code>OFFSET</code> (например, <code>LIMIT 20 OFFSET 500000</code>) на таблицах с миллионами строк. Чтобы пропустить 500 000 строк, PostgreSQL всё равно придётся честно прочитать их, отсортировать и выкинуть в корзину. В высоконагруженных системах для глубоких страниц применяют курсорную пагинацию (<code>WHERE id &gt; last_seen_id LIMIT 20</code>) — мы ещё вернёмся к этому трюку в теме индексов!
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">04</span> Коварство NULL: почему «неизвестно» ломает привычную логику</h2>
+      <p>
+        Представь три коробки со скидочными купонами:
+      </p>
+      <ul>
+        <li>В первой коробке лежит бумажка с числом <code>10</code> (скидка 10%).</li>
+        <li>Во второй коробке лежит бумажка с числом <code>0</code> (скидки точно нет, она равна нулю).</li>
+        <li>А третья коробка вообще закрыта замком с вопросительным знаком — мы <strong>не знаем</strong>, что внутри. Вот это и есть <code>NULL</code>.</li>
+      </ul>
+      <p>
+        <code>NULL</code> — это <strong>не ноль</strong> и <strong>не пустая строка</strong> <code>''</code>. Это маркер отсутствия данных («неизвестно»). И из-за этого в SQL вместо привычной логики «Истина / Ложь» действует <strong>трёхзначная логика</strong> (Three-Valued Logic): любое обычное сравнение с <code>NULL</code> (<code>NULL = NULL</code>, <code>NULL &lt;&gt; 10</code>, <code>NULL &lt; 15</code>) возвращает не <code>TRUE</code> и не <code>FALSE</code>, а третье состояние — <code>UNKNOWN</code> («неизвестно»).
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart TD
+            Q["Проверка условия в WHERE<br/>(например, discount_pct &lt;&gt; 10)"] --> T["TRUE<br/>Строка попадает в ответ"]
+            Q --> F["FALSE<br/>Строка отбрасывается"]
+            Q --> U["UNKNOWN (в ячейке NULL)<br/>Строка ТОЖЕ отбрасывается!"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 3. Трёхзначная логика SQL: блок WHERE пропускает дальше строго TRUE, а значит строки с NULL молча пропадают при обычных сравнениях.</figcaption>
+      </figure>
+
+      <p>
+        Из-за этого возникает одна из самых коварных ошибок в SQL: если написать <code>WHERE discount_pct &lt;&gt; 10</code> («покажи все товары, у которых скидка НЕ 10%»), ты потеряешь все 4 товара, где скидка равна <code>NULL</code>! Чтобы работать с пустотой честно, используй специальные операторы:
+      </p>
+      <ul>
+        <li><code>IS NULL</code> / <code>IS NOT NULL</code> — проверка, пуста ли ячейка;</li>
+        <li><code>IS DISTINCT FROM</code> — «безопасное не равно», которое считает, что <code>NULL</code> отличается от <code>10</code> (вернёт <code>TRUE</code>!).</li>
+      </ul>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- 1) Всегда вернёт 0 строк!
+SELECT * FROM products
+WHERE discount_pct = NULL;
+
+-- 2) Потеряет товары с NULL!
+SELECT * FROM products
+WHERE discount_pct &lt;&gt; 10;</code></pre>
+            </div>
+            <p>Операторы <code>=</code> и <code>&lt;&gt;</code> при встрече с <code>NULL</code> выдают <code>UNKNOWN</code>, и <code>WHERE</code> безжалостно выкидывает эти строки.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- 1) Находим товары без скидки
+SELECT * FROM products
+WHERE discount_pct IS NULL;
+
+-- 2) Не 10%, включая NULL!
+SELECT * FROM products
+WHERE discount_pct IS DISTINCT FROM 10;</code></pre>
+            </div>
+            <p>Операторы <code>IS NULL</code> и <code>IS DISTINCT FROM</code> возвращают строго <code>TRUE</code> или <code>FALSE</code> — никаких сюрпризов.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 6: ищем товары, у которых ещё нет оценки (IS NULL)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Находим новинки без рейтинга, которые есть в наличии
+SELECT id, title, price, rating
+FROM products
+WHERE rating IS NULL
+  AND stock &gt; 0
+ORDER BY id ASC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id |        title        |  price  | rating
+----+---------------------+---------+--------
+  8 | Кепка «NULL Safety» | 3900.00 |
+ 10 | Блокнот архитектора | 2100.00 |
+(2 rows)</pre>
+      </div>
+
+      <h3>NULL-вирус в формулах и лекарство COALESCE</h3>
+      <p>
+        У <code>NULL</code> есть ещё одно «суперзлодейское» свойство: <strong>в любой арифметической формуле он заражает весь результат</strong>. Сколько будет <code>1200 - неизвестно</code>? Правильно — <code>неизвестно</code> (<code>NULL</code>)! Если ты просто посчитаешь цену со скидкой для стикерпака, у которого <code>discount_pct IS NULL</code>, его итоговая цена исчезнет и превратится в <code>NULL</code>.
+      </p>
+      <p>
+        Спасает встроенная функция <code>COALESCE(a, b, ...)</code> — представь её как запасного вратаря. Она просматривает аргументы слева направо и возвращает <strong>первое не-NULL значение</strong>. Запись <code>COALESCE(discount_pct, 0)</code> читается просто: «возьми скидку из колонки, а если там <code>NULL</code> — подставь ноль».
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 7: сравнение сломанной формулы и безопасного COALESCE</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Посмотрим на гаджеты и аксессуары: что случится без COALESCE и с ним
+SELECT
+  title,
+  price,
+  discount_pct,
+  ROUND(price * (100 - discount_pct) / 100.0, 2) AS broken_price,
+  ROUND(price * (100 - COALESCE(discount_pct, 0)) / 100.0, 2) AS final_price
+FROM products
+WHERE category IN ('Гаджеты', 'Аксессуары')
+ORDER BY id ASC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>         title         |  price   | discount_pct | broken_price | final_price
+-----------------------+----------+--------------+--------------+-------------
+ Стикерпак «Postgres»  |  1200.00 |              |              |     1200.00
+ Термокружка кодера    |  6900.00 |           15 |      5865.00 |     5865.00
+ Коврик для мыши XL    |  3500.00 |            5 |      3325.00 |     3325.00
+ Клавиатура «MechPro»  | 18900.00 |           20 |     15120.00 |    15120.00
+ USB-хаб «Docker Port» |  7400.00 |            0 |      7400.00 |     7400.00
+(5 rows)</pre>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Осторожно с <code>NOT IN</code> и <code>NULL</code>!</strong> Если внутри списка <code>NOT IN (10, 20, NULL)</code> окажется хотя бы один <code>NULL</code>, весь запрос вернёт ровно <strong>0 строк</strong>. Почему? Потому что <code>x NOT IN (10, NULL)</code> раскрывается как <code>x &lt;&gt; 10 AND x &lt;&gt; NULL</code>, а вторая часть всегда даёт <code>UNKNOWN</code>. Всегда проверяй, могут ли в списке оказаться пустые значения!
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 3. БЛОК САМОПРОВЕРКИ ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Мини-практикум для закрепления</h2>
+      <p>
+        Выполни все 4 задания в своей базе <code>learning_db</code> (таблица <code>products</code> из раздела 01), прежде чем открывать эталонные решения. Старайся сначала проверить результат глазами, а потом свериться со спойлером.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовое). Бюджетный каталог одежды и книг</div>
+        <p style="margin-bottom: 0;">
+          Выведи колонки <code>title</code>, <code>category</code> и <code>price</code> для всех товаров из категорий <code>'Одежда'</code> и <code>'Книги'</code>, которые стоят строго меньше <code>6000</code>. Отсортируй результат от самого дешёвого товара к самому дорогому.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT title, category, price
+FROM products
+WHERE category IN ('Одежда', 'Книги')
+  AND price &lt; 6000
+ORDER BY price ASC, id ASC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Поиск по тексту). Фанаты SQL и Postgres</div>
+        <p style="margin-bottom: 0;">
+          Найди все товары, у которых в названии (<code>title</code>) встречается слово <code>sql</code> или слово <code>postgres</code> — без учёта регистра букв. Покажи их <code>id</code>, <code>title</code> и остаток <code>stock</code>, отсортировав по <code>id</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT id, title, stock
+FROM products
+WHERE title ILIKE '%sql%'
+   OR title ILIKE '%postgres%'
+ORDER BY id ASC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Пагинация и NULLS LAST). Вторая страница витрины</div>
+        <p style="margin-bottom: 0;">
+          Получи <strong>2-ю страницу</strong> каталога (размер страницы — 3 товара). Товары должны быть отсортированы от самого высокого рейтинга к самому низкому так, чтобы новинки без рейтинга (<code>NULL</code>) оказались в самом конце. При одинаковом рейтинге выше должен идти более дешёвый товар, а на случай полного совпадения — с меньшим <code>id</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Пропускаем 1-ю страницу (3 товара) и берём следующие 3
+SELECT id, title, rating, price
+FROM products
+ORDER BY rating DESC NULLS LAST, price ASC, id ASC
+LIMIT 3 OFFSET 3;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Со звёздочкой). Безопасная арифметика и коварный NULL</div>
+        <p style="margin-bottom: 0;">
+          Выведи товары, которые есть в наличии (<code>stock &gt; 0</code>) и у которых скидка либо не задана (<code>NULL</code>), либо меньше <code>15</code> процентов. В результате покажи <code>title</code>, исходную <code>price</code>, скидку под именем <code>discount</code> (если <code>NULL</code> — выводи <code>0</code>) и итоговую цену со скидкой <code>final_price</code> (округлённую до 2 знаков). Отсортируй результат от самой низкой <code>final_price</code> к самой высокой.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Обрати внимание: в ORDER BY псевдоним final_price работает,
+-- потому что сортировка выполняется ПОСЛЕ шага SELECT!
+SELECT
+  title,
+  price,
+  COALESCE(discount_pct, 0) AS discount,
+  ROUND(price * (100 - COALESCE(discount_pct, 0)) / 100.0, 2) AS final_price
+FROM products
+WHERE stock &gt; 0
+  AND (discount_pct IS NULL OR discount_pct &lt; 15)
+ORDER BY final_price ASC, id ASC;</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_1/practice.html#sec-1-3"><strong>Практикум по Уроку 1.3 →</strong></a> — там 18 пошаговых заданий (от простейших <code>SELECT</code> до <code>LIMIT/OFFSET</code>, <code>NULLS LAST</code> и <code>COALESCE</code>) с ответами и прогрессом.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока</span>
+      Теперь ты умеешь говорить с PostgreSQL на языке точных вопросов: отбирать колонки и убирать повторы (<code>SELECT</code>, <code>DISTINCT</code>), фильтровать строки (<code>WHERE</code>, <code>IN</code>, <code>BETWEEN</code>, <code>ILIKE</code>), строить стабильную пагинацию (<code>ORDER BY ... NULLS LAST</code>, <code>LIMIT</code>, <code>OFFSET</code>) и не попадаться в ловушки <code>NULL</code> с помощью <code>IS NULL</code>, <code>IS DISTINCT FROM</code> и <code>COALESCE</code>. Пока мы только <em>читали</em> таблицу и не изменили в ней ни одного байта — а уже в <strong>Уроке 1.4</strong> научимся редактировать и удалять записи командами <code>UPDATE</code> и <code>DELETE</code> (где твоё умение писать аккуратный <code>WHERE</code> спасёт базу от случайного стирания!) и впервые склеим несколько связанных таблиц с помощью <code>INNER JOIN</code>.
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_1_2.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">1.2 · Создание таблиц, типы данных, ограничения и INSERT</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_1_4.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">1.4 · Изменение и удаление данных (UPDATE, DELETE) и пе…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          try {
+            await navigator.clipboard.writeText(codeEl.innerText);
+            const originalText = btn.textContent;
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 6.4: Потоки данных ELT, идемпотентность и медленно меняющиеся измерения (SCD Type 2)</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_6/practice.html#sec-6-4">Практикум 6.4</a>
+        <a class="course-nav-btn" href="../slides/module-6.html#6.4">Слайды урока 6.4</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 6 · Архитектура DWH, OLAP-движки и итоговый проект</span>
+        <span class="pill pill-neutral">Урок 6.4</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Потоки данных ELT, идемпотентность и медленно меняющиеся измерения (SCD Type 2)</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Поймёшь, чем современный подход <strong>ELT</strong> отличается от классического <code>ETL</code> и зачем данные раскладывают по слоям <code>raw</code> → <code>dwh</code> → <code>mart</code>.</li>
+          <li>Освоишь принцип <strong>идемпотентности</strong> (<code>Idempotency</code>): научишься писать загрузки через <code>ON CONFLICT DO UPDATE</code> и транзакции <code>DELETE + INSERT</code> так, чтобы повторный запуск скрипта никогда не создавал дубликаты.</li>
+          <li>Разберёшь ловушку переехавшего клиента и три стратегии <strong>SCD</strong> (Type 0, Type 1, Type 2).</li>
+          <li>Реализуешь в <code>learning_db</code> полную загрузку <strong>SCD Type 2</strong> с частичным уникальным индексом и соберёшь «машину времени» — исторический <code>Point-in-Time JOIN</code>.</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. ОСНОВНЫЕ РАЗДЕЛЫ ЛЕКЦИИ ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Откуда данные попадают в хранилище: ETL против ELT</h2>
+      <p>
+        Представь ресторан, в который фермер каждый день привозит свежие овощи. Есть два способа организовать доставку на кухню:
+      </p>
+      <ul>
+        <li><strong>Старый способ — ETL (Extract → Transform → Load):</strong> Повара залезают прямо в кузов грузовика на дороге, там моют, чистят и режут картошку для супа, а очистки выбрасывают в окно. На кухню попадает уже нарезанная заготовка. Проблема: если завтра шеф-повар решит сделать запечённый картофель в кожуре, кожуру уже не вернуть — придётся снова ехать к фермеру!</li>
+        <li><strong>Современный способ — ELT (Extract → Load → Transform):</strong> Водитель просто забирает ящики у фермера (<strong>Extract</strong>) и максимально быстро сгружает их в большую кладовку прямо как есть (<strong>Load</strong>). А уже внутри мощной кухни повара с помощью SQL-запросов моют, чистят и готовят из этих сырых запасов любые блюда (<strong>Transform</strong>). Если рецепт изменится, сырые овощи всегда под рукой в кладовке!</li>
+      </ul>
+      <p>
+        В современном хранилище данных (<code>DWH</code>) поток <code>ELT</code> почти всегда делят на три аккуратных слоя (схемы):
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            S[("OLTP-источники\n(Сайт, CRM, Касса)")] -->|"Extract + Load"| R["Слой 1: RAW / STAGE\nСырые копии «как есть»"]
+            R -->|"Transform (SQL)\nОчистка + SCD2"| D["Слой 2: DWH / CORE\nЧистая «Звезда» и история"]
+            D -->|"Transform (SQL)\nАгрегация"| M["Слой 3: MART\nГотовые витрины для BI"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Классический конвейер ELT: сырые данные сначала сохраняются в кладовку (RAW), а затем очищаются внутри хранилища.</figcaption>
+      </figure>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Критерий</th>
+              <th>ETL (Преобразование в пути)</th>
+              <th>ELT (Преобразование внутри DWH)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Где чистятся данные</strong></td>
+              <td>На отдельном сервере-обработчике до записи в DWH</td>
+              <td>Прямо внутри DWH на чистом SQL (например, через <code>dbt</code>)</td>
+            </tr>
+            <tr>
+              <td><strong>Если в формуле нашли баг</strong></td>
+              <td>Нужно заново выгружать сырые данные из боевой OLTP-базы</td>
+              <td>Пересчитываем слой <code>DWH</code> из уже сохранённого слоя <code>RAW</code></td>
+            </tr>
+            <tr>
+              <td><strong>Скорость добавления нового отчёта</strong></td>
+              <td>Долго — нужно менять скрипты выгрузки</td>
+              <td>Быстро — аналитик просто пишет новый SQL-запрос к <code>RAW</code>/<code>DWH</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Аналогия фотографа:</strong> Хранить слой <code>RAW</code> в базе — это как снимать на фотоаппарат в формате RAW, а не сразу в сжатый JPEG. Ты всегда можешь переделать цветокоррекцию (пересчитать формулу выручки), не переснимая кадр заново!
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">02</span> Идемпотентность: кнопка лифта вместо кнопки оплаты</h2>
+      <p>
+        Представь две кнопки из жизни. Первая — <strong>кнопка вызова лифта</strong>: нажмёшь ты на неё 1 раз или в нетерпении 10 раз подряд, результат будет одинаковым — приедет ровно <strong>один лифт</strong>. Вторая — кнопка <strong>«Перевести 5 000 тенге»</strong> в плохо написанном банке: если интернет моргнул и ты нажал её дважды, со счёта улетит <strong>10 000 тенге</strong>!
+      </p>
+      <p>
+        В инженерии данных свойство «кнопки лифта» называется <strong>идемпотентностью (Idempotency)</strong>: <em>сколько бы раз ты ни запустил скрипт загрузки с одними и теми же входными данными (1 раз, 2 раза или 50 раз), итоговое состояние базы должно оставаться абсолютно одинаковым — без ошибок и без дубликатов</em>.
+      </p>
+      <p>
+        Зачем это жизненно важно? Ночные ELT-конвейеры работают в 3 часа утра. Если на середине загрузки моргнёт сеть, планировщик (например, Apache Airflow) автоматически перезапустит задачу ещё раз. Если твой SQL-скрипт <strong>не идемпотентен</strong>, утром директор увидит в отчёте двойную выручку!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash · Подключение к PostgreSQL</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker compose up -d
+docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+      </div>
+
+      <h3>Пример 1. Как ломается наивная (неидемпотентная) загрузка</h3>
+      <p>
+        Создадим учебную схему <code>elt_lab</code> со «складом входящих пачек» <code>raw_orders</code> и целевой таблицей <code>dwh_orders</code>. Попробуем загрузить пачку заказов обычным <code>INSERT</code> два раза подряд (имитируя повторный запуск после сбоя):
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Подготовка elt_lab и повторный наивный INSERT</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP SCHEMA IF EXISTS elt_lab CASCADE;
+CREATE SCHEMA elt_lab;
+
+-- Слой RAW: входящая пачка заказов за январь
+CREATE TABLE elt_lab.raw_orders (
+    order_id    INT NOT NULL,
+    order_date  DATE NOT NULL,
+    customer_bk INT NOT NULL,
+    amount      NUMERIC(10, 2) NOT NULL
+);
+
+-- Слой DWH: целевая таблица заказов с первичным ключом
+CREATE TABLE elt_lab.dwh_orders (
+    order_id    INT PRIMARY KEY,
+    order_date  DATE NOT NULL,
+    customer_bk INT NOT NULL,
+    amount      NUMERIC(10, 2) NOT NULL
+);
+
+INSERT INTO elt_lab.raw_orders VALUES
+    (101, '2026-01-10', 1, 35000.00),
+    (102, '2026-01-15', 2, 22000.00),
+    (103, '2026-01-20', 3, 18000.00);
+
+-- Запуск №1: прошёл успешно
+INSERT INTO elt_lab.dwh_orders
+SELECT order_id, order_date, customer_bk, amount
+FROM elt_lab.raw_orders;
+
+-- Запуск №2 (повторный запуск после сбоя сети): падает с ошибкой!
+INSERT INTO elt_lab.dwh_orders
+SELECT order_id, order_date, customer_bk, amount
+FROM elt_lab.raw_orders;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  duplicate key value violates unique constraint "dwh_orders_pkey"
+DETAIL:  Key (order_id)=(101) already exists.</pre>
+      </div>
+
+      <p>
+        Хорошо ещё, что у нас стоял <code>PRIMARY KEY</code> — он хотя бы остановил загрузку! Если бы первичного ключа не было (как часто бывает в сырых таблицах), второй запуск тихо вставил бы ещё 3 копии тех же заказов, и выручка выросла бы с <code>75 000</code> до <code>150 000</code>!
+      </p>
+
+      <h3>Пример 2. Делаем загрузку идемпотентной через UPSERT (<code>ON CONFLICT DO UPDATE</code>)</h3>
+      <p>
+        Представь, что пришла новая выгрузка: в заказе <code>102</code> применили скидку (сумма изменилась с <code>22 000</code> на <code>20 000</code>), а ещё добавился новый заказ <code>104</code>. Напишем идемпотентный запрос <strong>UPSERT</strong> (Update + Insert) и <strong>намеренно запустим его дважды подряд</strong>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Идемпотентный UPSERT: двойной запуск без дубликатов</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Обновляем входящий буфер: заказ 102 исправлен, добавлен 104
+TRUNCATE TABLE elt_lab.raw_orders;
+INSERT INTO elt_lab.raw_orders VALUES
+    (101, '2026-01-10', 1, 35000.00), -- без изменений
+    (102, '2026-01-15', 2, 20000.00), -- сумма исправлена!
+    (103, '2026-01-20', 3, 18000.00), -- без изменений
+    (104, '2026-01-25', 1, 15000.00); -- новый заказ
+
+-- Попытка №1: вставляет новые и обновляет изменившиеся заказы
+INSERT INTO elt_lab.dwh_orders (order_id, order_date, customer_bk, amount)
+SELECT order_id, order_date, customer_bk, amount
+FROM elt_lab.raw_orders
+ON CONFLICT (order_id) DO UPDATE
+SET
+    order_date  = EXCLUDED.order_date,
+    customer_bk = EXCLUDED.customer_bk,
+    amount      = EXCLUDED.amount
+WHERE elt_lab.dwh_orders.amount IS DISTINCT FROM EXCLUDED.amount;
+
+-- Попытка №2: запускаем ТОЧНО ТОТ ЖЕ запрос ещё раз!
+INSERT INTO elt_lab.dwh_orders (order_id, order_date, customer_bk, amount)
+SELECT order_id, order_date, customer_bk, amount
+FROM elt_lab.raw_orders
+ON CONFLICT (order_id) DO UPDATE
+SET
+    order_date  = EXCLUDED.order_date,
+    customer_bk = EXCLUDED.customer_bk,
+    amount      = EXCLUDED.amount
+WHERE elt_lab.dwh_orders.amount IS DISTINCT FROM EXCLUDED.amount;
+
+-- Проверяем результат: ни одной лишней строки, сумма точная!
+SELECT COUNT(*) AS orders_cnt, SUM(amount) AS total_revenue
+FROM elt_lab.dwh_orders;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> orders_cnt | total_revenue 
+------------+---------------
+          4 |      88000.00
+(1 row)</pre>
+      </div>
+
+      <p>
+        Обрати внимание на строчку <code>WHERE elt_lab.dwh_orders.amount IS DISTINCT FROM EXCLUDED.amount</code> — это профессиональный штрих: PostgreSQL даже не тратит диск на перезапись тех строк, которые не изменились (в нашем случае 101 и 103)!
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Без транзакции!
+DELETE FROM dwh_orders
+WHERE order_date = '2026-01-25';
+-- БАХ! Упала сеть!
+INSERT INTO dwh_orders ...;</code></pre>
+            </div>
+            <p>Если скрипт упадёт между <code>DELETE</code> и <code>INSERT</code>, день <strong>25 января пропадёт</strong> с дашбордов!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Атомарный Delete-Insert
+BEGIN;
+DELETE FROM dwh_orders
+WHERE order_date = '2026-01-25';
+INSERT INTO dwh_orders ...;
+COMMIT;</code></pre>
+            </div>
+            <p>Внутри <code>BEGIN ... COMMIT</code> замена окна дат проходит <strong>целиком или никак</strong> — и при этом абсолютно идемпотентна.</p>
+          </div>
+        </div>
+      </div>
+
+      <p>
+        Вернёмся к нашей задаче из начала раздела: теперь наш ELT-конвейер стал похож на кнопку лифта. Даже если ночной планировщик перезапустит загрузку пять раз подряд, данные останутся кристально чистыми.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">03</span> Загадка переехавшего клиента: что такое SCD (Type 0, 1, 2)</h2>
+      <p>
+        А теперь представь детективную историю из жизни нашего интернет-магазина. В <strong>январе</strong> покупательница <strong>Айгерим</strong> жила в <strong>Костанае</strong> и купила клавиатуру за <strong>35 000 тенге</strong>. Управляющий филиалом в Костанае честно получил за этот заказ премию.
+      </p>
+      <p>
+        А <strong>1 февраля</strong> Айгерим переехала жить в <strong>Алматы</strong>, поменяла город в личном кабинете и купила худи за <strong>22 000 тенге</strong>. Если в таблице измерений <code>dim_customer</code> мы просто сделаем обычный <code>UPDATE SET city = 'Алматы'</code>, то в марте случится катастрофа: когда бухгалтерия заново откроет отчёт за январь, окажется, что <strong>Костанай в январе заработал 0 тенге</strong>, а вся январская покупка Айгерим чудесным образом «переехала» в Алматы!
+      </p>
+      <p>
+        Такие справочники, атрибуты которых меняются не каждую секунду, а изредка (город клиента, сегмент <code>Standard → VIP</code>, категория товара, тариф подписки), называются <strong>медленно меняющимися измерениями — SCD (Slowly Changing Dimensions)</strong>. В DWH есть три классических способа обращаться с такими изменениями:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Тип SCD</th>
+              <th>Как поступает с изменением</th>
+              <th>Когда применять</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>SCD Type 0</strong> (Неизменяемое)</td>
+              <td>Вообще игнорирует изменения — хранит только самое первое значение</td>
+              <td>Дата рождения, дата первой регистрации клиента</td>
+            </tr>
+            <tr>
+              <td><strong>SCD Type 1</strong> (Перезапись)</td>
+              <td>Делает обычный <code>UPDATE</code> — старое значение стирается навсегда</td>
+              <td>Исправление опечатки в имени (<code>Айгеримм</code> → <code>Айгерим</code>), когда история не нужна</td>
+            </tr>
+            <tr>
+              <td><strong>SCD Type 2</strong> (Полная история)</td>
+              <td>Закрывает старую строку датой окончания и <strong>добавляет новую строку-версию</strong></td>
+              <td>Город клиента, тариф, сегмент, должность сотрудника — везде, где нужна правда о прошлом!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Посмотри, как выглядит судьба Айгерим в таблице <strong>SCD Type 2</strong>. Вместо одной строки у неё появляются две «серии» с разными суррогатными ключами (<code>customer_sk</code>) и чёткими границами действия <code>valid_from</code> — <code>valid_to</code>:
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            V1["Версия 1 (customer_sk = 1)\ncustomer_bk = 1 | Айгерим\nГород: Костанай\n2026-01-01 ... 2026-01-31\nis_current = false"]
+            V2["Версия 2 (customer_sk = 4)\ncustomer_bk = 1 | Айгерим\nГород: Алматы\n2026-02-01 ... 9999-12-31\nis_current = true"]
+            V1 -->|"1 февраля: переезд"| V2
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. SCD Type 2: старая запись не удаляется, а аккуратно закрывается вчерашней датой, и рядом рождается новая активная версия.</figcaption>
+      </figure>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Зачем писать <code>9999-12-31</code> вместо <code>NULL</code> в <code>valid_to</code>?</strong> Если для активной строки оставить <code>valid_to IS NULL</code>, то простой и красивый запрос <code>WHERE order_date BETWEEN valid_from AND valid_to</code> перестанет находить актуальные записи! Условная «бесконечная дата» <code>9999-12-31</code> избавляет от лишних <code>COALESCE</code> в каждом отчёте.
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">04</span> Собираем живой конвейер SCD Type 2 в PostgreSQL</h2>
+      <p>
+        Давай проживём два дня из жизни нашего хранилища: <strong>1 января</strong> (первая загрузка 3 клиентов) и <strong>1 февраля</strong> (приходит новый снимок из OLTP с изменениями). Вот что должно произойти с каждым клиентом:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Клиент (<code>customer_bk</code>)</th>
+              <th>Было 1 января</th>
+              <th>Пришло 1 февраля</th>
+              <th>Что сделает SCD Type 2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1 · Айгерим Сатова</strong></td>
+              <td>Костанай, VIP</td>
+              <td><strong>Алматы</strong>, VIP</td>
+              <td>Закроет версию 1 (<code>2026-01-31</code>) и создаст версию 2</td>
+            </tr>
+            <tr>
+              <td><strong>2 · Тимур Искаков</strong></td>
+              <td>Астана, Standard</td>
+              <td>Астана, <strong>VIP</strong></td>
+              <td>Закроет версию 1 (<code>2026-01-31</code>) и создаст версию 2</td>
+            </tr>
+            <tr>
+              <td><strong>3 · Елена Морозова</strong></td>
+              <td>Алматы, VIP</td>
+              <td>Алматы, VIP</td>
+              <td><strong>Ничего не тронет!</strong> (Лишние версии не плодим)</td>
+            </tr>
+            <tr>
+              <td><strong>4 · Данияр Алимов</strong></td>
+              <td><em>Не было</em></td>
+              <td>Костанай, Standard</td>
+              <td>Вставит новую активную запись с <code>2026-02-01</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Пример 3. Создаём таблицу SCD Type 2 с защитой от двойных активных версий</h3>
+      <p>
+        Обрати внимание на частичный уникальный индекс (<code>Partial Unique Index</code>) в конце этого блока: он физически запрещает базе иметь одновременно две строки с <code>is_current = true</code> для одного и того же клиента!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Таблица dim_customer_scd2 и загрузка Дня 1 (2026-01-01)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP TABLE IF EXISTS elt_lab.fact_sales_hist;
+DROP TABLE IF EXISTS elt_lab.dim_customer_scd2;
+DROP TABLE IF EXISTS elt_lab.raw_customers_stage;
+
+-- Входящий буфер (снимок клиентов из OLTP)
+CREATE TABLE elt_lab.raw_customers_stage (
+    customer_bk INT PRIMARY KEY,
+    full_name   TEXT NOT NULL,
+    city        TEXT NOT NULL,
+    segment     TEXT NOT NULL
+);
+
+-- Измерение с полной историей SCD Type 2
+CREATE TABLE elt_lab.dim_customer_scd2 (
+    customer_sk SERIAL PRIMARY KEY,           -- уникальный ключ конкретной ВЕРСИИ
+    customer_bk INT NOT NULL,                 -- бизнес-ключ клиента (может повторяться!)
+    full_name   TEXT NOT NULL,
+    city        TEXT NOT NULL,
+    segment     TEXT NOT NULL,
+    valid_from  DATE NOT NULL,
+    valid_to    DATE NOT NULL DEFAULT DATE '9999-12-31',
+    is_current  BOOLEAN NOT NULL DEFAULT true
+);
+
+-- Профессиональный предохранитель: у одного клиента максимум ОДНА активная версия!
+CREATE UNIQUE INDEX idx_dim_customer_scd2_active
+    ON elt_lab.dim_customer_scd2 (customer_bk)
+    WHERE is_current = true;
+
+-- День 1 (2026-01-01): первичная загрузка клиентов
+INSERT INTO elt_lab.dim_customer_scd2 (customer_bk, full_name, city, segment, valid_from)
+VALUES
+    (1, 'Айгерим Сатова', 'Костанай', 'VIP',      '2026-01-01'),
+    (2, 'Тимур Искаков',  'Астана',   'Standard', '2026-01-01'),
+    (3, 'Елена Морозова', 'Алматы',   'VIP',      '2026-01-01');
+
+SELECT customer_sk, customer_bk, full_name, city, segment, valid_from, valid_to, is_current
+FROM elt_lab.dim_customer_scd2
+ORDER BY customer_sk;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL (состояние на 1 января)</div>
+        <pre> customer_sk | customer_bk |   full_name    |   city   | segment  | valid_from |  valid_to  | is_current 
+-------------+-------------+----------------+----------+----------+------------+------------+------------
+           1 |           1 | Айгерим Сатова | Костанай | VIP      | 2026-01-01 | 9999-12-31 | t
+           2 |           2 | Тимур Искаков  | Астана   | Standard | 2026-01-01 | 9999-12-31 | t
+           3 |           3 | Елена Морозова | Алматы   | VIP      | 2026-01-01 | 9999-12-31 | t
+(3 rows)</pre>
+      </div>
+
+      <h3>Пример 4. Идемпотентная загрузка изменений Дня 2 (<code>2026-02-01</code>)</h3>
+      <p>
+        Алгоритм обновления <strong>SCD Type 2</strong> всегда состоит из двух чётких шагов внутри одной транзакции <code>BEGIN ... COMMIT</code>: сначала <strong>закрываем</strong> устаревшие версии, потом <strong>открываем</strong> новые версии для изменившихся и новоприбывших клиентов. Причём этот блок полностью идемпотентен — можешь запустить транзакцию хоть 3 раза подряд, и лишних строк не появится!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Обработка изменений 1 февраля (SCD Type 2 в 2 шага)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Пришёл снимок из OLTP за 2026-02-01
+TRUNCATE TABLE elt_lab.raw_customers_stage;
+INSERT INTO elt_lab.raw_customers_stage VALUES
+    (1, 'Айгерим Сатова', 'Алматы',   'VIP'),      -- сменила город!
+    (2, 'Тимур Искаков',  'Астана',   'VIP'),      -- вырос до VIP!
+    (3, 'Елена Морозова', 'Алматы',   'VIP'),      -- без изменений
+    (4, 'Данияр Алимов',  'Костанай', 'Standard'); -- новый клиент
+
+BEGIN;
+
+-- Шаг 1. Закрываем старые активные версии, у которых изменился хотя бы 1 атрибут
+UPDATE elt_lab.dim_customer_scd2 d
+SET
+    valid_to   = DATE '2026-02-01' - INTERVAL '1 day',
+    is_current = false
+FROM elt_lab.raw_customers_stage s
+WHERE d.customer_bk = s.customer_bk
+  AND d.is_current = true
+  AND (
+      d.full_name IS DISTINCT FROM s.full_name
+      OR d.city    IS DISTINCT FROM s.city
+      OR d.segment IS DISTINCT FROM s.segment
+  );
+
+-- Шаг 2. Открываем новые активные версии (для изменившихся И для новых клиентов)
+INSERT INTO elt_lab.dim_customer_scd2
+    (customer_bk, full_name, city, segment, valid_from, valid_to, is_current)
+SELECT
+    s.customer_bk,
+    s.full_name,
+    s.city,
+    s.segment,
+    DATE '2026-02-01',
+    DATE '9999-12-31',
+    true
+FROM elt_lab.raw_customers_stage s
+LEFT JOIN elt_lab.dim_customer_scd2 d
+       ON d.customer_bk = s.customer_bk
+      AND d.is_current = true
+WHERE d.customer_bk IS NULL
+ORDER BY s.customer_bk;
+
+COMMIT;
+
+-- Смотрим полную историю измерений!
+SELECT customer_sk, customer_bk, full_name, city, segment, valid_from, valid_to, is_current
+FROM elt_lab.dim_customer_scd2
+ORDER BY customer_bk, valid_from;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL (состояние после 1 февраля)</div>
+        <pre> customer_sk | customer_bk |   full_name    |   city   | segment  | valid_from |  valid_to  | is_current 
+-------------+-------------+----------------+----------+----------+------------+------------+------------
+           1 |           1 | Айгерим Сатова | Костанай | VIP      | 2026-01-01 | 2026-01-31 | f
+           4 |           1 | Айгерим Сатова | Алматы   | VIP      | 2026-02-01 | 9999-12-31 | t
+           2 |           2 | Тимур Искаков  | Астана   | Standard | 2026-01-01 | 2026-01-31 | f
+           5 |           2 | Тимур Искаков  | Астана   | VIP      | 2026-02-01 | 9999-12-31 | t
+           3 |           3 | Елена Морозова | Алматы   | VIP      | 2026-01-01 | 9999-12-31 | t
+           6 |           4 | Данияр Алимов  | Костанай | Standard | 2026-02-01 | 9999-12-31 | t
+(6 rows)</pre>
+      </div>
+
+      <h3>Пример 5. Проверяем предохранитель от «раздвоения личности» клиента</h3>
+      <p>
+        Представь, что начинающий разработчик написал новый скрипт и забыл выполнить Шаг 1 (закрыть старую версию), сразу попытавшись вставить новую активную строку для Айгерим. Наш частичный уникальный индекс мгновенно спасёт хранилище от поломки:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Попытка создать вторую активную версию для customer_bk = 1</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">INSERT INTO elt_lab.dim_customer_scd2
+    (customer_bk, full_name, city, segment, valid_from, valid_to, is_current)
+VALUES
+    (1, 'Айгерим Сатова', 'Астана', 'VIP', '2026-03-01', '9999-12-31', true);</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  duplicate key value violates unique constraint "idx_dim_customer_scd2_active"
+DETAIL:  Key (customer_bk)=(1) already exists.</pre>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">05</span> Машина времени в SQL: Point-in-Time JOIN</h2>
+      <p>
+        Теперь давай вернёмся к нашей детективной задаче из Раздела 03 и восстановим справедливость для директора костанайского филиала! Когда мы загружаем продажи в таблицу фактов <code>fact_sales_hist</code>, мы связываем каждый чек не просто с «клиентом №1», а с <strong>конкретной исторической версией <code>customer_sk</code>, действовавшей в день покупки</strong>:
+      </p>
+      <p>
+        <code>o.order_date BETWEEN dc.valid_from AND dc.valid_to</code> — этот приём называется <strong>Point-in-Time JOIN</strong> (соединение на момент времени).
+      </p>
+
+      <h3>Пример 6. Загружаем факты с привязкой ко времени и строим правдивый отчёт</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Загрузка фактов через Point-in-Time JOIN и отчёт по городам</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">CREATE TABLE elt_lab.fact_sales_hist (
+    order_id    INT PRIMARY KEY,
+    order_date  DATE NOT NULL,
+    customer_sk INT NOT NULL REFERENCES elt_lab.dim_customer_scd2(customer_sk),
+    amount      NUMERIC(10, 2) NOT NULL
+);
+
+-- Сырые заказы за январь и февраль
+WITH incoming_sales (order_id, order_date, customer_bk, amount) AS (
+    VALUES
+        (201, DATE '2026-01-12', 1, 35000.00), -- Айгерим ещё в Костанае!
+        (202, DATE '2026-01-20', 2, 15000.00), -- Тимур ещё Standard!
+        (203, DATE '2026-02-05', 1, 22000.00), -- Айгерим уже в Алматы!
+        (204, DATE '2026-02-14', 2, 40000.00), -- Тимур уже VIP!
+        (205, DATE '2026-02-18', 3, 18000.00)  -- Елена в Алматы
+)
+INSERT INTO elt_lab.fact_sales_hist (order_id, order_date, customer_sk, amount)
+SELECT
+    s.order_id,
+    s.order_date,
+    dc.customer_sk,
+    s.amount
+FROM incoming_sales s
+JOIN elt_lab.dim_customer_scd2 dc
+  ON dc.customer_bk = s.customer_bk
+ AND s.order_date BETWEEN dc.valid_from AND dc.valid_to
+ON CONFLICT (order_id) DO NOTHING;
+
+-- Правдивый исторический отчёт: выручка по месяцам и городам на момент покупки!
+SELECT
+    TO_CHAR(f.order_date, 'YYYY-MM') AS sale_month,
+    dc.city,
+    SUM(f.amount)                    AS revenue
+FROM elt_lab.fact_sales_hist f
+JOIN elt_lab.dim_customer_scd2 dc ON dc.customer_sk = f.customer_sk
+GROUP BY TO_CHAR(f.order_date, 'YYYY-MM'), dc.city
+ORDER BY sale_month, revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> sale_month |   city   | revenue  
+------------+----------+----------
+ 2026-01    | Костанай | 35000.00
+ 2026-01    | Астана   | 15000.00
+ 2026-02    | Алматы   | 40000.00
+ 2026-02    | Астана   | 40000.00
+(4 rows)</pre>
+      </div>
+
+      <p>
+        Справедливость восторжествовала! Костанай сохранил свои законные <strong>35 000.00</strong> за январь, а февральская покупка Айгерим (22 000) вместе с покупкой Елены (18 000) честно попали в Алматы (<strong>40 000.00</strong>). А если завтра маркетологи захотят посмотреть на те же покупки «по <em>текущим</em> городам клиентов» (<code>As-Is</code>), это тоже возможно — достаточно соединить по <code>customer_bk</code> с фильтром <code>is_current = true</code>. С <strong>SCD Type 2</strong> у тебя есть и прошлое, и настоящее!
+      </p>
+
+      <div class="compare-grid stacked">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо · Соединение с SCD Type 2 по customer_bk без фильтра дат</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- ОПАСНО: у Айгерим 2 строки в dim_customer_scd2!
+-- Каждый её заказ задвоится, и выручка раздуется в 2 раза!
+SELECT dc.city, SUM(s.amount)
+FROM raw_orders s
+JOIN elt_lab.dim_customer_scd2 dc ON dc.customer_bk = s.customer_bk
+GROUP BY dc.city;</code></pre>
+            </div>
+            <p>Забыть условие <code>s.order_date BETWEEN dc.valid_from AND dc.valid_to</code> (или <code>dc.is_current = true</code>) при соединении с SCD2-таблицей по бизнес-ключу — одна из самых частых причин <strong>размножения строк (Fan-out)</strong> в отчётах.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно · Привязывать факт к суррогатному ключу customer_sk</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- На этапе ELT подбираем точный customer_sk через BETWEEN valid_from AND valid_to,
+-- а в отчётах соединяем просто по первичному ключу customer_sk (1 к 1, без риска дублей!):
+SELECT dc.city, SUM(f.amount)
+FROM elt_lab.fact_sales_hist f
+JOIN elt_lab.dim_customer_scd2 dc ON dc.customer_sk = f.customer_sk
+GROUP BY dc.city;</code></pre>
+            </div>
+            <p>Поскольку <code>customer_sk</code> — первичный ключ конкретной версии, такой <code>JOIN</code> никогда не задвоит сумму и работает максимально быстро.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Инженерный лайфхак с хэшем строки:</strong> Если в таблице измерений не 3, а 40 отслеживаемых колонок, писать 40 условий <code>IS DISTINCT FROM</code> утомительно. В продакшене в таблицу добавляют колонку <code>row_hash TEXT</code> и считают <code>md5(concat_ws('|', col1, col2, ..., col40))</code>. Тогда в Шаге 1 достаточно одного сравнения: <code>WHERE d.row_hash &lt;&gt; s.row_hash</code>!
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">06</span> Шпаргалка урока перед практикой</h2>
+      <p>
+        Пять золотых опорных пунктов, которые стоит запомнить навсегда:
+      </p>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Понятие / Приём</th>
+              <th>Короткий смысл</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Слои ELT</strong></td>
+              <td><code>RAW</code> (сырые данные как есть) → <code>DWH</code> (чистая «Звезда» + история) → <code>MART</code> (готовые витрины).</td>
+            </tr>
+            <tr>
+              <td><strong>Идемпотентность</strong></td>
+              <td>Повторный запуск загрузки с теми же данными даёт 100% тот же результат без ошибок и дублей (<code>ON CONFLICT DO UPDATE</code> или <code>BEGIN; DELETE; INSERT; COMMIT;</code>).</td>
+            </tr>
+            <tr>
+              <td><strong>SCD Type 1 vs Type 2</strong></td>
+              <td>Type 1 перезаписывает старое значение (опечатки). Type 2 закрывает старую версию (<code>valid_to</code>, <code>is_current = false</code>) и открывает новую.</td>
+            </tr>
+            <tr>
+              <td><strong>Частичный уникальный индекс</strong></td>
+              <td><code>CREATE UNIQUE INDEX ... ON dim (bk) WHERE is_current = true;</code> — страховка БД от двух активных версий одного объекта.</td>
+            </tr>
+            <tr>
+              <td><strong>Point-in-Time JOIN</strong></td>
+              <td><code>event_date BETWEEN valid_from AND valid_to</code> — позволяет привязать факт к версии справочника, действовавшей именно в день события.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== 3. БЛОК САМОПРОВЕРКИ ==================== -->
+    <section>
+      <h2><span class="sec-num">07</span> Мини-практикум для закрепления</h2>
+      <p>
+        Выполни 4 автономных задания в <code>learning_db</code> (PostgreSQL 16). Каждая задача сама подготавливает свои таблицы и не зависит от остальных.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый). Идемпотентная загрузка курсов валют (UPSERT)</div>
+        <p style="margin-bottom: 0;">
+          Создай схему <code>elt_lab</code> (если её нет) и таблицу <code>elt_lab.lab_rates</code> (<code>rate_date DATE</code>, <code>currency TEXT</code>, <code>rate_kzt NUMERIC(10, 2)</code>, составной <code>PRIMARY KEY (rate_date, currency)</code>). Вставь 2 курса за <code>'2026-03-01'</code>: <code>USD = 495.00</code>, <code>EUR = 535.00</code>. Затем напиши идемпотентный запрос <code>INSERT ... ON CONFLICT (rate_date, currency) DO UPDATE</code>, который обновит курс <code>USD</code> до <code>498.50</code> и добавит <code>RUB = 5.40</code>. Запусти этот запрос <strong>дважды</strong> и проверь, что в таблице ровно 3 строки.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 1</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">CREATE SCHEMA IF NOT EXISTS elt_lab;
+DROP TABLE IF EXISTS elt_lab.lab_rates;
+
+CREATE TABLE elt_lab.lab_rates (
+    rate_date DATE NOT NULL,
+    currency  TEXT NOT NULL,
+    rate_kzt  NUMERIC(10, 2) NOT NULL,
+    PRIMARY KEY (rate_date, currency)
+);
+
+-- Первая загрузка
+INSERT INTO elt_lab.lab_rates VALUES
+    ('2026-03-01', 'USD', 495.00),
+    ('2026-03-01', 'EUR', 535.00);
+
+-- Идемпотентный блок обновления (запусти 2 раза — результат одинаковый!)
+INSERT INTO elt_lab.lab_rates (rate_date, currency, rate_kzt) VALUES
+    ('2026-03-01', 'USD', 498.50),
+    ('2026-03-01', 'RUB',   5.40)
+ON CONFLICT (rate_date, currency) DO UPDATE
+SET rate_kzt = EXCLUDED.rate_kzt
+WHERE elt_lab.lab_rates.rate_kzt IS DISTINCT FROM EXCLUDED.rate_kzt;
+
+SELECT * FROM elt_lab.lab_rates ORDER BY currency;
+-- Ожидаемый результат: EUR (535.00), RUB (5.40), USD (498.50)</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Средний). Атомарная перезаливка дня (Delete-Insert в транзакции)</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>elt_lab.lab_daily_sales</code> (<code>sale_id INT</code>, <code>sale_date DATE</code>, <code>amount NUMERIC(10, 2)</code>). Вставь 2 продажи за <code>'2026-03-01'</code> (на 1000 и 2000) и 2 ошибочные продажи за <code>'2026-03-02'</code> (на 9999 и 8888). Затем внутри одной транзакции <code>BEGIN ... COMMIT</code> идемпотентно перезалей только день <code>'2026-03-02'</code> правильными данными (две продажи на 3000 и 4000), не затронув 1 марта. Выведи сумму выручки по каждому дню.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 2</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">CREATE SCHEMA IF NOT EXISTS elt_lab;
+DROP TABLE IF EXISTS elt_lab.lab_daily_sales;
+
+CREATE TABLE elt_lab.lab_daily_sales (
+    sale_id   INT PRIMARY KEY,
+    sale_date DATE NOT NULL,
+    amount    NUMERIC(10, 2) NOT NULL
+);
+
+INSERT INTO elt_lab.lab_daily_sales VALUES
+    (1, '2026-03-01', 1000.00),
+    (2, '2026-03-01', 2000.00),
+    (3, '2026-03-02', 9999.00),
+    (4, '2026-03-02', 8888.00);
+
+-- Атомарная идемпотентная перезаливка окна 2026-03-02
+BEGIN;
+    DELETE FROM elt_lab.lab_daily_sales
+    WHERE sale_date = DATE '2026-03-02';
+
+    INSERT INTO elt_lab.lab_daily_sales VALUES
+        (3, '2026-03-02', 3000.00),
+        (4, '2026-03-02', 4000.00);
+COMMIT;
+
+SELECT sale_date, SUM(amount) AS day_revenue
+FROM elt_lab.lab_daily_sales
+GROUP BY sale_date
+ORDER BY sale_date;
+-- Ожидаемый результат: 2026-03-01 (3000.00), 2026-03-02 (7000.00)</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Продвинутый). SCD Type 2 для подписочных тарифов</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>elt_lab.lab_dim_plan</code> (<code>plan_sk SERIAL PRIMARY KEY</code>, <code>plan_bk TEXT</code>, <code>monthly_price NUMERIC(10, 2)</code>, <code>valid_from DATE</code>, <code>valid_to DATE DEFAULT '9999-12-31'</code>, <code>is_current BOOLEAN DEFAULT true</code>) и частичный уникальный индекс на активный <code>plan_bk</code>. Вставь 2 тарифа с <code>2026-01-01</code>: <code>'Basic' = 2000</code> и <code>'Pro' = 5000</code>. С <code>2026-03-01</code> тариф <code>'Pro'</code> подорожал до <code>6500</code>, а <code>'Basic'</code> не изменился. Напиши 2-шаговую транзакцию SCD Type 2 из временной таблицы-снимка (<code>CTE</code> или stage-таблицы) и убедись, что у <code>'Pro'</code> стало 2 версии, а у <code>'Basic'</code> осталась 1.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 3</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">CREATE SCHEMA IF NOT EXISTS elt_lab;
+DROP TABLE IF EXISTS elt_lab.lab_dim_plan;
+DROP TABLE IF EXISTS elt_lab.lab_stage_plan;
+
+CREATE TABLE elt_lab.lab_dim_plan (
+    plan_sk       SERIAL PRIMARY KEY,
+    plan_bk       TEXT NOT NULL,
+    monthly_price NUMERIC(10, 2) NOT NULL,
+    valid_from    DATE NOT NULL,
+    valid_to      DATE NOT NULL DEFAULT DATE '9999-12-31',
+    is_current    BOOLEAN NOT NULL DEFAULT true
+);
+
+CREATE UNIQUE INDEX idx_lab_dim_plan_active
+    ON elt_lab.lab_dim_plan (plan_bk) WHERE is_current = true;
+
+-- Начальное состояние (2026-01-01)
+INSERT INTO elt_lab.lab_dim_plan (plan_bk, monthly_price, valid_from) VALUES
+    ('Basic', 2000.00, '2026-01-01'),
+    ('Pro',   5000.00, '2026-01-01');
+
+-- Входящий снимок на 2026-03-01
+CREATE TABLE elt_lab.lab_stage_plan (
+    plan_bk       TEXT PRIMARY KEY,
+    monthly_price NUMERIC(10, 2) NOT NULL
+);
+INSERT INTO elt_lab.lab_stage_plan VALUES
+    ('Basic', 2000.00),
+    ('Pro',   6500.00);
+
+BEGIN;
+    -- Шаг 1: закрываем изменившиеся тарифы
+    UPDATE elt_lab.lab_dim_plan d
+    SET valid_to = DATE '2026-03-01' - INTERVAL '1 day',
+        is_current = false
+    FROM elt_lab.lab_stage_plan s
+    WHERE d.plan_bk = s.plan_bk
+      AND d.is_current = true
+      AND d.monthly_price IS DISTINCT FROM s.monthly_price;
+
+    -- Шаг 2: открываем новые версии
+    INSERT INTO elt_lab.lab_dim_plan (plan_bk, monthly_price, valid_from, valid_to, is_current)
+    SELECT s.plan_bk, s.monthly_price, DATE '2026-03-01', DATE '9999-12-31', true
+    FROM elt_lab.lab_stage_plan s
+    LEFT JOIN elt_lab.lab_dim_plan d
+           ON d.plan_bk = s.plan_bk AND d.is_current = true
+    WHERE d.plan_bk IS NULL;
+COMMIT;
+
+SELECT * FROM elt_lab.lab_dim_plan ORDER BY plan_bk, valid_from;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Проектирование). Point-in-Time отчёт по грейдам разработчика</div>
+        <p style="margin-bottom: 0;">
+          Создай две автономные таблицы: <code>elt_lab.lab_dim_emp</code> (SCD2-история сотрудника №10: с <code>2026-01-01</code> по <code>2026-02-28</code> он был <code>'Junior'</code>, а с <code>2026-03-01</code> по <code>9999-12-31</code> стал <code>'Middle'</code>) и <code>elt_lab.lab_tasks</code> (4 закрытые задачи сотрудника №10: две в феврале и две в марте). Напиши запрос с <strong>Point-in-Time JOIN</strong> (<code>BETWEEN valid_from AND valid_to</code>), который посчитает, сколько задач разработчик закрыл в роли <code>Junior</code> и сколько — в роли <code>Middle</code> (должно получиться по 2 задачи, без задвоения!).
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 4</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">CREATE SCHEMA IF NOT EXISTS elt_lab;
+DROP TABLE IF EXISTS elt_lab.lab_tasks;
+DROP TABLE IF EXISTS elt_lab.lab_dim_emp;
+
+CREATE TABLE elt_lab.lab_dim_emp (
+    emp_sk     SERIAL PRIMARY KEY,
+    emp_bk     INT NOT NULL,
+    grade      TEXT NOT NULL,
+    valid_from DATE NOT NULL,
+    valid_to   DATE NOT NULL,
+    is_current BOOLEAN NOT NULL
+);
+
+INSERT INTO elt_lab.lab_dim_emp (emp_bk, grade, valid_from, valid_to, is_current) VALUES
+    (10, 'Junior', '2026-01-01', '2026-02-28', false),
+    (10, 'Middle', '2026-03-01', '9999-12-31', true);
+
+CREATE TABLE elt_lab.lab_tasks (
+    task_id   INT PRIMARY KEY,
+    emp_bk    INT NOT NULL,
+    task_date DATE NOT NULL
+);
+
+INSERT INTO elt_lab.lab_tasks VALUES
+    (1, 10, '2026-02-10'),
+    (2, 10, '2026-02-25'),
+    (3, 10, '2026-03-05'),
+    (4, 10, '2026-03-19');
+
+-- Point-in-Time JOIN: точное попадание в историческую версию грейда!
+SELECT
+    e.grade,
+    COUNT(t.task_id) AS tasks_completed
+FROM elt_lab.lab_tasks t
+JOIN elt_lab.lab_dim_emp e
+  ON e.emp_bk = t.emp_bk
+ AND t.task_date BETWEEN e.valid_from AND e.valid_to
+GROUP BY e.grade
+ORDER BY e.grade;
+-- Ожидаемый результат: Junior (2), Middle (2)</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_6/practice.html#sec-6-4"><strong>Практикум по Уроку 6.4 →</strong></a> — там 9 заданий с ответами на идемпотентный <code>UPSERT</code> с <code>IS DISTINCT FROM</code>, атомарный <code>Delete-Insert</code>, краш-тест частичного индекса SCD Type 2, сравнение <code>As-Was</code> vs <code>As-Is</code> и 2-шаговое обновление истории.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока и мостик дальше</span>
+      Сегодня ты собрал «кровеносную систему» любого современного хранилища данных: понял слоистую архитектуру <strong>ELT</strong> (<code>RAW → DWH → MART</code>), научился защищать загрузки от сбоев и дубликатов через <strong>идемпотентность</strong> (<code>ON CONFLICT</code> и атомарный <code>Delete-Insert</code>), и построил настоящую «машину времени» — <strong>SCD Type 2</strong> с частичным уникальным индексом и <strong>Point-in-Time JOIN</strong>. Теперь у тебя на руках есть абсолютно все кусочки большого инженерного пазла! В финальном <strong>Уроке 6.5 (Итоговый проект)</strong> мы объединим всё, что прошли в этом модуле, и соберём сквозной боевой контур: выгрузим живые транзакции из <strong>PostgreSQL (OLTP)</strong>, прогоним их через идемпотентный <strong>ELT</strong> с историей и загрузим готовую скоростную витрину в колончатый <strong>ClickHouse (OLAP)</strong>!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_6_3.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">6.3 · Колончатое хранение и OLAP-движки (ClickHouse): с…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_6_5.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">6.5 · Итоговый проект: сквозной контур OLTP (PostgreSQL…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

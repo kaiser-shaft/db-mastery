@@ -1,0 +1,1901 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 2.2: Внешние объединения (LEFT JOIN), объединение выборок (UNION), условная логика (CASE WHEN) и агрегация (GROUP BY, HAVING)</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_2/practice.html#sec-2-2">Практикум 2.2</a>
+        <a class="course-nav-btn" href="../slides/module-2.html#2.2">Слайды урока 2.2</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 2 · Проектирование БД и продвинутый SQL</span>
+        <span class="pill pill-neutral">Урок 2.2</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Внешние объединения (LEFT JOIN), объединение выборок (UNION), условная логика (CASE WHEN) и агрегация (GROUP BY, HAVING)</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Научишься соединять таблицы через <code>LEFT JOIN</code> так, чтобы не терять клиентов без заказов и товары без продаж, и обойдёшь главную ловушку фильтрации в <code>WHERE</code>.</li>
+          <li>Разберёшься, как склеивать результаты разных запросов сверху вниз с помощью <code>UNION</code> и <code>UNION ALL</code> без ошибок типов данных.</li>
+          <li>Освоишь условные «развилки» <code>CASE WHEN</code> для разметки строк и подсчёта метрик по условиям прямо внутри SQL.</li>
+          <li>Соберёшь настоящий бизнес-отчёт на 4 таблицах с <code>GROUP BY</code>, <code>HAVING</code> и агрегатными функциями, понимая реальный порядок выполнения запроса в PostgreSQL.</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. ПОДГОТОВКА УЧЕБНОЙ БАЗЫ ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Готовим стенд: наш мини-магазин в learning_db</h2>
+      <p>
+        В прошлом уроке мы научились раскладывать данные по аккуратным нормализованным таблицам и связывать их «многие-ко-многим». Теперь настало время <strong>собирать из этих таблиц ответы на живые вопросы бизнеса</strong>: кто из клиентов пропал, какие товары не продаются и сколько денег приносит каждый город.
+      </p>
+      <p>
+        Открой консоль <code>psql</code> внутри своего контейнера PostgreSQL и выполни стартовый скрипт ниже. Он безопасен для повторного запуска (сначала очищает старые учебные таблицы через <code>DROP TABLE IF EXISTS ... CASCADE</code>) и создаёт 5 таблиц нашего магазина IT-мерча.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · Подключение к learning_db</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Подготовка таблиц и тестовых данных (безопасный перезапуск)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Сбрасываем учебные таблицы урока, если они уже существуют
+DROP TABLE IF EXISTS order_items CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS customers CASCADE;
+DROP TABLE IF EXISTS newsletter_leads CASCADE;
+
+-- 1. Покупатели магазина
+CREATE TABLE customers (
+    id        INTEGER PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL,
+    email     VARCHAR(100) NOT NULL UNIQUE,
+    city      VARCHAR(60)  NOT NULL
+);
+
+-- 2. Каталог товаров
+CREATE TABLE products (
+    id       INTEGER PRIMARY KEY,
+    title    VARCHAR(100)   NOT NULL,
+    category VARCHAR(50)    NOT NULL,
+    price    NUMERIC(10, 2) NOT NULL CHECK (price &gt; 0)
+);
+
+-- 3. Заказы (связь 1-ко-многим с customers)
+CREATE TABLE orders (
+    id          INTEGER PRIMARY KEY,
+    customer_id INTEGER     NOT NULL REFERENCES customers(id),
+    status      VARCHAR(20) NOT NULL CHECK (status IN ('paid', 'cancelled')),
+    created_at  DATE        NOT NULL
+);
+
+-- 4. Позиции внутри заказа (связь многие-ко-многим между orders и products)
+CREATE TABLE order_items (
+    order_id   INTEGER NOT NULL REFERENCES orders(id),
+    product_id INTEGER NOT NULL REFERENCES products(id),
+    quantity   INTEGER NOT NULL CHECK (quantity &gt; 0),
+    PRIMARY KEY (order_id, product_id)
+);
+
+-- 5. Подписчики рассылки с рекламного лендинга (часть из них уже клиенты!)
+CREATE TABLE newsletter_leads (
+    id        INTEGER PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL,
+    email     VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- Наполняем таблицы данными
+INSERT INTO customers (id, full_name, email, city) VALUES
+    (1, 'Алиса Смирнова', 'alice@mail.ru', 'Алматы'),
+    (2, 'Борис Волков',   'boris@mail.ru', 'Астана'),
+    (3, 'Вера Ли',        'vera@mail.ru',  'Алматы'),
+    (4, 'Глеб Орлов',     'gleb@mail.ru',  'Шымкент'),
+    (5, 'Дина Ким',       'dina@mail.ru',  'Астана');
+
+INSERT INTO products (id, title, category, price) VALUES
+    (1, 'Худи «SQL Master»',       'Одежда',     14500.00),
+    (2, 'Стикерпак «Postgres»',    'Аксессуары',  1200.00),
+    (3, 'Термокружка кодера',      'Аксессуары',  6900.00),
+    (4, 'Футболка «JOIN Me»',      'Одежда',      8500.00),
+    (5, 'Механическая клавиатура', 'Гаджеты',    32000.00),
+    (6, 'Брелок «Слон Postgres»',  'Аксессуары',   900.00);
+
+INSERT INTO orders (id, customer_id, status, created_at) VALUES
+    (101, 1, 'paid',      '2025-03-01'),
+    (102, 1, 'paid',      '2025-03-10'),
+    (103, 2, 'paid',      '2025-03-05'),
+    (104, 2, 'cancelled', '2025-03-12'),
+    (105, 3, 'cancelled', '2025-03-15'),
+    (106, 5, 'paid',      '2025-03-18');
+
+INSERT INTO order_items (order_id, product_id, quantity) VALUES
+    (101, 1, 1),  -- Алиса: 1 худи (14 500)
+    (101, 2, 2),  -- Алиса: 2 стикерпака (2 400)
+    (102, 5, 1),  -- Алиса: 1 клавиатура (32 000)
+    (103, 3, 1),  -- Борис: 1 термокружка (6 900)
+    (103, 2, 1),  -- Борис: 1 стикерпак (1 200)
+    (104, 5, 1),  -- Борис: отменённая клавиатура (32 000)
+    (105, 4, 2),  -- Вера:  отменённые 2 футболки (17 000)
+    (106, 4, 1),  -- Дина:  1 футболка (8 500)
+    (106, 3, 2);  -- Дина:  2 термокружки (13 800)
+
+INSERT INTO newsletter_leads (id, full_name, email) VALUES
+    (1, 'Алиса Смирнова', 'alice@mail.ru'),
+    (2, 'Егор Савин',     'egor@mail.ru'),
+    (3, 'Жанна Нур',      'zhanna@mail.ru'),
+    (4, 'Борис Волков',   'boris@mail.ru');</code></pre>
+      </div>
+
+      <p>
+        Обрати внимание на «секретных персонажей» в наших данных: <strong>Глеб Орлов</strong> зарегистрировался, но не сделал ни одного заказа; <strong>Вера Ли</strong> оформила заказ, но отменила его; а <strong>Брелок «Слон Postgres»</strong> пока не купил вообще никто. Именно на таких жизненных случаях проверяется знание SQL!
+      </p>
+    </section>
+
+    <!-- ==================== 3. LEFT JOIN ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Внешние объединения (LEFT JOIN): как не потерять «молчунов»</h2>
+      <p>
+        <strong>Проблема:</strong> Маркетолог просит список всех зарегистрированных клиентов и номера их заказов, чтобы понять, кто уже покупал, а кому пора отправить приветственный промокод. Если просто соединить <code>customers</code> и <code>orders</code> обычным <code>INNER JOIN</code>, Глеб Орлов просто исчезнет из таблицы!
+      </p>
+      <p>
+        Представь школьного учителя со списком класса в журнале и стопкой сданных контрольных на столе. Если учитель выпишет только тех, чьи тетради нашлись в стопке, двоечники и прогульщики просто пропадут из ведомости — это и есть <strong>внутреннее объединение</strong> (<code>INNER JOIN</code>). А если учитель оставит <em>весь список класса целиком</em> и напротив не сдавших поставит прочерк — это <strong>левое внешнее объединение</strong> (<code>LEFT OUTER JOIN</code>, в коде почти всегда пишут коротко <code>LEFT JOIN</code>).
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            subgraph LEFT_T["Левая таблица: customers"]
+              C1["1: Алиса"]
+              C2["3: Вера"]
+              C3["4: Глеб"]
+            end
+            subgraph RIGHT_T["Правая таблица: orders"]
+              O1["101, 102 (Алиса)"]
+              O2["105 (Вера)"]
+            end
+            C1 -->|"Совпало"| R1["Алиса | 101 и 102"]
+            C2 -->|"Совпало"| R2["Вера | 105"]
+            C3 -.->|"Нет пары -> NULL"| R3["Глеб | NULL"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Как работает LEFT JOIN: все строки левой таблицы сохраняются, а на месте отсутствующих данных справа появляется NULL.</figcaption>
+      </figure>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>А как же RIGHT JOIN и FULL JOIN?</strong> <code>RIGHT JOIN</code> — это зеркальная копия <code>LEFT JOIN</code> (сохраняет всю правую таблицу). Инженеры редко его пишут: проще поменять таблицы местами и использовать привычный <code>LEFT JOIN</code>. А <code>FULL OUTER JOIN</code> сохраняет несовпавшие строки сразу с <em>обеих</em> сторон (удобно для сверки двух прайс-листов).
+        </div>
+      </aside>
+
+      <h3>Пример 1. Все клиенты + поиск тех, кто ничего не купил</h3>
+      <p>
+        Сначала посмотрим всех покупателей и их заказы. В консольном выводе <code>psql</code> значения <code>NULL</code> по умолчанию отображаются пустыми ячейками.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 1А: LEFT JOIN сохраняет всех клиентов</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Берём ВСЕХ клиентов из левой таблицы и подтягиваем их заказы (если они есть)
+SELECT
+    c.id AS customer_id,
+    c.full_name,
+    o.id AS order_id,
+    o.status
+FROM customers AS c
+LEFT JOIN orders AS o
+    ON o.customer_id = c.id
+ORDER BY c.id, o.id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> customer_id |   full_name    | order_id |  status
+-------------+----------------+----------+-----------
+           1 | Алиса Смирнова |      101 | paid
+           1 | Алиса Смирнова |      102 | paid
+           2 | Борис Волков   |      103 | paid
+           2 | Борис Волков   |      104 | cancelled
+           3 | Вера Ли        |      105 | cancelled
+           4 | Глеб Орлов     |          |
+           5 | Дина Ким       |      106 | paid
+(7 rows)</pre>
+      </div>
+
+      <p>
+        Смотри на строчку с <strong>Глебом Орловым</strong>: в колонках <code>order_id</code> и <code>status</code> пусто (там лежит <code>NULL</code>). Этот трюк используют каждый день, чтобы искать «потеряшек» — такой приём называют <strong>анти-джойн</strong> (<code>LEFT JOIN ... WHERE right.id IS NULL</code>).
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 1Б: Находим клиентов без единого заказа</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Оставляем только те строки, которым не нашлось пары в таблице orders
+SELECT
+    c.id,
+    c.full_name,
+    c.email
+FROM customers AS c
+LEFT JOIN orders AS o
+    ON o.customer_id = c.id
+WHERE o.id IS NULL;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id | full_name  |    email
+----+------------+--------------
+  4 | Глеб Орлов | gleb@mail.ru
+(1 row)</pre>
+      </div>
+
+      <p>
+        <strong>Задача решена:</strong> теперь маркетолог видит не только активных покупателей, но и точно знает, что приветственный промокод нужно отправить именно Глебу на <code>gleb@mail.ru</code>.
+      </p>
+
+      <h3>Главная ловушка LEFT JOIN: фильтр в WHERE против ON</h3>
+      <p>
+        Допустим, задача слегка изменилась: <em>«Покажи ВСЕХ клиентов и только их оплаченные (<code>paid</code>) заказы. Если оплаченных заказов нет — клиент всё равно должен остаться в списке»</em>. Здесь ошибается 9 из 10 новичков!
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT c.full_name, o.id
+FROM customers AS c
+LEFT JOIN orders AS o
+  ON o.customer_id = c.id
+WHERE o.status = 'paid';</code></pre>
+            </div>
+            <p><code>WHERE</code> срабатывает <strong>после</strong> склейки! Строки Веры (<code>cancelled</code>) и Глеба (<code>NULL</code>) не пройдут проверку <code>o.status = 'paid'</code> и исчезнут — <code>LEFT JOIN</code> тайно превратится в <code>INNER JOIN</code>.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT c.full_name, o.id
+FROM customers AS c
+LEFT JOIN orders AS o
+  ON o.customer_id = c.id
+ AND o.status = 'paid';</code></pre>
+            </div>
+            <p>Условие в <code>ON</code> отсеивает отменённые заказы <strong>до</strong> присоединения. Алиса, Борис и Дина получат номера оплаченных заказов, а Вера и Глеб честно останутся в списке с <code>NULL</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Запомни железное правило:</strong> если ты пишешь условие на колонку <em>правой</em> таблицы внутри <code>WHERE</code> (кроме проверки <code>IS NULL</code>), ты уничтожаешь смысл <code>LEFT JOIN</code>. Фильтры правой таблицы переноси в блок <code>ON</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. UNION И UNION ALL ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Объединение выборок (UNION и UNION ALL): склеиваем списки вниз</h2>
+      <p>
+        <strong>Проблема:</strong> В нашем магазине есть база покупателей (<code>customers</code>) и отдельная таблица подписчиков рассылки с лендинга (<code>newsletter_leads</code>). Перед выходом новой коллекции нужно собрать единый список контактов, чтобы отправить анонс всем — но не засыпать Алису и Бориса двумя одинаковыми письмами.
+      </p>
+      <p>
+        Если <code>JOIN</code> склеивает таблицы <strong>вбок</strong> (приставляет новые колонки справа, как расширение анкеты), то оператор <strong>объединения выборок</strong> (<code>UNION</code>) склеивает результаты двух <code>SELECT</code> <strong>вертикально, один под другим</strong>. Представь, что ты собираешь список гостей на день рождения: один список написан у тебя в блокноте, второй — у друга. Склеиваешь два листка скотчем:
+      </p>
+      <ul>
+        <li><code>UNION</code> — склеивает листки и <strong>аккуратно вычёркивает повторяющиеся строки</strong> (удаляет полные дубликаты).</li>
+        <li><code>UNION ALL</code> — просто склеивает листки <strong>как есть, вместе с дубликатами</strong>, зато работает быстрее, потому что базе не нужно перепроверять все строки на совпадение.</li>
+      </ul>
+
+      <h3>Пример 2. Единая база контактов для рассылки</h3>
+      <p>
+        Чтобы два запроса состыковались через <code>UNION</code>, у них должно быть <strong>одинаковое количество колонок</strong> и <strong>совместимые типы данных</strong> на одних и тех же позициях. Названия итоговых колонок PostgreSQL берёт из первого <code>SELECT</code>, а общий <code>ORDER BY</code> ставится в самом конце.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 2: Уникальный список email из двух таблиц</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Склеиваем покупателей и подписчиков лендинга без дубликатов
+SELECT full_name, email
+FROM customers
+
+UNION
+
+SELECT full_name, email
+FROM newsletter_leads
+ORDER BY full_name;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>   full_name    |     email
+----------------+----------------
+ Алиса Смирнова | alice@mail.ru
+ Борис Волков   | boris@mail.ru
+ Вера Ли        | vera@mail.ru
+ Глеб Орлов     | gleb@mail.ru
+ Дина Ким       | dina@mail.ru
+ Егор Савин     | egor@mail.ru
+ Жанна Нур      | zhanna@mail.ru
+(7 rows)</pre>
+      </div>
+
+      <p>
+        В таблице <code>customers</code> было 5 строк, в <code>newsletter_leads</code> — 4 строки (в сумме 9). Но <code>UNION</code> заметил, что Алиса и Борис есть в обоих списках, убрал повторы и вернул ровно <strong>7 уникальных получателей</strong>. Задача рассылки решена!
+      </p>
+
+      <p>
+        А что произойдёт, если перепутать порядок колонок и попытаться склеить число (<code>id</code>) со строкой (<code>full_name</code>)? PostgreSQL мгновенно остановит тебя ошибкой:
+      </p>
+
+      <div class="error-block standalone">
+        <div class="output-label">Ошибка PostgreSQL · Несовпадение типов в UNION</div>
+        <pre>ERROR:  UNION types integer and character varying cannot be matched
+LINE 3: SELECT full_name, email
+               ^</pre>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет для больших баз:</strong> Используй <code>UNION ALL</code> по умолчанию везде, где дублей заведомо быть не может (например, склеиваешь архив заказов за 2024 год и свежие заказы за 2025-й). Обычный <code>UNION</code> вынуждает PostgreSQL выполнять лишнюю сортировку или хеширование ради поиска повторов — на миллионах строк это ощутимо тормозит запрос.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 5. CASE WHEN ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> Условная логика (CASE WHEN): «если… то…» внутри SQL</h2>
+      <p>
+        <strong>Проблема:</strong> Магазин хочет повесить на сайте цветные бейджи ценовых категорий: всё дешевле 5 000 ₸ — «Бюджетный», от 5 000 до 15 000 ₸ — «Средний», а дороже 15 000 ₸ — «Премиум». Заводить ради этого отдельную колонку в таблице не нужно — достаточно вычислять ярлык на лету.
+      </p>
+      <p>
+        Представь сортировщика на складе доставки. По конвейеру едут посылки, а он смотрит на вес каждой коробки и клеит наклейку: лёгкая — на верхнюю полку, средняя — на среднюю, тяжёлая — вниз. В SQL роль такого сортировщика играет <strong>условное выражение</strong> <code>CASE WHEN ... THEN ... ELSE ... END</code>.
+      </p>
+      <p>
+        PostgreSQL проверяет ветки <code>WHEN</code> строго <strong>сверху вниз</strong> и останавливается на самом первом условии, которое оказалось истинным. Если ни одно условие не подошло — срабатывает запасная ветка <code>ELSE</code>.
+      </p>
+
+      <h3>Пример 3. Размечаем каталог по ценовым сегментам</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 3: Классификация товаров через CASE WHEN</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Вычисляем ценовую категорию на лету без изменения таблицы products
+SELECT
+    title,
+    price,
+    CASE
+        WHEN price &lt; 5000  THEN 'Бюджетный'
+        WHEN price &lt;= 15000 THEN 'Средний'
+        ELSE 'Премиум'
+    END AS price_tier
+FROM products
+ORDER BY price;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>          title          |  price   | price_tier
+-------------------------+----------+------------
+ Брелок «Слон Postgres»  |   900.00 | Бюджетный
+ Стикерпак «Postgres»    |  1200.00 | Бюджетный
+ Термокружка кодера      |  6900.00 | Средний
+ Футболка «JOIN Me»      |  8500.00 | Средний
+ Худи «SQL Master»       | 14500.00 | Средний
+ Механическая клавиатура | 32000.00 | Премиум
+(6 rows)</pre>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Две частые оплошности в CASE WHEN:</strong>
+          1) Если забыть ветку <code>ELSE</code>, для всех неподошедших строк вернётся <code>NULL</code>.<br />
+          2) Следи за порядком условий! Если первым написать <code>WHEN price &gt; 1000</code>, а вторым <code>WHEN price &gt; 15000</code>, то клавиатура за 32 000 остановится на первой же ветке и никогда не станет «Премиумом».
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 6. GROUP BY И HAVING ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Агрегация (GROUP BY и HAVING): сворачиваем строки в итоги</h2>
+      <p>
+        <strong>Проблема:</strong> Директор магазина спрашивает: «Сколько товаров и какая средняя цена в каждой категории? Но не показывай мне категории, где всего один товар — для анализа там мало данных».
+      </p>
+      <p>
+        Представь, что ты высыпал на стол полную копилку монет и хочешь подсчитать итоги по номиналам:
+      </p>
+      <ol>
+        <li>Сначала убираешь в сторону иностранные и гнутые монеты — это <code>WHERE</code> (отсеивает <strong>сырые строки до группировки</strong>).</li>
+        <li>Раскладываешь оставшиеся монеты по стопкам: 10, 50, 100 тенге — это <strong>группировка</strong> (<code>GROUP BY</code>).</li>
+        <li>Считаешь количество монет и сумму в каждой стопке — это <strong>агрегатные функции</strong> (<code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code>).</li>
+        <li>Оставляешь на столе только те стопки, где набралось больше 5 монет — это <code>HAVING</code> (фильтрует <strong>уже готовые группы</strong>).</li>
+      </ol>
+
+      <p>
+        Хотя в коде мы пишем <code>SELECT</code> в самом начале, внутри PostgreSQL запрос выполняется совсем в другом порядке — по чёткому конвейеру:
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            A["1. FROM / JOIN"] --> B["2. WHERE (строки)"]
+            B --> C["3. GROUP BY (стопки)"]
+            C --> D["4. HAVING (группы)"]
+            D --> E["5. SELECT / CASE"]
+            E --> F["6. ORDER BY"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Порядок логического выполнения SQL-запроса: поэтому WHERE не «видит» агрегаты, а HAVING не знает псевдонимов из SELECT.</figcaption>
+      </figure>
+
+      <h3>Пример 4. Статистика по категориям с фильтром HAVING</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 4: GROUP BY + HAVING по категориям товаров</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Сворачиваем каталог по категориям и отсеиваем одиночные категории
+SELECT
+    category,
+    COUNT(*)             AS products_cnt,
+    ROUND(AVG(price), 2) AS avg_price,
+    MAX(price)           AS max_price
+FROM products
+GROUP BY category
+HAVING COUNT(*) &gt;= 2
+ORDER BY avg_price DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>  category  | products_cnt | avg_price | max_price
+------------+--------------+-----------+-----------
+ Одежда     |            2 |  11500.00 |  14500.00
+ Аксессуары |            3 |   3000.00 |   6900.00
+(2 rows)</pre>
+      </div>
+
+      <p>
+        Категория <code>Гаджеты</code> (где лежит одна клавиатура) аккуратно отфильтровалась блоком <code>HAVING COUNT(*) &gt;= 2</code>. Проблема директора решена за один короткий запрос!
+      </p>
+
+      <h3>Две знаменитые ошибки PostgreSQL при агрегации</h3>
+      <p>
+        Если ты попробуешь вывести в <code>SELECT</code> колонку <code>title</code>, не добавив её в <code>GROUP BY</code>, PostgreSQL не поймёт, какое именно название товара показать для целой стопки из трёх аксессуаров, и выдаст ошибку:
+      </p>
+
+      <div class="error-block standalone">
+        <div class="output-label">Ошибка PostgreSQL · Колонка забыта в GROUP BY</div>
+        <pre>ERROR:  column "products.title" must appear in the GROUP BY clause or be used in an aggregate function
+LINE 1: SELECT category, title, COUNT(*)
+                         ^</pre>
+      </div>
+
+      <p>
+        А если попытаться поставить проверку <code>COUNT(*) &gt;= 2</code> в <code>WHERE</code> вместо <code>HAVING</code>, база напомнит о порядке выполнения конвейера с Рис. 2 — на шаге <code>WHERE</code> никаких групп ещё не существует:
+      </p>
+
+      <div class="error-block standalone">
+        <div class="output-label">Ошибка PostgreSQL · Агрегатная функция внутри WHERE</div>
+        <pre>ERROR:  aggregate functions are not allowed in WHERE
+LINE 3: WHERE COUNT(*) &gt;= 2;
+              ^</pre>
+      </div>
+
+      <h3>Ловушка №2: COUNT(*) против COUNT(колонка) после LEFT JOIN</h3>
+      <p>
+        Что будет, если совместить <code>LEFT JOIN</code> и <code>GROUP BY</code>, чтобы посчитать количество заказов у каждого клиента? Тут кроется коварный баг с <code>COUNT(*)</code>!
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT
+  c.full_name,
+  COUNT(*) AS orders_cnt
+FROM customers AS c
+LEFT JOIN orders AS o
+  ON o.customer_id = c.id
+GROUP BY c.id, c.full_name;</code></pre>
+            </div>
+            <p><code>COUNT(*)</code> считает <strong>количество строк</strong>. У Глеба после <code>LEFT JOIN</code> есть одна строка с <code>NULL</code>, поэтому запрос соврёт и покажет Глебу <strong>1 заказ</strong>!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT
+  c.full_name,
+  COUNT(o.id) AS orders_cnt
+FROM customers AS c
+LEFT JOIN orders AS o
+  ON o.customer_id = c.id
+GROUP BY c.id, c.full_name;</code></pre>
+            </div>
+            <p><code>COUNT(o.id)</code> игнорирует <code>NULL</code> и считает только реальные номера заказов. У Глеба <code>o.id</code> пустой, поэтому результат будет честный <strong>0</strong>.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Пример 5. Выручка по городам: проверяем на живых данных</h3>
+      <p>
+        Давай закрепим связку <code>LEFT JOIN</code> + <code>GROUP BY</code> + <code>COALESCE</code> (функция <code>COALESCE(a, b)</code> подставляет <code>b</code>, если <code>a</code> оказалось <code>NULL</code>). Посчитаем для каждого города число клиентов и их оплаченную выручку:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 5: Аналитика выручки по городам</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Считаем клиентов и оплаченную выручку по каждому городу (включая Шымкент с 0)
+SELECT
+    c.city,
+    COUNT(DISTINCT c.id) AS customers_cnt,
+    COUNT(DISTINCT o.id) AS paid_orders_cnt,
+    COALESCE(SUM(oi.quantity * p.price), 0.00) AS total_revenue
+FROM customers AS c
+LEFT JOIN orders AS o
+    ON o.customer_id = c.id
+   AND o.status = 'paid'
+LEFT JOIN order_items AS oi
+    ON oi.order_id = o.id
+LEFT JOIN products AS p
+    ON p.id = oi.product_id
+GROUP BY c.city
+ORDER BY total_revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>  city   | customers_cnt | paid_orders_cnt | total_revenue
+---------+---------------+-----------------+---------------
+ Алматы  |             2 |               2 |      48900.00
+ Астана  |             2 |               2 |      30400.00
+ Шымкент |             1 |               0 |          0.00
+(3 rows)</pre>
+      </div>
+
+      <p>
+        Заметь важную деталь: внутри <code>COUNT(DISTINCT c.id)</code> и <code>COUNT(DISTINCT o.id)</code> мы добавили слово <code>DISTINCT</code>. Почему? Потому что заказ №101 у Алисы состоит из двух разных товаров (худи и стикерпаки), а значит, после присоединения <code>order_items</code> этот заказ превращается в две строки. Без <code>DISTINCT</code> он посчитался бы дважды!
+      </p>
+    </section>
+
+    <!-- ==================== 7. КОМБО-ЗАПРОС НА 4 ТАБЛИЦАХ ==================== -->
+    <section>
+      <h2><span class="sec-num">06</span> Комбо-удар: клиентский отчёт лояльности на 4 таблицах</h2>
+      <p>
+        <strong>Реальная боевая задача:</strong> Руководитель отдела продаж просит единую сводку по <strong>каждому</strong> клиенту магазина: сколько у него оплаченных заказов, сколько отменённых, на какую сумму он реально выкупил товаров и к какому сегменту лояльности относится (<code>VIP</code> от 30 000 ₸, <code>Активный</code> при любых покупках, <code>Спящий</code> при 0 ₸).
+      </p>
+      <p>
+        Запрос затронет сразу 4 таблицы (<code>customers</code>, <code>orders</code>, <code>order_items</code>, <code>products</code>) и объединит все инструменты сегодняшнего урока — включая <strong>условную агрегацию</strong> (когда <code>CASE WHEN</code> кладётся прямо внутрь <code>COUNT</code> или <code>SUM</code>!). Прежде чем писать код, посмотрим на трансформацию данных «Было → Стало»:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Этап</th>
+              <th>Что происходит с данными</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Было (4 таблицы)</strong></td>
+              <td>Разрозненные строки: 5 клиентов, 6 заказов (часть <code>paid</code>, часть <code>cancelled</code>), 9 товарных позиций и 6 цен в каталоге. У Глеба вообще нет строк в <code>orders</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Склейка (LEFT JOIN)</strong></td>
+              <td>Прикрепляем к клиентам все их заказы, позиции и цены. Благодаря <code>LEFT JOIN</code> ни один клиент не теряется.</td>
+            </tr>
+            <tr>
+              <td><strong>Свёртка (GROUP BY + CASE)</strong></td>
+              <td>Схлопываем все строки в <strong>1 строку на клиента</strong>. Внутри <code>COUNT(DISTINCT CASE ...)</code> раздельно считаем оплаченные и отменённые заказы, а в <code>SUM(CASE ...)</code> суммируем только оплаченные чеки.</td>
+            </tr>
+            <tr>
+              <td><strong>Стало (Отчёт)</strong></td>
+              <td>Аккуратная таблица из 5 строк с готовым статусом <code>VIP / Активный / Спящий</code> для CRM-системы.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Пример 6. Единый отчёт лояльности клиентов</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 6: LEFT JOIN + условная агрегация (CASE внутри SUM/COUNT)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Полный профиль лояльности по каждому клиенту магазина
+SELECT
+    c.full_name,
+    -- Считаем уникальные оплаченные заказы (DISTINCT защищает от размножения строк товарами)
+    COUNT(DISTINCT CASE WHEN o.status = 'paid' THEN o.id END)      AS paid_orders,
+    -- Считаем уникальные отменённые заказы
+    COUNT(DISTINCT CASE WHEN o.status = 'cancelled' THEN o.id END) AS cancelled_orders,
+    -- Суммируем выручку только по оплаченным заказам; вместо NULL выводим 0.00
+    COALESCE(
+        SUM(CASE WHEN o.status = 'paid' THEN oi.quantity * p.price ELSE 0.00 END),
+        0.00
+    ) AS total_spent,
+    -- Присваиваем сегмент лояльности по итоговой сумме покупок
+    CASE
+        WHEN COALESCE(
+            SUM(CASE WHEN o.status = 'paid' THEN oi.quantity * p.price ELSE 0.00 END),
+            0.00
+        ) &gt;= 30000 THEN 'VIP'
+        WHEN COALESCE(
+            SUM(CASE WHEN o.status = 'paid' THEN oi.quantity * p.price ELSE 0.00 END),
+            0.00
+        ) &gt; 0 THEN 'Активный'
+        ELSE 'Спящий'
+    END AS segment
+FROM customers AS c
+LEFT JOIN orders AS o
+    ON o.customer_id = c.id
+LEFT JOIN order_items AS oi
+    ON oi.order_id = o.id
+LEFT JOIN products AS p
+    ON p.id = oi.product_id
+GROUP BY c.id, c.full_name
+ORDER BY total_spent DESC, c.id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>   full_name    | paid_orders | cancelled_orders | total_spent | segment
+----------------+-------------+------------------+-------------+----------
+ Алиса Смирнова |           2 |                0 |    48900.00 | VIP
+ Дина Ким       |           1 |                0 |    22300.00 | Активный
+ Борис Волков   |           1 |                1 |     8100.00 | Активный
+ Вера Ли        |           0 |                1 |        0.00 | Спящий
+ Глеб Орлов     |           0 |                0 |        0.00 | Спящий
+(5 rows)</pre>
+      </div>
+
+      <p>
+        <strong>Смотри, как красиво решилась задача руководителя:</strong> Алиса — наш главный VIP-клиент (48 900 ₸), у Бориса и Веры сразу видны отменённые заказы (можно выяснить причину отказа), а Глеб не потерялся и попал в сегмент «Спящий» с честными нулями.
+      </p>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Фишка PostgreSQL — клауза FILTER:</strong> В PostgreSQL условную агрегацию можно записывать ещё изящнее, без громоздкого <code>CASE</code> внутри скобок:
+          <code>COUNT(DISTINCT o.id) FILTER (WHERE o.status = 'paid')</code>. Это официальный стандарт SQL, который отлично читается и работает так же быстро.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 8. ШПАРГАЛКА ПЕРЕД ПРАКТИКОЙ ==================== -->
+    <section>
+      <h2><span class="sec-num">07</span> Шпаргалка урока перед практикой</h2>
+      <p>
+        Пробегись глазами по этому чек-листу — он спасёт тебя от 90% ошибок в задачах ниже и на реальных проектах:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Инструмент</th>
+              <th>Что делает простыми словами</th>
+              <th>Главное правило безопасности</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>LEFT JOIN</code></td>
+              <td>Сохраняет <strong>все</strong> строки левой таблицы, подставляя <code>NULL</code> там, где справа нет пары.</td>
+              <td>Фильтр для правой таблицы пиши в <code>ON</code>, а не в <code>WHERE</code>; для подсчёта используй <code>COUNT(right.id)</code>.</td>
+            </tr>
+            <tr>
+              <td><code>UNION</code> / <code>UNION ALL</code></td>
+              <td>Склеивает результаты двух <code>SELECT</code> <strong>вертикально</strong> (<code>UNION</code> убирает дубли, <code>UNION ALL</code> — нет).</td>
+              <td>Число колонок и их типы данных в обоих запросах должны совпадать один-в-один.</td>
+            </tr>
+            <tr>
+              <td><code>CASE WHEN</code></td>
+              <td>Размечает строки по условиям «если… то…» прямо внутри запроса.</td>
+              <td>Условия проверяются сверху вниз до первого совпадения; всегда добавляй <code>ELSE</code>.</td>
+            </tr>
+            <tr>
+              <td><code>GROUP BY</code></td>
+              <td>Сворачивает одинаковые значения в группы для расчёта <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code>.</td>
+              <td>Любая колонка в <code>SELECT</code> должна либо быть в <code>GROUP BY</code>, либо лежать внутри агрегатной функции.</td>
+            </tr>
+            <tr>
+              <td><code>HAVING</code></td>
+              <td>Отсеивает уже готовые <strong>группы</strong> по результатам агрегатных функций.</td>
+              <td><code>WHERE</code> режет строки <em>до</em> группировки, а <code>HAVING</code> — группы <em>после</em> неё.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== 9. МИНИ-ПРАКТИКУМ ==================== -->
+    <section>
+      <h2><span class="sec-num">08</span> Мини-практикум для закрепления</h2>
+      <p>
+        Все 4 задания полностью автономны и выполняются поверх таблиц, которые ты создал в разделе 01 в базе <code>learning_db</code>. Попробуй решить каждое самостоятельно в <code>psql</code>, прежде чем раскрывать спойлер с эталонным решением.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый уровень). Находим товары-«невидимки»</div>
+        <p style="margin-bottom: 0;">
+          Найди в таблице <code>products</code> товары, которые ещё <strong>ни разу</strong> не попадали ни в один заказ (даже отменённый). Выведи колонки <code>id</code>, <code>title</code> и <code>price</code>, отсортировав по <code>id</code>. <em>Ожидаемый результат: 1 строка — брелок за 900.00.</em>
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 1</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Анти-джойн: ищем товары без единого совпадения в order_items
+SELECT
+    p.id,
+    p.title,
+    p.price
+FROM products AS p
+LEFT JOIN order_items AS oi
+    ON oi.product_id = p.id
+WHERE oi.product_id IS NULL
+ORDER BY p.id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Уверенный уровень). Сверка баз контактов с меткой источника</div>
+        <p style="margin-bottom: 0;">
+          Собери общий список записей из таблиц <code>customers</code> и <code>newsletter_leads</code> <strong>без удаления дублей</strong>, чтобы увидеть, кто числится сразу в обеих базах. Выведи три колонки: <code>full_name</code>, <code>email</code> и текстовую метку <code>source</code> (<code>'Покупатель'</code> для таблицы клиентов и <code>'Подписчик'</code> для лендинга). Отсортируй по <code>email</code>, затем по <code>source</code>. <em>Ожидаемый результат: 9 строк.</em>
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 2</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- UNION ALL сохраняет все строки, а константа source показывает, откуда пришла запись
+SELECT
+    full_name,
+    email,
+    'Покупатель' AS source
+FROM customers
+
+UNION ALL
+
+SELECT
+    full_name,
+    email,
+    'Подписчик' AS source
+FROM newsletter_leads
+ORDER BY email, source;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Продвинутый уровень). Города-лидеры по выручке</div>
+        <p style="margin-bottom: 0;">
+          Посчитай для каждого города (<code>customers.city</code>) количество уникальных клиентов и общую сумму их <strong>оплаченных</strong> (<code>status = 'paid'</code>) заказов. Оставь в результате только те города, где суммарная выручка строго больше <code>20000</code>, и отсортируй по убыванию выручки. <em>Ожидаемый результат: 2 строки (Алматы и Астана).</em>
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 3</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Фильтруем оплаченные заказы в ON, группируем по городу и режем слабые города в HAVING
+SELECT
+    c.city,
+    COUNT(DISTINCT c.id) AS customers_cnt,
+    COALESCE(SUM(oi.quantity * p.price), 0.00) AS city_revenue
+FROM customers AS c
+LEFT JOIN orders AS o
+    ON o.customer_id = c.id
+   AND o.status = 'paid'
+LEFT JOIN order_items AS oi
+    ON oi.order_id = o.id
+LEFT JOIN products AS p
+    ON p.id = oi.product_id
+GROUP BY c.city
+HAVING COALESCE(SUM(oi.quantity * p.price), 0.00) &gt; 20000
+ORDER BY city_revenue DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Со звёздочкой). Отчёт спроса по всему каталогу</div>
+        <p style="margin-bottom: 0;">
+          Выведи список <strong>всех 6 товаров</strong> из <code>products</code> с колонками: название (<code>title</code>), количество проданных штук в <strong>оплаченных</strong> заказах (<code>sold_qty</code>, если продаж не было — <code>0</code>) и метку спроса (<code>demand_label</code>) через <code>CASE WHEN</code>: <code>'Хит продаж'</code> (если продано <code>&gt;= 3</code> шт.), <code>'Есть спрос'</code> (если <code>1</code> или <code>2</code> шт.) и <code>'Нет продаж'</code> (если <code>0</code> шт.). Отсортируй по <code>sold_qty</code> по убыванию, затем по <code>title</code>. <em>Подсказка: аккуратно обработай отменённые заказы, чтобы они не попали в сумму!</em>
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 4</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Используем условную сумму, чтобы отменённые заказы (cancelled) давали 0, а не теряли товар
+SELECT
+    p.title,
+    SUM(CASE WHEN o.status = 'paid' THEN oi.quantity ELSE 0 END) AS sold_qty,
+    CASE
+        WHEN SUM(CASE WHEN o.status = 'paid' THEN oi.quantity ELSE 0 END) &gt;= 3
+            THEN 'Хит продаж'
+        WHEN SUM(CASE WHEN o.status = 'paid' THEN oi.quantity ELSE 0 END) &gt;= 1
+            THEN 'Есть спрос'
+        ELSE 'Нет продаж'
+    END AS demand_label
+FROM products AS p
+LEFT JOIN order_items AS oi
+    ON oi.product_id = p.id
+LEFT JOIN orders AS o
+    ON o.id = oi.order_id
+GROUP BY p.id, p.title
+ORDER BY sold_qty DESC, p.title;</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_2/practice.html#sec-2-2"><strong>Практикум по Уроку 2.2 →</strong></a> — там ещё 12 пошаговых заданий с ответами на <code>LEFT JOIN</code>, <code>UNION</code>, <code>CASE WHEN</code>, <code>GROUP BY</code> и <code>HAVING</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 10. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока и мостик дальше</span>
+      Сегодня ты получил главный аналитический набор SQL-инженера: научился сохранять строки без совпадений через <code>LEFT JOIN</code>, вертикально склеивать выборки через <code>UNION</code> / <code>UNION ALL</code>, добавлять бизнес-логику с <code>CASE WHEN</code> и сворачивать таблицы в сводки через <code>GROUP BY</code> и <code>HAVING</code>. Заметил, как в Примере 6 и Задании 4 нам пришлось по два-три раза копировать одну и ту же длинную формулу <code>SUM(CASE ...)</code>? В следующем <strong>Уроке 2.3 (Подзапросы, CTE, работа с датами, строками и JSONB)</strong> мы разберём конструкцию <code>WITH</code> (CTE), которая позволит вычислять такие метрики ровно один раз и писать сложные отчёты чисто, как главы в книге.
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_2_1.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">2.1 · Нормализация (1НФ–3НФ), связи «многие-ко-многим»…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_2_3.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">2.3 · Подзапросы, CTE, работа с датами, строками и JSONB</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

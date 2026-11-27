@@ -1,0 +1,2212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Практикум · Модуль 6: Архитектура DWH, ClickHouse, ELT и итоговый проект</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --accent-border: #bfdbfe;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --purple-bg: #f5f3ff;
+      --purple-border: #ddd6fe;
+      --purple-text: #6d28d9;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --cyan-bg: #ecfeff;
+      --cyan-border: #a5f3fc;
+      --cyan-text: #155e75;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      padding: 2.25rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .lecture {
+      max-width: 920px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.75rem 3rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== НАВИГАЦИЯ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover { border-color: var(--accent); color: var(--accent); background: #ffffff; }
+    .course-nav-btn.primary { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent); }
+
+    /* ==================== ШАПКА ==================== */
+    .lecture-header {
+      padding-bottom: 1.85rem;
+      margin-bottom: 2.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.9rem; }
+    .pill { font-size: 0.78rem; font-weight: 600; padding: 0.28rem 0.75rem; border-radius: 999px; letter-spacing: 0.01em; }
+    .pill-primary { background: var(--accent-soft); color: var(--accent); }
+    .pill-tip     { background: var(--tip-bg); color: var(--tip-text); }
+    .pill-purple  { background: var(--purple-bg); color: var(--purple-text); }
+    .pill-neutral { background: #f1f5f9; color: var(--muted); }
+
+    h1 {
+      margin: 0 0 0.75rem;
+      font-size: 1.98rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    .hero-sub { margin: 0 0 1.4rem; color: var(--muted); font-size: 0.97rem; }
+
+    /* Прогресс-бар и фильтры */
+    .practice-toolbar {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem 1.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .progress-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; font-size: 0.88rem; }
+    .progress-label { font-weight: 600; color: var(--text-body); }
+    .progress-label strong { font-family: "JetBrains Mono", monospace; color: var(--tip-border); }
+
+    .progress-bar { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #2563eb, #7c3aed, #16a34a); border-radius: 999px; transition: width 0.25s ease; }
+
+    .toolbar-actions { display: flex; flex-direction: column; gap: 0.55rem; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+    .filter-row-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-right: 0.2rem; }
+
+    .filter-btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-body);
+      font-family: inherit;
+      font-size: 0.79rem;
+      font-weight: 600;
+      padding: 0.28rem 0.68rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+
+    .reset-btn {
+      appearance: none;
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.76rem;
+      font-weight: 500;
+      padding: 0.26rem 0.62rem;
+      border-radius: 7px;
+      cursor: pointer;
+      display: none;
+    }
+
+    .reset-btn.visible { display: inline-block; }
+    .reset-btn:hover { border-color: var(--err-border); color: var(--err-border); }
+
+    /* Легенда форматов */
+    .format-legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.55rem; margin-top: 1.05rem; }
+    .format-chip { background: #ffffff; border: 1px solid var(--border); border-radius: 10px; padding: 0.55rem 0.75rem; font-size: 0.8rem; line-height: 1.4; color: var(--muted); }
+    .format-chip strong { display: block; font-size: 0.82rem; color: var(--text); margin-bottom: 0.15rem; }
+
+    /* Оглавление */
+    .toc-box { margin-top: 1.1rem; padding: 0.95rem 1.25rem; background: #ffffff; border: 1px solid var(--border); border-radius: 12px; font-size: 0.9rem; }
+    .toc-title { font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.5rem; }
+    .toc-list { display: flex; flex-direction: column; gap: 0.15rem; list-style: none; margin: 0; padding: 0; }
+    .toc-list li { border-bottom: 1px solid #f1f5f9; }
+    .toc-list li:last-child { border-bottom: none; }
+    .toc-list a { display: flex; align-items: baseline; gap: 0.65rem; padding: 0.36rem 0.5rem; border-radius: 8px; color: var(--text-body); text-decoration: none; font-weight: 500; transition: background-color 0.15s ease, color 0.15s ease; }
+    .toc-list a:hover { background: var(--surface-soft); color: var(--accent); }
+    .toc-num { display: inline-flex; align-items: center; justify-content: center; min-width: 1.85rem; padding: 0.06rem 0.38rem; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-family: "JetBrains Mono", monospace; font-size: 0.78rem; font-weight: 700; flex-shrink: 0; }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section { margin-top: 2.75rem; scroll-margin-top: 1.5rem; }
+    section:first-of-type { margin-top: 0; }
+    section.hidden { display: none; }
+
+    h2 { display: flex; align-items: center; gap: 0.7rem; margin: 0 0 1rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border); font-size: 1.35rem; font-weight: 700; letter-spacing: -0.015em; color: var(--text); }
+    .sec-num { display: inline-flex; align-items: center; justify-content: center; min-width: 2.1rem; height: 2rem; padding: 0 0.45rem; font-size: 0.85rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 8px; flex-shrink: 0; }
+    h3 { margin: 1.65rem 0 0.75rem; font-size: 1.04rem; font-weight: 700; color: var(--text); }
+    p { margin: 0 0 1rem; }
+    ul, ol { margin: 0 0 1.15rem; padding-left: 1.4rem; }
+    li { margin-bottom: 0.4rem; }
+
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.14em 0.4em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* ==================== БЛОКИ КОДА И ПЛАШКИ СРЕД ==================== */
+    .code-block { margin: 0.85rem 0 1.05rem; border-radius: 10px; overflow: hidden; border: 1px solid var(--code-border); background: var(--code-bg); }
+    .code-block.bug-code { border-color: #f87171; box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.12); }
+    .code-block.bug-code .code-header { background: #2b1417; border-bottom-color: #5c2128; color: #fca5a5; }
+    .code-block.cleanup-code { border-color: #22c55e; }
+    .code-block.cleanup-code .code-header { background: #102619; border-bottom-color: #1f4b31; color: #86efac; }
+
+    .code-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.42rem 0.85rem; background: var(--code-header-bg); border-bottom: 1px solid var(--code-border); font-family: "JetBrains Mono", monospace; font-size: 0.73rem; color: #8b949e; }
+    .code-lang { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-weight: 600; letter-spacing: 0.02em; }
+
+    .db-pill { display: inline-block; padding: 0.09rem 0.46rem; border-radius: 5px; font-size: 0.69rem; font-weight: 700; text-transform: none; }
+    .db-pg   { background: #1d4ed8; color: #ffffff; }
+    .db-ch   { background: #7c3aed; color: #ffffff; }
+    .db-bash { background: #334155; color: #f1f5f9; }
+
+    .copy-btn { background: transparent; border: 1px solid #30363d; color: #c9d1d9; font-family: "Inter", sans-serif; font-size: 0.72rem; font-weight: 500; padding: 0.18rem 0.55rem; border-radius: 6px; cursor: pointer; flex-shrink: 0; transition: all 0.15s ease; }
+    .copy-btn:hover { background: #21262d; border-color: #8b949e; color: #ffffff; }
+    .copy-btn.copied { border-color: #238636; color: #3fb950; }
+
+    .code-block pre { margin: 0; padding: 0.88rem 1.05rem; overflow-x: auto; background: var(--code-bg) !important; color: var(--code-text); color-scheme: dark; }
+    .code-block pre code, .code-block pre code.hljs { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.83rem; line-height: 1.54; padding: 0 !important; background: transparent !important; }
+
+    /* ==================== ВЫНОСКИ И ТАБЛИЦЫ ==================== */
+    .callout { display: flex; gap: 0.85rem; margin: 1.15rem 0; padding: 0.95rem 1.15rem; border-radius: 12px; border-left: 4px solid var(--accent); background: var(--accent-soft); font-size: 0.93rem; line-height: 1.6; }
+    .callout-icon { flex-shrink: 0; width: 20px; height: 20px; margin-top: 0.18rem; color: var(--accent); }
+    .callout-body strong { color: #1e40af; }
+    .callout.warn { background: var(--warn-bg); border-left-color: var(--warn-border); }
+    .callout.warn .callout-icon { color: var(--warn-border); }
+    .callout.warn .callout-body strong { color: var(--warn-text); }
+    .callout.tip { background: var(--tip-bg); border-left-color: var(--tip-border); }
+    .callout.tip .callout-icon { color: var(--tip-border); }
+    .callout.tip .callout-body strong { color: var(--tip-text); }
+
+    .table-wrapper { width: 100%; overflow-x: auto; margin: 0.8rem 0 1.1rem; border: 1px solid var(--border); border-radius: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.87rem; line-height: 1.5; }
+    th, td { text-align: left; padding: 0.6rem 0.82rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { background: var(--surface-soft); font-weight: 600; color: var(--text); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    tbody tr:last-child td { border-bottom: none; }
+
+    /* ==================== СХЕМА СТЕНДА И ПРЕДПРОСМОТР ==================== */
+    .schema-box { margin: 1rem 0 1.25rem; padding: 1.15rem 1.15rem 1rem; background: #f8fafc; border: 1px solid var(--border); border-radius: 14px; }
+    .er-scroll { width: 100%; overflow-x: auto; }
+    .er-svg { display: block; width: 100%; min-width: 720px; height: auto; font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .er-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 0.65rem 1rem; margin-top: 0.9rem; padding-top: 0.85rem; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--muted); }
+    .er-legend-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .er-tag { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 0.7rem; font-weight: 700; padding: 0.08rem 0.38rem; border-radius: 5px; line-height: 1.3; }
+    .er-tag-pk   { background: #dbeafe; color: #1d4ed8; }
+    .er-tag-fk   { background: #fef3c7; color: #b45309; }
+    .er-tag-uk   { background: #f3e8ff; color: #7e22ce; }
+    .er-tag-null { background: #fee2e2; color: #b91c1c; }
+
+    .quirks-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; margin-top: 0.9rem; }
+    .quirk-chip { background: #ffffff; border: 1px solid var(--border); border-radius: 10px; padding: 0.62rem 0.82rem; font-size: 0.84rem; line-height: 1.48; color: var(--text-body); }
+    .quirk-chip strong { color: var(--text); }
+
+    details.data-preview { margin: 0.9rem 0 0; background: #ffffff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    details.data-preview summary { cursor: pointer; padding: 0.78rem 1.05rem; font-size: 0.9rem; font-weight: 600; color: var(--accent); background: #ffffff; user-select: none; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    details.data-preview summary::-webkit-details-marker { display: none; }
+    details.data-preview summary::after { content: "Развернуть ▾"; font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+    details.data-preview[open] summary { border-bottom: 1px solid var(--border); background: var(--accent-soft); }
+    details.data-preview[open] summary::after { content: "Свернуть ▴"; color: var(--accent); }
+    .preview-body { padding: 1rem 1.1rem 1.15rem; display: flex; flex-direction: column; gap: 1rem; }
+    .preview-table-title { font-family: "JetBrains Mono", monospace; font-size: 0.82rem; font-weight: 700; color: var(--text); margin: 0 0 0.4rem; display: flex; align-items: center; gap: 0.45rem; }
+    .preview-table-title span { font-family: "Inter", sans-serif; font-size: 0.75rem; font-weight: 500; color: var(--muted); }
+    .preview-body .table-wrapper { margin: 0; border-radius: 9px; }
+    .preview-body table { font-size: 0.81rem; line-height: 1.4; }
+    .preview-body th, .preview-body td { padding: 0.44rem 0.65rem; white-space: nowrap; }
+
+    .null-pill { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 0.72rem; font-weight: 600; padding: 0.05rem 0.38rem; border-radius: 4px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .status-pill { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 0.73rem; font-weight: 600; padding: 0.05rem 0.4rem; border-radius: 5px; background: #f1f5f9; color: #334155; }
+
+    /* ==================== КАРТОЧКИ ЗАДАНИЙ И ПРОЕКТА ==================== */
+    .task-card {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 1.45rem;
+      margin: 1.1rem 0;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .task-card.bench-card   { border-left: 4px solid #f59e0b; }
+    .task-card.design-card  { border-left: 4px solid #2563eb; }
+    .task-card.bug-card     { border-left: 4px solid #ef4444; }
+    .task-card.project-card { border-left: 4px solid #7c3aed; background: #fcfbff; }
+
+    .task-card.done {
+      background: #f8fdf9;
+      border-color: #bbf7d0;
+      border-left-color: #16a34a;
+    }
+
+    .task-card.hidden { display: none; }
+
+    .task-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.55rem; }
+    .task-title-wrap { display: flex; align-items: flex-start; gap: 0.65rem; min-width: 0; }
+
+    .task-check {
+      appearance: none;
+      width: 19px;
+      height: 19px;
+      margin-top: 0.22rem;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-strong);
+      background: #ffffff;
+      cursor: pointer;
+      display: grid;
+      place-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .task-check:hover { border-color: var(--accent); }
+    .task-check:checked { background: var(--tip-border); border-color: var(--tip-border); }
+    .task-check:checked::after { content: "✓"; color: #ffffff; font-size: 0.76rem; font-weight: 800; line-height: 1; }
+
+    .task-title { font-weight: 700; color: var(--text); line-height: 1.4; font-size: 1.02rem; }
+    .task-card.done .task-title { color: var(--tip-text); }
+
+    .task-num { font-family: "JetBrains Mono", monospace; font-size: 0.8rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-border); padding: 0.08rem 0.45rem; border-radius: 6px; margin-right: 0.45rem; }
+    .task-card.done .task-num { background: var(--tip-bg); border-color: #bbf7d0; color: var(--tip-text); }
+
+    .task-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.35rem; flex-shrink: 0; }
+    .env-badge, .lvl-badge { font-size: 0.71rem; font-weight: 700; padding: 0.16rem 0.55rem; border-radius: 999px; white-space: nowrap; }
+
+    .env-pg   { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .env-ch   { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
+    .env-both { background: linear-gradient(90deg, #dbeafe 0%, #ede9fe 100%); color: #1e293b; border: 1px solid #c4b5fd; }
+
+    .lvl-sql     { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+    .lvl-bench   { background: var(--warn-bg); color: var(--warn-text); border: 1px solid #fde68a; }
+    .lvl-design  { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); }
+    .lvl-bug     { background: var(--err-bg); color: var(--err-text); border: 1px solid #fecaca; }
+    .lvl-lab     { background: var(--tip-bg); color: var(--tip-text); border: 1px solid #bbf7d0; }
+    .lvl-project { background: var(--purple-bg); color: var(--purple-text); border: 1px solid var(--purple-border); }
+    .lvl-boss    { background: #1e293b; color: #f8fafc; border: 1px solid #0f172a; }
+
+    .state-bar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0.15rem 0 0.65rem; padding: 0.28rem 0.65rem; border-radius: 8px; background: #fffbeb; border: 1px solid #fde68a; font-size: 0.8rem; color: var(--warn-text); }
+
+    .task-desc { margin: 0 0 0.55rem; font-size: 0.95rem; }
+
+    .observe-box { margin: 0.7rem 0 0.2rem; padding: 0.72rem 0.95rem; background: #ffffff; border: 1px solid var(--accent-border); border-left: 3.5px solid var(--accent); border-radius: 10px; font-size: 0.87rem; line-height: 1.55; }
+    .observe-title { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); margin-bottom: 0.3rem; }
+    .observe-box ul { margin: 0; padding-left: 1.2rem; }
+    .observe-box li { margin-bottom: 0.22rem; }
+    .observe-box li:last-child { margin-bottom: 0; }
+
+    details.solution { margin-top: 0.85rem; border-top: 1px dashed var(--border-strong); padding-top: 0.7rem; }
+    details.solution summary { cursor: pointer; font-size: 0.88rem; font-weight: 600; color: var(--accent); user-select: none; }
+    details.solution summary:hover { text-decoration: underline; }
+
+    .step-flow { margin-top: 0.8rem; display: flex; flex-direction: column; gap: 0.7rem; }
+    .step-flow .code-block { margin: 0; }
+
+    .solution-note { margin: 0.7rem 0 0; padding: 0.65rem 0.85rem; background: #ffffff; border: 1px solid var(--border); border-radius: 9px; font-size: 0.86rem; color: var(--text-body); }
+    .solution-note strong { color: var(--text); }
+
+    /* Дорожная карта Итогового проекта 6.5 */
+    .milestone-roadmap {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.55rem;
+      margin: 0.9rem 0 1.2rem;
+    }
+
+    .ms-step {
+      background: #f5f3ff;
+      border: 1px solid #ddd6fe;
+      border-radius: 10px;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.8rem;
+      line-height: 1.38;
+      color: #4c1d95;
+    }
+
+    .ms-step strong { display: block; font-size: 0.81rem; margin-bottom: 0.15rem; }
+
+    .os-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+    .os-grid .code-block { margin: 0; }
+    .os-grid .code-block pre code { font-size: 0.78rem; }
+
+    .file-link-bar { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.32rem 0.68rem; border-radius: 8px; background: var(--accent-soft); border: 1px solid var(--accent-border); color: var(--accent); font-family: "JetBrains Mono", monospace; font-size: 0.81rem; font-weight: 600; text-decoration: none; }
+    .file-link-bar:hover { background: #dbeafe; border-color: var(--accent); }
+
+    .empty-filter { display: none; text-align: center; padding: 2rem; border: 1px dashed var(--border-strong); border-radius: 12px; color: var(--muted); margin-top: 1.5rem; }
+    .empty-filter.visible { display: block; }
+
+    @media (max-width: 760px) {
+      .format-legend, .milestone-roadmap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .quirks-grid, .os-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 1rem 0.7rem 3rem; font-size: 15px; }
+      .lecture { padding: 1.5rem 1.15rem; border-radius: 12px; }
+      h1 { font-size: 1.55rem; }
+      h2 { font-size: 1.2rem; }
+      .task-head { flex-direction: column; gap: 0.45rem; }
+      .task-badges { justify-content: flex-start; }
+      .format-legend, .milestone-roadmap { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../../docker_guide.html">Гид по Docker</a>
+      </div>
+    </nav>
+
+    <!-- ==================== ШАПКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Практикум · Модуль 6</span>
+        <span class="pill pill-tip">20 инженерных заданий · DWH + Итоговый проект</span>
+        <span class="pill pill-purple">Docker: --profile mod6 (для 6.3 и 6.5)</span>
+        <span class="pill pill-neutral">PostgreSQL 16 + ClickHouse</span>
+      </div>
+
+      <h1>Практикум Data Engineer: DWH, ClickHouse, ELT и сквозной проект</h1>
+      <p class="hero-sub">
+        Гибридный формат: <strong>16 задач по архитектуре DWH, бенчмаркам и конвейерам ELT/SCD2</strong> (Уроки 6.1–6.4) + <strong>4-этапный итоговый проект курса</strong> (Урок 6.5) со сквозной переливкой <strong>PostgreSQL → ClickHouse</strong>, сверкой <strong>Data Quality</strong> и лечением инцидента на проде.
+      </p>
+
+      <div class="practice-toolbar">
+        <div>
+          <div class="progress-head">
+            <span class="progress-label">Выполнено заданий: <strong id="progress-text">0 / 20 (0%)</strong></span>
+            <button type="button" class="reset-btn" id="reset-progress">Сбросить прогресс</button>
+          </div>
+          <div class="progress-bar" style="margin-top: 0.45rem;">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="toolbar-actions">
+          <div class="filter-row" role="group" aria-label="Фильтр по урокам">
+            <span class="filter-row-label">Урок:</span>
+            <button type="button" class="filter-btn active" data-filter="all">Все (20)</button>
+            <button type="button" class="filter-btn" data-filter="todo">Невыполненные</button>
+            <button type="button" class="filter-btn" data-filter="6_1">6.1 Звезда</button>
+            <button type="button" class="filter-btn" data-filter="6_2">6.2 Партиции</button>
+            <button type="button" class="filter-btn" data-filter="6_3">6.3 ClickHouse</button>
+            <button type="button" class="filter-btn" data-filter="6_4">6.4 ELT &amp; SCD2</button>
+            <button type="button" class="filter-btn" data-filter="6_5">6.5 Проект</button>
+          </div>
+          <div class="filter-row" role="group" aria-label="Фильтр по формату">
+            <span class="filter-row-label">Формат:</span>
+            <button type="button" class="filter-btn" data-filter="tag:bench">Бенчмарки</button>
+            <button type="button" class="filter-btn" data-filter="tag:design">Дизайн &amp; ELT</button>
+            <button type="button" class="filter-btn" data-filter="tag:bugfix">Баг-фикс</button>
+            <button type="button" class="filter-btn" data-filter="tag:clickhouse">ClickHouse</button>
+            <button type="button" class="filter-btn" data-filter="tag:project">Проект 6.5</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="format-legend">
+        <div class="format-chip">
+          <strong>Бенчмарк (До/После)</strong>
+          Сравниваем планы, гранулы и сжатие в цифрах.
+        </div>
+        <div class="format-chip">
+          <strong>Дизайн &amp; ELT</strong>
+          Проектируем схемы, партиции, кодеки и конвейеры SCD2.
+        </div>
+        <div class="format-chip">
+          <strong>Баг-фикс DWH</strong>
+          Ловим Fan-out, перезапись цены и дубли SCD2.
+        </div>
+        <div class="format-chip">
+          <strong>Итоговый проект (6.5)</strong>
+          4 Milestone-этапа: мост PG → CH, DQ и авария.
+        </div>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание практикума"></nav>
+    </header>
+
+    <!-- ==================== 00. ПОДГОТОВКА СТЕНДА ==================== -->
+    <section id="sec-init" data-section-lesson="init">
+      <h2><span class="sec-num">00</span> Подготовка стенда (PG + ClickHouse), схема и чек-лист</h2>
+      <p>
+        В Модуле 6 участвуют <strong>две СУБД</strong> в общей сети Docker <code>db_net</code>:
+        <a class="file-link-bar" href="init.sql">📄 practice/module_6/init.sql</a> (<strong>PostgreSQL 16</strong>, схемы <code>m6_oltp</code>, <code>m6_star</code>, <code>m6_part</code>, <code>m6_elt</code>) и
+        <a class="file-link-bar" href="init_clickhouse.sql">📄 practice/module_6/init_clickhouse.sql</a> (<strong>ClickHouse</strong>, база <code>analytics_db</code> — для 6.3 и 6.5).
+      </p>
+
+      <h3>Шаг 1. Подними профиль <code>mod6</code> и загрузи оба скрипта</h3>
+      <div class="os-grid">
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang"><span class="db-pill db-bash">Bash</span> Linux / macOS / Git Bash</span>
+            <button class="copy-btn" type="button">Копировать</button>
+          </div>
+          <pre><code class="language-bash">docker compose --profile mod6 up -d
+
+docker exec -i course_pg_primary \
+  psql -U student -d learning_db &lt; practice/module_6/init.sql
+
+docker exec -i course_clickhouse clickhouse-client \
+  -u student --password student_pass -d analytics_db \
+  --multiquery &lt; practice/module_6/init_clickhouse.sql</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang"><span class="db-pill db-bash">PowerShell</span> Windows</span>
+            <button class="copy-btn" type="button">Копировать</button>
+          </div>
+          <pre><code class="language-powershell">docker compose --profile mod6 up -d
+
+Get-Content practice/module_6/init.sql -Raw |
+  docker exec -i course_pg_primary psql -U student -d learning_db
+
+Get-Content practice/module_6/init_clickhouse.sql -Raw |
+  docker exec -i course_clickhouse clickhouse-client `
+  -u student --password student_pass -d analytics_db --multiquery</code></pre>
+        </div>
+      </div>
+
+      <h3>Шаг 2. Консоли PostgreSQL 16 и ClickHouse (веб-UI: <code>http://localhost:8123/play</code>)</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang"><span class="db-pill db-bash">Host Bash</span> Два окна для Модуля 6</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># Окно 1: PostgreSQL 16 (выход: \q)
+docker exec -it course_pg_primary psql -U student -d learning_db
+
+# Окно 2: ClickHouse (выход: exit; или браузер http://localhost:8123/play)
+docker exec -it course_clickhouse clickhouse-client -u student --password student_pass -d analytics_db</code></pre>
+      </div>
+
+      <details class="data-preview">
+        <summary>Чек-лист готовности стенда (1 минута перед стартом: быстрая разведка таблиц PG и ClickHouse)</summary>
+        <div class="preview-body">
+          <div class="os-grid">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> Проверка m6_star, m6_part, m6_elt</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. Итоги fact_sales (10 строк, 6 заказов, 231500.00)
+SELECT COUNT(*) AS fact_rows,
+       COUNT(DISTINCT order_bk) AS orders_cnt,
+       SUM(total_amount) AS revenue
+FROM m6_star.fact_sales;
+
+-- 2. Раскладка 90 000 строк по партициям (31k / 28k / 31k)
+SELECT tableoid::regclass AS part, COUNT(*)
+FROM m6_part.fact_sales_part
+GROUP BY tableoid ORDER BY part;
+
+-- 3. Актуальный срез SCD2 (4 клиента)
+SELECT customer_sk, customer_bk, full_name, city, segment
+FROM m6_elt.dim_customer_scd2
+WHERE is_current = true ORDER BY customer_bk;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-ch">ClickHouse</span> Версия и список таблиц analytics_db</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT version() AS ch_version,
+       currentDatabase() AS db_name;
+
+SHOW TABLES;
+-- Ожидаем: m6_sales_raw, m6_sales_opt,
+-- m6_shard_kz, m6_shard_ru, m6_sales_global,
+-- m6_mart_sales, m6_mart_sales_stage</code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <h3>Архитектура стенда и схема таблиц Модуля 6</h3>
+      <div class="schema-box">
+        <div class="er-scroll">
+          <svg class="er-svg" viewBox="0 0 860 606" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Архитектура и схема таблиц Модуля 6: PostgreSQL (m6_oltp, m6_star, m6_part, m6_elt) и ClickHouse (analytics_db)">
+            <defs>
+              <filter id="cardShadow" x="-4%" y="-4%" width="108%" height="112%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.06" />
+              </filter>
+              <marker id="arrowMany" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+                <path d="M 1 1 L 10 6 L 1 11 M 10 6 L 1 6" fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </marker>
+              <marker id="tickOne" viewBox="0 0 10 12" refX="4" refY="6" markerWidth="8" markerHeight="10" orient="auto">
+                <path d="M 4 1 L 4 11" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round" />
+              </marker>
+              <marker id="arrowFlow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto">
+                <path d="M 1 2 L 10 6 L 1 10 Z" fill="#7c3aed" />
+              </marker>
+            </defs>
+
+            <rect x="12" y="12" width="526" height="582" rx="14" fill="#ffffff" stroke="#93c5fd" stroke-width="1.6" stroke-dasharray="6 4" />
+            <rect x="24" y="22" width="502" height="28" rx="8" fill="#eff6ff" />
+            <text x="36" y="40" font-size="12.5" font-weight="700" fill="#1e3a8a" font-family="JetBrains Mono, monospace">PostgreSQL 16 · pg_primary:5432 · learning_db</text>
+
+            <rect x="572" y="12" width="276" height="582" rx="14" fill="#ffffff" stroke="#c4b5fd" stroke-width="1.6" stroke-dasharray="6 4" />
+            <rect x="584" y="22" width="252" height="28" rx="8" fill="#f5f3ff" />
+            <text x="596" y="40" font-size="12" font-weight="700" fill="#4c1d95" font-family="JetBrains Mono, monospace">ClickHouse · analytics_db</text>
+
+            <path d="M 244 86 L 266 86 L 266 130 L 292 130" fill="none" stroke="#64748b" stroke-width="1.6" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <path d="M 244 166 L 292 166" fill="none" stroke="#64748b" stroke-width="1.6" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <path d="M 244 246 L 266 246 L 266 190 L 292 190" fill="none" stroke="#64748b" stroke-width="1.6" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <rect x="252" y="101" width="32" height="15" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+            <text x="268" y="112" text-anchor="middle" font-size="9" font-weight="700" fill="#334155">1:N</text>
+
+            <path d="M 244 452 L 292 452" fill="none" stroke="#64748b" stroke-width="1.6" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <rect x="251" y="434" width="34" height="15" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+            <text x="268" y="445" text-anchor="middle" font-size="9" font-weight="700" fill="#334155">1:N</text>
+
+            <path d="M 526 534 L 584 534" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowFlow)" />
+            <rect x="528" y="508" width="54" height="18" rx="5" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1" />
+            <text x="555" y="520" text-anchor="middle" font-size="9.5" font-weight="700" fill="#6d28d9" font-family="JetBrains Mono, monospace">db_net</text>
+
+            <!-- m6_star -->
+            <g filter="url(#cardShadow)">
+              <rect x="26" y="62" width="216" height="62" rx="9" fill="#ffffff" stroke="#93c5fd" stroke-width="1.4" />
+              <path d="M 26 71 Q 26 62 35 62 L 233 62 Q 242 62 242 71 L 242 86 L 26 86 Z" fill="#eff6ff" />
+              <text x="36" y="78" font-size="11.5" font-weight="700" fill="#1e3a8a" font-family="JetBrains Mono, monospace">m6_star.dim_date</text>
+              <text x="234" y="78" text-anchor="end" font-size="9.5" font-weight="600" fill="#1d4ed8">365</text>
+              <rect x="34" y="92" width="22" height="13" rx="3" fill="#dbeafe" />
+              <text x="45" y="102" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="61" y="102" font-size="10.5" fill="#0f172a" font-family="JetBrains Mono, monospace">date_sk (YYYYMMDD)</text>
+              <text x="36" y="117" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">quarter_num, is_weekend</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="26" y="134" width="216" height="64" rx="9" fill="#ffffff" stroke="#86efac" stroke-width="1.4" />
+              <path d="M 26 143 Q 26 134 35 134 L 233 134 Q 242 134 242 143 L 242 158 L 26 158 Z" fill="#f0fdf4" />
+              <text x="36" y="150" font-size="11.5" font-weight="700" fill="#14532d" font-family="JetBrains Mono, monospace">m6_star.dim_product</text>
+              <text x="234" y="150" text-anchor="end" font-size="9.5" font-weight="600" fill="#166534">5</text>
+              <rect x="34" y="164" width="22" height="13" rx="3" fill="#dbeafe" />
+              <text x="45" y="174" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="61" y="174" font-size="10.5" fill="#0f172a" font-family="JetBrains Mono, monospace">product_sk</text>
+              <rect x="136" y="164" width="22" height="13" rx="3" fill="#f3e8ff" />
+              <text x="147" y="174" text-anchor="middle" font-size="8.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="163" y="174" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">product_bk</text>
+              <text x="36" y="190" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">product_title, category_name</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="26" y="208" width="216" height="66" rx="9" fill="#ffffff" stroke="#86efac" stroke-width="1.4" />
+              <path d="M 26 217 Q 26 208 35 208 L 233 208 Q 242 208 242 217 L 242 232 L 26 232 Z" fill="#f0fdf4" />
+              <text x="36" y="224" font-size="11.5" font-weight="700" fill="#14532d" font-family="JetBrains Mono, monospace">m6_star.dim_customer</text>
+              <text x="234" y="224" text-anchor="end" font-size="9.5" font-weight="600" fill="#166534">5</text>
+              <rect x="34" y="238" width="22" height="13" rx="3" fill="#dbeafe" />
+              <text x="45" y="248" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="61" y="248" font-size="10.5" fill="#0f172a" font-family="JetBrains Mono, monospace">customer_sk</text>
+              <rect x="142" y="238" width="22" height="13" rx="3" fill="#f3e8ff" />
+              <text x="153" y="248" text-anchor="middle" font-size="8.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="169" y="248" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">_bk</text>
+              <text x="36" y="264" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">full_name, city, country</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="294" y="62" width="232" height="162" rx="9" fill="#ffffff" stroke="#fcd34d" stroke-width="1.6" />
+              <path d="M 294 71 Q 294 62 303 62 L 517 62 Q 526 62 526 71 L 526 88 L 294 88 Z" fill="#fffbeb" />
+              <text x="304" y="79" font-size="11.5" font-weight="700" fill="#78350f" font-family="JetBrains Mono, monospace">m6_star.fact_sales</text>
+              <text x="518" y="79" text-anchor="end" font-size="9.5" font-weight="600" fill="#92400e">10 строк</text>
+              <rect x="302" y="95" width="22" height="13" rx="3" fill="#dbeafe" />
+              <text x="313" y="105" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="330" y="105" font-size="11" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">sale_sk</text>
+              <text x="518" y="105" text-anchor="end" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">BIGSERIAL</text>
+              <rect x="302" y="117" width="22" height="13" rx="3" fill="#fef3c7" />
+              <text x="313" y="127" text-anchor="middle" font-size="8.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="330" y="127" font-size="10.5" fill="#0f172a" font-family="JetBrains Mono, monospace">date_sk → dim_date</text>
+              <rect x="302" y="139" width="22" height="13" rx="3" fill="#fef3c7" />
+              <text x="313" y="149" text-anchor="middle" font-size="8.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="330" y="149" font-size="10.5" fill="#0f172a" font-family="JetBrains Mono, monospace">product_sk → dim_product</text>
+              <rect x="302" y="161" width="22" height="13" rx="3" fill="#fef3c7" />
+              <text x="313" y="171" text-anchor="middle" font-size="8.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="330" y="171" font-size="10.5" fill="#0f172a" font-family="JetBrains Mono, monospace">customer_sk → dim_customer</text>
+              <line x1="302" y1="181" x2="518" y2="181" stroke="#f1f5f9" stroke-width="1" />
+              <text x="304" y="196" font-size="10.5" fill="#1e293b" font-family="JetBrains Mono, monospace">order_bk, qty, unit_price</text>
+              <text x="304" y="213" font-size="10.5" font-weight="600" fill="#92400e" font-family="JetBrains Mono, monospace">discount_amount, total_amount</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="294" y="234" width="232" height="40" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" />
+              <text x="304" y="250" font-size="10.5" font-weight="700" fill="#334155" font-family="JetBrains Mono, monospace">m6_oltp (3НФ · 7 таблиц)</text>
+              <text x="304" y="265" font-size="9.5" fill="#64748b" font-family="JetBrains Mono, monospace">orders (delivery_fee, NULL), items…</text>
+            </g>
+
+            <!-- m6_part -->
+            <g filter="url(#cardShadow)">
+              <rect x="26" y="290" width="500" height="84" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="1.4" />
+              <path d="M 26 299 Q 26 290 35 290 L 517 290 Q 526 290 526 299 L 526 314 L 26 314 Z" fill="#eff6ff" />
+              <text x="36" y="306" font-size="11.5" font-weight="700" fill="#1e3a8a" font-family="JetBrains Mono, monospace">m6_part · Партиции RANGE (90 000 строк) + MATERIALIZED VIEW</text>
+              <rect x="36" y="324" width="144" height="38" rx="6" fill="#f8fafc" stroke="#bfdbfe" stroke-width="1" />
+              <text x="108" y="340" text-anchor="middle" font-size="10" font-weight="700" fill="#1e3a8a" font-family="JetBrains Mono, monospace">fact_sales_2026_01</text>
+              <text x="108" y="354" text-anchor="middle" font-size="9.5" fill="#64748b">31 000 строк (янв)</text>
+              <rect x="188" y="324" width="144" height="38" rx="6" fill="#f8fafc" stroke="#bfdbfe" stroke-width="1" />
+              <text x="260" y="340" text-anchor="middle" font-size="10" font-weight="700" fill="#1e3a8a" font-family="JetBrains Mono, monospace">fact_sales_2026_02</text>
+              <text x="260" y="354" text-anchor="middle" font-size="9.5" fill="#64748b">28 000 строк (фев)</text>
+              <rect x="340" y="324" width="176" height="38" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1" />
+              <text x="428" y="340" text-anchor="middle" font-size="10" font-weight="700" fill="#166534" font-family="JetBrains Mono, monospace">mv_city_monthly (36)</text>
+              <text x="428" y="354" text-anchor="middle" font-size="9.5" fill="#166534">+ _2026_03 (31 000 строк)</text>
+            </g>
+
+            <!-- m6_elt -->
+            <g filter="url(#cardShadow)">
+              <rect x="26" y="390" width="216" height="106" rx="9" fill="#ffffff" stroke="#86efac" stroke-width="1.4" />
+              <path d="M 26 399 Q 26 390 35 390 L 233 390 Q 242 390 242 399 L 242 414 L 26 414 Z" fill="#f0fdf4" />
+              <text x="36" y="406" font-size="11" font-weight="700" fill="#14532d" font-family="JetBrains Mono, monospace">m6_elt.dim_customer_scd2</text>
+              <rect x="34" y="421" width="22" height="13" rx="3" fill="#dbeafe" />
+              <text x="45" y="431" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="61" y="431" font-size="10.5" fill="#0f172a" font-family="JetBrains Mono, monospace">customer_sk (6 версий)</text>
+              <rect x="34" y="442" width="22" height="13" rx="3" fill="#f3e8ff" />
+              <text x="45" y="452" text-anchor="middle" font-size="8.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="61" y="452" font-size="10" fill="#1e293b" font-family="JetBrains Mono, monospace">customer_bk (is_current)</text>
+              <text x="36" y="471" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">valid_from .. valid_to</text>
+              <text x="36" y="487" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">+ raw_customers_stage (5)</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="294" y="390" width="232" height="106" rx="9" fill="#ffffff" stroke="#fcd34d" stroke-width="1.4" />
+              <path d="M 294 399 Q 294 390 303 390 L 517 390 Q 526 390 526 399 L 526 414 L 294 414 Z" fill="#fffbeb" />
+              <text x="304" y="406" font-size="11" font-weight="700" fill="#78350f" font-family="JetBrains Mono, monospace">m6_elt.fact_sales_hist (5)</text>
+              <rect x="302" y="421" width="22" height="13" rx="3" fill="#dbeafe" />
+              <text x="313" y="431" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="330" y="431" font-size="10.5" fill="#0f172a" font-family="JetBrains Mono, monospace">order_id, order_date</text>
+              <rect x="302" y="442" width="22" height="13" rx="3" fill="#fef3c7" />
+              <text x="313" y="452" text-anchor="middle" font-size="8.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="330" y="452" font-size="10.5" fill="#0f172a" font-family="JetBrains Mono, monospace">customer_sk → scd2</text>
+              <line x1="302" y1="464" x2="518" y2="464" stroke="#f1f5f9" stroke-width="1" />
+              <text x="304" y="478" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">raw_orders (4) → dwh_orders (3)</text>
+              <rect x="478" y="468" width="36" height="13" rx="3" fill="#fee2e2" />
+              <text x="496" y="478" text-anchor="middle" font-size="8.5" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono, monospace">NULL</text>
+              <text x="304" y="491" font-size="9.5" fill="#64748b" font-family="JetBrains Mono, monospace">колонка note может быть NULL</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="26" y="510" width="500" height="68" rx="9" fill="#ffffff" stroke="#c4b5fd" stroke-width="1.6" />
+              <path d="M 26 519 Q 26 510 35 510 L 517 510 Q 526 510 526 519 L 526 534 L 26 534 Z" fill="#f5f3ff" />
+              <text x="36" y="526" font-size="11.5" font-weight="700" fill="#4c1d95" font-family="JetBrains Mono, monospace">m6_elt.export_sales_mart (шлюз → ClickHouse)</text>
+              <text x="518" y="526" text-anchor="end" font-size="9.5" font-weight="600" fill="#6d28d9">6 строк · 152 000</text>
+              <rect x="36" y="542" width="22" height="13" rx="3" fill="#dbeafe" />
+              <text x="47" y="552" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="64" y="552" font-size="10.5" fill="#0f172a" font-family="JetBrains Mono, monospace">item_bk, order_bk, order_date, city_name, segment</text>
+              <text x="36" y="569" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">Январь (3 стр., 89 000) + Февраль (3 стр., 63 000)</text>
+            </g>
+
+            <!-- ClickHouse -->
+            <g filter="url(#cardShadow)">
+              <rect x="586" y="62" width="248" height="162" rx="9" fill="#ffffff" stroke="#c4b5fd" stroke-width="1.5" />
+              <path d="M 586 71 Q 586 62 595 62 L 825 62 Q 834 62 834 71 L 834 88 L 586 88 Z" fill="#f5f3ff" />
+              <text x="596" y="79" font-size="11.5" font-weight="700" fill="#4c1d95" font-family="JetBrains Mono, monospace">m6_sales_raw / _opt</text>
+              <text x="596" y="106" font-size="10.5" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">MergeTree · 500 000 строк</text>
+              <text x="596" y="124" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">PARTITION BY toYYYYMM()</text>
+              <text x="596" y="140" font-size="10" fill="#64748b" font-family="JetBrains Mono, monospace">ORDER BY (city, sale_date)</text>
+              <line x1="596" y1="152" x2="824" y2="152" stroke="#f1f5f9" stroke-width="1" />
+              <text x="596" y="168" font-size="10" fill="#1e293b" font-family="JetBrains Mono, monospace">_raw: String + LZ4</text>
+              <text x="596" y="185" font-size="10" font-weight="600" fill="#6d28d9" font-family="JetBrains Mono, monospace">_opt: LowCardinality +</text>
+              <text x="596" y="201" font-size="10" font-weight="600" fill="#6d28d9" font-family="JetBrains Mono, monospace">      Delta / DoubleDelta / ZSTD</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="586" y="242" width="248" height="132" rx="9" fill="#ffffff" stroke="#86efac" stroke-width="1.4" />
+              <path d="M 586 251 Q 586 242 595 242 L 825 242 Q 834 242 834 251 L 834 268 L 586 268 Z" fill="#f0fdf4" />
+              <text x="596" y="259" font-size="11.5" font-weight="700" fill="#14532d" font-family="JetBrains Mono, monospace">Мини-MPP · Merge (Урок 6.3)</text>
+              <rect x="598" y="278" width="108" height="36" rx="6" fill="#f8fafc" stroke="#bbf7d0" stroke-width="1" />
+              <text x="652" y="293" text-anchor="middle" font-size="10" font-weight="700" fill="#166534" font-family="JetBrains Mono, monospace">m6_shard_kz</text>
+              <text x="652" y="307" text-anchor="middle" font-size="9" fill="#64748b">375 000 строк</text>
+              <rect x="714" y="278" width="108" height="36" rx="6" fill="#f8fafc" stroke="#bbf7d0" stroke-width="1" />
+              <text x="768" y="293" text-anchor="middle" font-size="10" font-weight="700" fill="#166534" font-family="JetBrains Mono, monospace">m6_shard_ru</text>
+              <text x="768" y="307" text-anchor="middle" font-size="9" fill="#64748b">125 000 строк</text>
+              <rect x="598" y="326" width="224" height="36" rx="6" fill="#dcfce7" stroke="#86efac" stroke-width="1" />
+              <text x="710" y="342" text-anchor="middle" font-size="10.5" font-weight="700" fill="#14532d" font-family="JetBrains Mono, monospace">m6_sales_global (Merge)</text>
+              <text x="710" y="355" text-anchor="middle" font-size="9" fill="#166534">^m6_shard_ · колонка _table</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="586" y="392" width="248" height="186" rx="9" fill="#ffffff" stroke="#fcd34d" stroke-width="1.6" />
+              <path d="M 586 401 Q 586 392 595 392 L 825 392 Q 834 392 834 401 L 834 418 L 586 418 Z" fill="#fffbeb" />
+              <text x="596" y="409" font-size="11.5" font-weight="700" fill="#78350f" font-family="JetBrains Mono, monospace">Витрина OLAP (Проект 6.5)</text>
+              <rect x="598" y="428" width="224" height="50" rx="7" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" />
+              <text x="608" y="445" font-size="10.5" font-weight="700" fill="#334155" font-family="JetBrains Mono, monospace">m6_mart_sales_stage</text>
+              <text x="608" y="460" font-size="9.5" fill="#64748b">Буфер приёма из postgresql()</text>
+              <text x="608" y="472" font-size="9.5" fill="#64748b">Стартово: 0 строк</text>
+              <text x="710" y="494" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7c3aed" font-family="JetBrains Mono, monospace">↓ REPLACE PARTITION ↓</text>
+              <rect x="598" y="502" width="224" height="64" rx="7" fill="#fffbeb" stroke="#fcd34d" stroke-width="1.2" />
+              <text x="608" y="519" font-size="10.5" font-weight="700" fill="#78350f" font-family="JetBrains Mono, monospace">m6_mart_sales (MergeTree)</text>
+              <text x="608" y="534" font-size="9.5" fill="#92400e">PARTITION BY toYYYYMM(order_date)</text>
+              <text x="608" y="548" font-size="9.5" fill="#92400e">Стартово: Янв (3 стр., 89 000)</text>
+              <text x="608" y="560" font-size="9.5" font-weight="700" fill="#b91c1c">DQ на старте: MISMATCH ✗</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="er-legend">
+          <span class="er-legend-item"><span class="er-tag er-tag-pk">PK</span> Первичный ключ</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-fk">FK</span> Внешний ключ</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-uk">UK</span> Уникальный (в т.ч. частичный SCD2)</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-null">NULL</span> Может быть пустым</span>
+        </div>
+
+        <div class="quirks-grid">
+          <div class="quirk-chip">
+            <strong>Ловушки <code>m6_oltp</code> / <code>m6_star</code>:</strong> заказ <code>1004</code> отменён; клиент <code>id=5</code> без заказов; в чеке <code>1001</code> старая цена <code>32 000</code> против каталожной <code>35 000</code>.
+          </div>
+          <div class="quirk-chip">
+            <strong>Заготовки <code>m6_part</code>:</strong> 90 000 строк (янв 31k / фев 28k / мар 31k); специально нет апреля, нет <code>DEFAULT</code> и нет <code>UNIQUE INDEX</code> на <code>mv_city_monthly</code>.
+          </div>
+          <div class="quirk-chip">
+            <strong>История <code>m6_elt</code>:</strong> <code>dwh_orders</code> отстаёт от <code>raw_orders</code> (плюс <code>NULL</code> в <code>note</code>); в <code>dim_customer_scd2</code> 6 версий (Янв–Фев) и ждёт снимок <code>2026-03-01</code>.
+          </div>
+          <div class="quirk-chip">
+            <strong>Интрига ClickHouse:</strong> <code>m6_sales_raw</code> vs <code>_opt</code> по 500k строк; в <code>m6_mart_sales</code> только Январь (89 000), а в PG уже 6 строк (152 000).
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 01. УРОК 6.1 ==================== -->
+    <section id="sec-6-1" data-section-lesson="6_1">
+      <h2><span class="sec-num">6.1</span> OLTP vs OLAP и размерное моделирование «Звезда» (4 задания)</h2>
+      <p>
+        Работаем в <strong>PostgreSQL 16</strong> (схемы <code>m6_oltp</code> и <code>m6_star</code>): строим аналитические срезы по «Звезде», ловим две классические ловушки DWH (перезапись цены и <em>Fan-out</em>) и проектируем собственное расширение витрины.
+      </p>
+
+      <!-- 6.1.1 -->
+      <div class="task-card" data-task-id="6_1_1" data-lesson="6_1" data-tags="dwh">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.1.1" />
+            <div class="task-title"><span class="task-num">6.1.1</span> Три базовых отчёта по «Звезде»: Q1, выходные vs будни и клиенты без продаж</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-sql">DWH · SQL</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Напиши 3 аналитических запроса по схеме <code>m6_star</code>:
+          1) <strong>Отчёт директора за Q1 2026:</strong> выручка (<code>revenue</code>) и штуки (<code>items_sold</code>) по <code>city_name</code> и <code>category_name</code> (сортировка по <code>revenue DESC</code>).
+          2) <strong>Выходные против будней (2026):</strong> подпись <code>'Выходные'</code> / <code>'Будни'</code>, штуки, выручка и средний чек позиции <code>avg_line_amount</code> (до 2 знаков).
+          3) <strong>Покупатели без оплаченных продаж:</strong> найди в <code>dim_customer</code> всех клиентов без строк в <code>fact_sales</code> (<code>LEFT JOIN</code>).
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Ожидаемые контрольные цифры</div>
+          <ul>
+            <li>Q1: 7 строк, лидер — Москва / Электроника (<code>70000.00</code>); апрельский заказ №1007 не попадает.</li>
+            <li>Выходные приносят <code>178000.00</code> (9 шт.), будни — <code>53500.00</code> (4 шт.).</li>
+            <li>Без оплаченных продаж 2 клиента: Данияр Алимов (заказ 1004 был отменён) и Алина Нурланова.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать решение (3 запроса)</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> Отчёты по m6_star</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. Отчёт Q1 2026: города × категории
+SELECT dc.city_name, dp.category_name,
+       SUM(f.qty) AS items_sold, SUM(f.total_amount) AS revenue
+FROM m6_star.fact_sales f
+JOIN m6_star.dim_date     dd ON dd.date_sk     = f.date_sk
+JOIN m6_star.dim_product  dp ON dp.product_sk  = f.product_sk
+JOIN m6_star.dim_customer dc ON dc.customer_sk = f.customer_sk
+WHERE dd.year_num = 2026 AND dd.quarter_num = 1
+GROUP BY dc.city_name, dp.category_name
+ORDER BY revenue DESC;
+
+-- 2. Выходные vs будни
+SELECT CASE WHEN dd.is_weekend THEN 'Выходные' ELSE 'Будни' END AS day_type,
+       SUM(f.qty) AS total_qty, SUM(f.total_amount) AS revenue,
+       ROUND(AVG(f.total_amount), 2) AS avg_line_amount
+FROM m6_star.fact_sales f
+JOIN m6_star.dim_date dd ON dd.date_sk = f.date_sk
+WHERE dd.year_num = 2026
+GROUP BY dd.is_weekend
+ORDER BY revenue DESC;
+
+-- 3. Клиенты без оплаченных покупок
+SELECT dc.customer_bk, dc.full_name, dc.city_name, dc.segment
+FROM m6_star.dim_customer dc
+LEFT JOIN m6_star.fact_sales f ON f.customer_sk = dc.customer_sk
+WHERE f.sale_sk IS NULL
+ORDER BY dc.customer_bk;</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- 6.1.2 -->
+      <div class="task-card bug-card" data-task-id="6_1_2" data-lesson="6_1" data-tags="bugfix">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.1.2" />
+            <div class="task-title"><span class="task-num">6.1.2</span> Баг-фикс DWH: ловушка перезаписи цены и Fan-out на доставке (14 500 vs 9 000)</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-bug">Баг-фикс</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Финансовый директор заметил, что аналитик завысил январскую выручку на <code>3000.00</code>, а общую стоимость доставки оплаченных заказов посчитал как <code>14 500.00</code> вместо реальных <code>9 000.00</code>. Вот его проблемный запрос по <code>m6_oltp</code>:
+        </p>
+        <div class="code-block bug-code">
+          <div class="code-header"><span class="code-lang">❌ ПРОБЛЕМНЫЙ ОТЧЁТ (Fan-out при смешивании зёрен + текущая цена каталога)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-sql">SELECT
+    COUNT(DISTINCT o.id)                       AS paid_orders_cnt,
+    SUM(o.delivery_fee)                        AS wrong_delivery_fee,  -- 14 500 вместо 9 000!
+    SUM(oi.qty * p.current_price - oi.discount) AS wrong_revenue       -- считает по новой цене каталога!
+FROM m6_oltp.orders o
+JOIN m6_oltp.order_items oi ON oi.order_id = o.id
+JOIN m6_oltp.products    p  ON p.id = oi.product_id
+WHERE o.status = 'paid';</code></pre>
+        </div>
+        <p class="task-desc">
+          <strong>Задача:</strong>
+          1) найди конкретные строки, где <code>fact_sales.unit_price &lt;&gt; m6_oltp.products.current_price</code>, и посчитай величину искажения (<code>revenue_distortion</code>);
+          2) перепиши запрос по <code>m6_oltp</code> через <strong>CTE</strong> (сначала сверни <code>order_items</code> до зерна <code>order_id</code> по <code>price_at_purchase</code>), чтобы получить честные: <code>6</code> заказов, доставка <code>9000.00</code>, товары <code>231500.00</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Почему <code>SUM(o.delivery_fee)</code> в исходном запросе вырос с <code>9000.00</code> до <code>14500.00</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать расследование цены и исправленный запрос без Fan-out</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> 1) Поиск искажения цены · 2) Исправленный CTE без Fan-out</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. Какие позиции исказились бы при расчёте по current_price (заказ 1001: +3000.00!)
+SELECT f.order_bk, dp.product_title, f.unit_price, p.current_price,
+       (p.current_price - f.unit_price) * f.qty AS revenue_distortion
+FROM m6_star.fact_sales f
+JOIN m6_star.dim_product dp ON dp.product_sk = f.product_sk
+JOIN m6_oltp.products    p  ON p.id = dp.product_bk
+WHERE f.unit_price &lt;&gt; p.current_price;
+
+-- 2. Честный отчёт без Fan-out: сначала сворачиваем order_items до уровня order_id!
+WITH items_by_order AS (
+    SELECT order_id,
+           SUM(qty * price_at_purchase - discount) AS order_items_sum
+    FROM m6_oltp.order_items
+    GROUP BY order_id
+)
+SELECT COUNT(*)               AS paid_orders_cnt,
+       SUM(o.delivery_fee)    AS total_delivery_fee,   -- ровно 9000.00!
+       SUM(i.order_items_sum) AS total_items_revenue   -- ровно 231500.00!
+FROM m6_oltp.orders o
+JOIN items_by_order i ON i.order_id = o.id
+WHERE o.status = 'paid';</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Причина Fan-out:</strong> <code>orders</code> имеет зерно «1 заказ», а <code>order_items</code> — «1 товар в заказе». При прямом JOIN заказы с 2 позициями размножили строку <code>delivery_fee</code> вдвое.</p>
+        </details>
+      </div>
+
+      <!-- 6.1.3 -->
+      <div class="task-card design-card" data-task-id="6_1_3" data-lesson="6_1" data-tags="design">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.1.3" />
+            <div class="task-title"><span class="task-num">6.1.3</span> Проектирование: расширь «Звезду» измерением «Канал продаж»</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-design">Дизайн · DDL</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          <strong>Бизнес-требование:</strong> нужно анализировать продажи по 3 каналам (веб-сайт <code>web</code>, приложение <code>mobile</code>, розница <code>store</code>).
+          Спроектируй в схеме <code>m6_star</code> пару таблиц — измерение <code>dim_channel</code> (суррогатный PK + уникальный бизнес-код + название) и таблицу фактов <code>fact_channel_sales</code> (ссылка на суррогатный ключ канала + положительная сумма чека). Загрузи данные в правильном порядке DWH (3 канала и 5 продаж) и выведи по каждому каналу число продаж и средний чек.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Архитектурный чек-лист</div>
+          <ul>
+            <li>В таблице фактов ссылка идёт на суррогатный ключ <code>channel_sk</code>, а не на строковый код <code>'web'</code>.</li>
+            <li>Сначала наполняются измерения, и только затем — таблица фактов.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать эталонную реализацию DDL + DML</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> Измерение + Факты в схеме m6_star</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">DROP TABLE IF EXISTS m6_star.fact_channel_sales;
+DROP TABLE IF EXISTS m6_star.dim_channel;
+
+CREATE TABLE m6_star.dim_channel (
+    channel_sk   SERIAL PRIMARY KEY,
+    channel_code TEXT NOT NULL UNIQUE,
+    channel_name TEXT NOT NULL
+);
+
+CREATE TABLE m6_star.fact_channel_sales (
+    sale_sk      SERIAL PRIMARY KEY,
+    channel_sk   INT NOT NULL REFERENCES m6_star.dim_channel(channel_sk),
+    order_amount NUMERIC(10, 2) NOT NULL CHECK (order_amount &gt; 0)
+);
+
+-- Порядок загрузки DWH: сначала измерения, затем факты!
+INSERT INTO m6_star.dim_channel (channel_code, channel_name) VALUES
+    ('web', 'Веб-сайт'), ('mobile', 'Мобильное приложение'), ('store', 'Розничный магазин');
+
+INSERT INTO m6_star.fact_channel_sales (channel_sk, order_amount) VALUES
+    (1, 25000.00), (1, 35000.00), (2, 18000.00), (2, 12000.00), (3, 42000.00);
+
+SELECT ch.channel_name, COUNT(*) AS sales_cnt, ROUND(AVG(f.order_amount), 2) AS avg_check
+FROM m6_star.fact_channel_sales f
+JOIN m6_star.dim_channel ch ON ch.channel_sk = f.channel_sk
+GROUP BY ch.channel_name
+ORDER BY avg_check DESC;</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- 6.1.4 -->
+      <div class="task-card design-card" data-task-id="6_1_4" data-lesson="6_1" data-tags="design">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.1.4" />
+            <div class="task-title"><span class="task-num">6.1.4</span> Плоская BI-витрина поверх «Звезды» (v_sales_flat)</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-design">Дизайн · BI</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Аналитики в BI-системе (Metabase / Power BI) не хотят каждый раз писать 3 <code>JOIN</code> вручную. Создай представление <code>m6_star.v_sales_flat</code>, денормализующее <code>fact_sales</code>, <code>dim_date</code>, <code>dim_product</code> и <code>dim_customer</code> в одну широкую таблицу, и построй к ней отчёт <strong>без единого JOIN</strong>: выручка и штуки по <code>country_name</code> и <code>segment</code> за 2026 год.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> VIEW m6_star.v_sales_flat + отчёт без JOIN</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">CREATE OR REPLACE VIEW m6_star.v_sales_flat AS
+SELECT
+    f.sale_sk, f.order_bk, dd.full_date, dd.year_num, dd.quarter_num,
+    dc.country_name, dc.city_name, dc.segment,
+    dp.category_name, dp.product_title, f.qty, f.total_amount
+FROM m6_star.fact_sales f
+JOIN m6_star.dim_date     dd ON dd.date_sk     = f.date_sk
+JOIN m6_star.dim_product  dp ON dp.product_sk  = f.product_sk
+JOIN m6_star.dim_customer dc ON dc.customer_sk = f.customer_sk;
+
+SELECT country_name, segment, SUM(qty) AS total_qty, SUM(total_amount) AS revenue
+FROM m6_star.v_sales_flat
+WHERE year_num = 2026
+GROUP BY country_name, segment
+ORDER BY revenue DESC;</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 02. УРОК 6.2 ==================== -->
+    <section id="sec-6-2" data-section-lesson="6_2">
+      <h2><span class="sec-num">6.2</span> Партиционирование и Materialized View в PostgreSQL (4 задания)</h2>
+      <p>
+        Работаем со схемой <code>m6_part</code> (90 000 строк в <code>fact_sales_part</code> и витрина <code>mv_city_monthly</code>): замеряем <strong>Partition Pruning</strong>, управляем партициями без простоя и ускоряем отчёты через <code>REFRESH MATERIALIZED VIEW CONCURRENTLY</code>.
+      </p>
+
+      <!-- 6.2.1 -->
+      <div class="task-card bench-card" data-task-id="6_2_1" data-lesson="6_2" data-tags="bench">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.2.1" />
+            <div class="task-title"><span class="task-num">6.2.1</span> Бенчмарк Partition Pruning: полуинтервал дат против EXTRACT(MONTH)</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-bench">Бенчмарк</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Запусти <code>EXPLAIN (ANALYZE, COSTS OFF)</code> для подсчёта февральской выручки по городам в <code>m6_part.fact_sales_part</code> двумя способами:
+          <strong>Вариант А (правильный):</strong> <code>WHERE sale_date &gt;= DATE '2026-02-01' AND sale_date &lt; DATE '2026-03-01'</code>.
+          <strong>Вариант Б (антипаттерн):</strong> <code>WHERE EXTRACT(MONTH FROM sale_date) = 2</code>.
+          Сравни планы выполнения, число просканированных партиций и <code>Execution Time</code>!
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Почему оборачивание ключа партиционирования в функцию <code>EXTRACT(...)</code> заставляет планировщик читать все 3 партиции (узел <code>Append</code>)?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать запросы и таблицу сравнения «До / После»</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> Вариант А (Pruning работает) vs Вариант Б (Pruning сломан)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- Вариант А: SARGable-полуинтервал -&gt; сканируется ТОЛЬКО fact_sales_2026_02!
+EXPLAIN (ANALYZE, COSTS OFF)
+SELECT city_name, SUM(total_amount) AS feb_revenue
+FROM m6_part.fact_sales_part
+WHERE sale_date &gt;= DATE '2026-02-01' AND sale_date &lt; DATE '2026-03-01'
+GROUP BY city_name ORDER BY feb_revenue DESC;
+
+-- Вариант Б: функция вокруг ключа -&gt; Append по всем 3 партициям (90 000 строк)!
+EXPLAIN (ANALYZE, COSTS OFF)
+SELECT city_name, SUM(total_amount) AS feb_revenue
+FROM m6_part.fact_sales_part
+WHERE EXTRACT(MONTH FROM sale_date) = 2
+GROUP BY city_name ORDER BY feb_revenue DESC;</code></pre>
+            </div>
+          </div>
+          <div class="table-wrapper" style="margin-bottom: 0;">
+            <table>
+              <thead><tr><th>Запрос</th><th>План выполнения</th><th>Просканировано строк</th><th>Partition Pruning</th></tr></thead>
+              <tbody>
+                <tr><td><code>sale_date &gt;= ... AND &lt; ...</code></td><td>1× <code>Seq Scan on fact_sales_2026_02</code></td><td><strong>28 000</strong></td><td>✓ Отсечены янв и мар</td></tr>
+                <tr><td><code>EXTRACT(MONTH FROM sale_date) = 2</code></td><td><code>Append</code> → 3× <code>Seq Scan</code></td><td>90 000</td><td>✗ Сломан функцией</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+
+      <!-- 6.2.2 -->
+      <div class="task-card" data-task-id="6_2_2" data-lesson="6_2" data-tags="lab">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.2.2" />
+            <div class="task-title"><span class="task-num">6.2.2</span> Жизненный цикл партиций: ошибка «1 апреля», DEFAULT и мгновенная архивация DETACH</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-lab">Лаба</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Пройди 3 обязательных операции обслуживания партиционированной таблицы <code>m6_part.fact_sales_part</code>:
+          1) попробуй вставить продажу за <code>'2026-04-05'</code> и поймай ошибку <code>no partition of relation found for row</code>;
+          2) создай апрельскую партицию <code>fact_sales_2026_04</code> и страховочную <code>fact_sales_default</code> (<code>DEFAULT</code>), затем повтори вставку;
+          3) отцепи январь без блокировки читателей командой <code>DETACH PARTITION ... CONCURRENTLY</code> (вне транзакции!) и убедись, что 31 000 строк января остались целы в самостоятельной архивной таблице.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Почему <code>DETACH PARTITION</code> на 100 млн строк выполняется за миллисекунды, в отличие от <code>DELETE WHERE sale_date &lt; ...</code>?</li>
+            <li>Если захочешь вернуть январь перед следующим заданием, просто выполни <code>ATTACH PARTITION</code> (показано в шаге <code>↺ Cleanup</code>).</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговое решение + возврат партиции</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> 1) Ошибка 1 апреля → Создание 2026_04 + DEFAULT → 2) DETACH CONCURRENTLY</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. Упадёт: no partition of relation found for row
+INSERT INTO m6_part.fact_sales_part (sale_date, city_name, category, qty, total_amount)
+VALUES ('2026-04-05', 'Алматы', 'Мерч', 2, 44000.00);
+
+-- 2. Добавляем апрель и страховку DEFAULT
+CREATE TABLE m6_part.fact_sales_2026_04
+    PARTITION OF m6_part.fact_sales_part FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
+CREATE TABLE m6_part.fact_sales_default
+    PARTITION OF m6_part.fact_sales_part DEFAULT;
+
+INSERT INTO m6_part.fact_sales_part (sale_date, city_name, category, qty, total_amount)
+VALUES ('2026-04-05', 'Алматы', 'Мерч', 2, 44000.00);
+
+-- 3. Мгновенная архивация января (выполнять вне BEGIN ... COMMIT!)
+ALTER TABLE m6_part.fact_sales_part
+    DETACH PARTITION m6_part.fact_sales_2026_01 CONCURRENTLY;
+
+SELECT tableoid::regclass AS part, COUNT(*) FROM m6_part.fact_sales_part GROUP BY tableoid ORDER BY part;
+SELECT COUNT(*) AS archived_jan_rows FROM m6_part.fact_sales_2026_01;</code></pre>
+            </div>
+
+            <div class="code-block cleanup-code">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> ↺ Опционально: прицепить январь обратно перед 6.2.3</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">ALTER TABLE m6_part.fact_sales_part
+    ATTACH PARTITION m6_part.fact_sales_2026_01
+    FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Вывод:</strong> <code>DETACH</code> лишь меняет метаданные наследования за O(1), не генерирует миллионы мёртвых строк и не требует <code>VACUUM</code>.</p>
+        </details>
+      </div>
+
+      <!-- 6.2.3 -->
+      <div class="task-card bench-card" data-task-id="6_2_3" data-lesson="6_2" data-tags="bench">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.2.3" />
+            <div class="task-title"><span class="task-num">6.2.3</span> Бенчмарк витрины: сырая партиция vs MATERIALIZED VIEW + REFRESH CONCURRENTLY</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-bench">Бенчмарк</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          1) Запусти <code>EXPLAIN (ANALYZE, COSTS OFF)</code> для февральской выручки по городам из <code>m6_part.mv_city_monthly</code> и сравни время с <code>6.2.1</code> (сырая партиция).
+          2) Вставь новую апрельскую продажу (<code>'2026-04-10', 'Астана', 'Электроника', 1, 35000.00</code>), попробуй выполнить <code>REFRESH MATERIALIZED VIEW CONCURRENTLY m6_part.mv_city_monthly;</code> — поймай ошибку отсутствия уникального индекса, создай нужный <code>UNIQUE INDEX</code> и обнови витрину без блокировки читателей!
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Какие 3 колонки образуют уникальный ключ строки в <code>mv_city_monthly</code>?</li>
+            <li>Почему обычный <code>REFRESH MATERIALIZED VIEW</code> (без <code>CONCURRENTLY</code>) опасен для живого дашборда?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать бенчмарк и настройку REFRESH CONCURRENTLY</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> Замер MV + UNIQUE INDEX + REFRESH CONCURRENTLY</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. Замер скорости чтения из готовой витрины (всего 12 агрегированных строк вместо 28 000!)
+EXPLAIN (ANALYZE, COSTS OFF)
+SELECT city_name, SUM(total_revenue) AS feb_revenue
+FROM m6_part.mv_city_monthly
+WHERE month_start = DATE '2026-02-01'
+GROUP BY city_name ORDER BY feb_revenue DESC;
+
+-- 2. Добавляем апрельскую продажу (если 6.2.2 не делал — создай сперва fact_sales_2026_04)
+CREATE TABLE IF NOT EXISTS m6_part.fact_sales_2026_04
+    PARTITION OF m6_part.fact_sales_part FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
+
+INSERT INTO m6_part.fact_sales_part (sale_date, city_name, category, qty, total_amount)
+VALUES ('2026-04-10', 'Астана', 'Электроника', 1, 35000.00);
+
+-- 3. Без UNIQUE INDEX CONCURRENTLY упадёт! Создаём уникальный индекс без WHERE:
+CREATE UNIQUE INDEX IF NOT EXISTS idx_m6_mv_city_monthly_uniq
+    ON m6_part.mv_city_monthly (month_start, city_name, category);
+
+REFRESH MATERIALIZED VIEW CONCURRENTLY m6_part.mv_city_monthly;
+
+SELECT month_start, city_name, category, total_qty, total_revenue
+FROM m6_part.mv_city_monthly WHERE month_start = DATE '2026-04-01' ORDER BY total_revenue DESC;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Разница:</strong> обычный <code>REFRESH</code> вешает <code>ACCESS EXCLUSIVE LOCK</code> (дашборд встаёт до конца пересчёта). <code>CONCURRENTLY</code> строит дифф по <code>UNIQUE INDEX</code> и позволяет читать старую версию витрины во время обновления.</p>
+        </details>
+      </div>
+
+      <!-- 6.2.4 -->
+      <div class="task-card design-card" data-task-id="6_2_4" data-lesson="6_2" data-tags="design">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.2.4" />
+            <div class="task-title"><span class="task-num">6.2.4</span> Проектирование: партиционирование по странам (PARTITION BY LIST)</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-design">Дизайн · DDL</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Спроектируй в схеме <code>m6_part</code> таблицу заказов <code>lab_list_orders</code> с партиционированием <code>PARTITION BY LIST (country_code)</code> и тремя партициями: для <code>'KZ'</code>, для <code>'RU'</code> и <code>DEFAULT</code> для прочих стран. Вставь 4 заказа (<code>KZ</code>, <code>KZ</code>, <code>RU</code>, <code>DE</code>) и проверь через <code>tableoid::regclass</code>, что <code>'DE'</code> автоматически попал в <code>DEFAULT</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Ограничение PostgreSQL</div>
+          <ul>
+            <li>Любой <code>PRIMARY KEY</code> / <code>UNIQUE</code> на партиционированной таблице <strong>обязан включать ключ партиционирования</strong> (<code>PRIMARY KEY (order_id, country_code)</code>).</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать эталонное решение</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> PARTITION BY LIST + проверка tableoid</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">DROP TABLE IF EXISTS m6_part.lab_list_orders CASCADE;
+
+CREATE TABLE m6_part.lab_list_orders (
+    order_id     INT NOT NULL,
+    country_code TEXT NOT NULL,
+    amount       NUMERIC(10, 2) NOT NULL,
+    PRIMARY KEY (order_id, country_code)
+) PARTITION BY LIST (country_code);
+
+CREATE TABLE m6_part.lab_list_orders_kz    PARTITION OF m6_part.lab_list_orders FOR VALUES IN ('KZ');
+CREATE TABLE m6_part.lab_list_orders_ru    PARTITION OF m6_part.lab_list_orders FOR VALUES IN ('RU');
+CREATE TABLE m6_part.lab_list_orders_other PARTITION OF m6_part.lab_list_orders DEFAULT;
+
+INSERT INTO m6_part.lab_list_orders VALUES
+    (1, 'KZ', 15000.00), (2, 'KZ', 22000.00), (3, 'RU', 18000.00), (4, 'DE', 30000.00);
+
+SELECT tableoid::regclass AS partition_name, COUNT(*) AS rows_count, SUM(amount) AS total_amount
+FROM m6_part.lab_list_orders GROUP BY tableoid ORDER BY partition_name;</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 03. УРОК 6.3 ==================== -->
+    <section id="sec-6-3" data-section-lesson="6_3">
+      <h2><span class="sec-num">6.3</span> Колончатое хранение и ClickHouse: сжатие, гранулы и MPP (4 задания)</h2>
+      <p>
+        Переходим в <strong>ClickHouse</strong> (база <code>analytics_db</code> — через <code>clickhouse-client</code> или <code>http://localhost:8123/play</code>). Измеряем силу колончатого сжатия и разреженного индекса на 500 000 строках и пробуем мини-MPP.
+      </p>
+
+      <!-- 6.3.1 -->
+      <div class="task-card" data-task-id="6_3_1" data-lesson="6_3" data-tags="dwh clickhouse">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.3.1" />
+            <div class="task-title"><span class="task-num">6.3.1</span> Векторная аналитика по 500 000 строкам: агрегаты, uniqExact и 95-й перцентиль</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-ch">ClickHouse</span>
+            <span class="lvl-badge lvl-sql">OLAP · SQL</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Выполни два аналитических запроса по полумиллиону продаж:
+          1) по <code>m6_sales_raw</code> — по каждому городу выведи <code>count()</code>, <code>sum(qty)</code>, <code>sum(amount)</code> и средний чек <code>round(avg(amount), 2)</code>;
+          2) по <code>m6_sales_opt</code> за февраль 2026 (<code>'Алматы'</code> и <code>'Костанай'</code>) — число заказов, уникальных дней (<code>uniqExact(sale_date)</code>), выручку и 95-й перцентиль чека (<code>quantile(0.95)(amount)</code>).
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Что наблюдать в выводе консоли</div>
+          <ul>
+            <li>Посмотри на строку <code>Processed ... MB</code> — ClickHouse вообще не читал с диска тяжёлую колонку <code>comment</code>!</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать решение (ClickHouse SQL)</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-ch">ClickHouse</span> Агрегаты и векторные перцентили</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. 500 000 строк за миллисекунды (comment не читается с диска!)
+SELECT city, count() AS orders_cnt, sum(qty) AS items_sold,
+       sum(amount) AS total_revenue, round(avg(amount), 2) AS avg_check
+FROM m6_sales_raw
+GROUP BY city ORDER BY total_revenue DESC;
+
+-- 2. Векторные функции uniqExact + quantile(0.95) за февраль
+SELECT city, count() AS orders_cnt, uniqExact(sale_date) AS active_days,
+       sum(amount) AS total_revenue, quantile(0.95)(amount) AS p95_check
+FROM m6_sales_opt
+WHERE city IN ('Алматы', 'Костанай')
+  AND sale_date &gt;= toDate('2026-02-01') AND sale_date &lt; toDate('2026-03-01')
+GROUP BY city ORDER BY city;</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- 6.3.2 -->
+      <div class="task-card bench-card" data-task-id="6_3_2" data-lesson="6_3" data-tags="bench clickhouse">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.3.2" />
+            <div class="task-title"><span class="task-num">6.3.2</span> Бенчмарк сжатия и пачек: m6_sales_raw vs m6_sales_opt в system.columns и system.parts</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-ch">ClickHouse</span>
+            <span class="lvl-badge lvl-bench">Бенчмарк</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Загляни в системные каталоги ClickHouse тремя запросами:
+          1) сравни общий вес на диске и коэффициент сжатия (<code>compress_ratio</code>) таблиц <code>m6_sales_raw</code> и <code>m6_sales_opt</code> через <code>system.columns</code>;
+          2) сделай рентген по каждой колонке <code>m6_sales_opt</code> (отсортируй по <code>data_compressed_bytes DESC</code>) — какая одна колонка занимает почти весь диск?
+          3) посмотри в <code>system.parts</code> (<code>active = 1</code>) разбивку <code>m6_sales_opt</code> по месячным партициям (<code>202601</code>, <code>202602</code>, <code>202603</code>).
+        </p>
+        <details class="solution">
+          <summary>Показать запросы и эталонные наблюдения</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-ch">ClickHouse</span> system.columns (таблицы + колонки) и system.parts</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. Сравнение m6_sales_raw vs m6_sales_opt
+SELECT table,
+       formatReadableSize(sum(data_uncompressed_bytes)) AS raw_size,
+       formatReadableSize(sum(data_compressed_bytes))   AS disk_size,
+       round(sum(data_uncompressed_bytes) / sum(data_compressed_bytes), 1) AS compress_ratio
+FROM system.columns
+WHERE database = currentDatabase() AND table IN ('m6_sales_raw', 'm6_sales_opt')
+GROUP BY table ORDER BY table;
+
+-- 2. Рентген колонок m6_sales_opt
+SELECT name, type,
+       formatReadableSize(data_uncompressed_bytes) AS raw_size,
+       formatReadableSize(data_compressed_bytes)   AS disk_size,
+       round(data_uncompressed_bytes / nullIf(data_compressed_bytes, 0), 1) AS ratio
+FROM system.columns
+WHERE database = currentDatabase() AND table = 'm6_sales_opt'
+ORDER BY data_compressed_bytes DESC;
+
+-- 3. Активные партиции и пачки (parts)
+SELECT partition, count() AS parts_cnt, sum(rows) AS rows_cnt,
+       formatReadableSize(sum(bytes_on_disk)) AS disk_size
+FROM system.parts
+WHERE database = currentDatabase() AND table = 'm6_sales_opt' AND active = 1
+GROUP BY partition ORDER BY partition;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Что увидишь:</strong> благодаря <code>LowCardinality</code> и кодекам <code>Delta / DoubleDelta / ZSTD(3)</code> таблица <code>m6_sales_opt</code> в 2–3 раза компактнее <code>_raw</code> (коэффициент сжатия ~15x), причём <code>city</code> и <code>sale_date</code> весят считаные килобайты, а ~90% диска занимает уникальный строковый <code>comment</code>.</p>
+        </details>
+      </div>
+
+      <!-- 6.3.3 -->
+      <div class="task-card bench-card" data-task-id="6_3_3" data-lesson="6_3" data-tags="bench clickhouse">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.3.3" />
+            <div class="task-title"><span class="task-num">6.3.3</span> Бенчмарк разреженного индекса (EXPLAIN indexes = 1): порядок колонок в ORDER BY решает всё</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-ch">ClickHouse</span>
+            <span class="lvl-badge lvl-bench">Бенчмарк</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          1) На <code>m6_sales_opt</code> (<code>ORDER BY (city, sale_date)</code>) сравни <code>EXPLAIN indexes = 1</code> для <code>WHERE city = 'Алматы'</code> vs <code>WHERE category = 'Мерч'</code>.
+          2) Создай две таблицы по <strong>200 000 строк</strong> через <code>numbers(200000)</code>: <code>lab_orders_bad</code> с <code>ORDER BY (order_id, status)</code> и <code>lab_orders_good</code> с <code>ORDER BY (status, order_id)</code> (статусы: 10% <code>'refunded'</code>, 10% <code>'cancelled'</code>, 80% <code>'paid'</code>) и сравни строку <code>Granules: X/Y</code> для <code>WHERE status = 'refunded'</code>!
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Золотое правило MergeTree</div>
+          <ul>
+            <li>В начало <code>ORDER BY</code> всегда ставь часто фильтруемые колонки с <strong>низкой кардинальностью</strong> (мало уникальных значений), а монотонный ID — в конец.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать дуэль ORDER BY и таблицу сравнения гранул</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-ch">ClickHouse</span> EXPLAIN indexes = 1 на m6_sales_opt и lab_orders_bad vs _good</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. На m6_sales_opt: city (~25% гранул) vs category (100% гранул)
+EXPLAIN indexes = 1 SELECT sum(amount) FROM m6_sales_opt WHERE city = 'Алматы';
+EXPLAIN indexes = 1 SELECT sum(amount) FROM m6_sales_opt WHERE category = 'Мерч';
+
+-- 2. Дуэль 200 000 строк: плохой vs правильный порядок ключа сортировки
+DROP TABLE IF EXISTS lab_orders_bad;
+DROP TABLE IF EXISTS lab_orders_good;
+
+CREATE TABLE lab_orders_bad  (order_id UInt64, status LowCardinality(String), price UInt32)
+ENGINE = MergeTree() ORDER BY (order_id, status);
+
+CREATE TABLE lab_orders_good (order_id UInt64, status LowCardinality(String), price UInt32)
+ENGINE = MergeTree() ORDER BY (status, order_id);
+
+INSERT INTO lab_orders_bad
+SELECT number + 1,
+       multiIf(number % 10 = 0, 'refunded', number % 10 = 1, 'cancelled', 'paid'),
+       1000 + (number % 50) * 500
+FROM numbers(200000);
+
+INSERT INTO lab_orders_good SELECT * FROM lab_orders_bad;
+
+EXPLAIN indexes = 1 SELECT sum(price) FROM lab_orders_bad  WHERE status = 'refunded'; -- ~25/25!
+EXPLAIN indexes = 1 SELECT sum(price) FROM lab_orders_good WHERE status = 'refunded'; -- ~3–4/25!</code></pre>
+            </div>
+          </div>
+          <div class="table-wrapper" style="margin-bottom: 0;">
+            <table>
+              <thead><tr><th>Таблица</th><th>Ключ ORDER BY</th><th>Гранулы (по 8 192 строки)</th><th>Выигрыш</th></tr></thead>
+              <tbody>
+                <tr><td><code>lab_orders_bad</code></td><td><code>(order_id, status)</code></td><td>~25 / 25 (100%)</td><td>Полное сканирование</td></tr>
+                <tr><td><code>lab_orders_good</code></td><td><code>(status, order_id)</code></td><td><strong>~3–4 / 25 (~12%)</strong></td><td><strong>×6–8 меньше чтения</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+
+      <!-- 6.3.4 -->
+      <div class="task-card design-card" data-task-id="6_3_4" data-lesson="6_3" data-tags="design clickhouse">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.3.4" />
+            <div class="task-title"><span class="task-num">6.3.4</span> Проектирование телеметрии с кодеками + мини-MPP поверх двух шардов (Merge)</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-ch">ClickHouse</span>
+            <span class="lvl-badge lvl-design">Дизайн · DDL</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          1) Спроектируй компактную таблицу телеметрии <code>lab_metrics</code> (<code>MergeTree</code>): метка времени <code>ts</code> (подбери кодек для монотонного времени), имя сервиса (3 значения: <code>api/auth/billing</code> — подбери тип!), задержка <code>latency_ms</code> (10..260 мс — минимальный тип + сжатие) и оптимальный <code>ORDER BY</code>. Залей <code>100 000</code> строк через <code>numbers(100000)</code> и посчитай <code>avg_ms</code> и <code>p99_ms</code> по сервисам.
+          2) Выполни запрос к готовой мини-MPP таблице <code>m6_sales_global</code> (движок <code>Merge</code> поверх <code>m6_shard_kz</code> и <code>m6_shard_ru</code>), выведя имя шарда через виртуальную колонку <code>_table</code> и общее число опрошенных шардов <code>uniqExact(_table)</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать эталонную схему lab_metrics и запрос к мини-MPP</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-ch">ClickHouse</span> lab_metrics (кодеки) + мини-MPP m6_sales_global</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. Оптимальная схема телеметрии (DoubleDelta + LowCardinality + UInt16 ZSTD)
+DROP TABLE IF EXISTS lab_metrics;
+CREATE TABLE lab_metrics (
+    ts         DateTime CODEC(DoubleDelta, ZSTD(3)),
+    service    LowCardinality(String),
+    latency_ms UInt16   CODEC(ZSTD(3))
+) ENGINE = MergeTree()
+ORDER BY (service, ts);
+
+INSERT INTO lab_metrics
+SELECT toDateTime('2026-03-01 00:00:00') + number,
+       arrayElement(['api', 'auth', 'billing'], (number % 3) + 1),
+       10 + (number % 250)
+FROM numbers(100000);
+
+SELECT service, count() AS req_cnt,
+       round(avg(latency_ms), 2) AS avg_ms, quantile(0.99)(latency_ms) AS p99_ms
+FROM lab_metrics GROUP BY service ORDER BY service;
+
+-- 2. Мини-MPP: единый запрос поверх двух шардов (движок Merge + _table)
+SELECT _table AS shard_name, city, count() AS orders_cnt, sum(amount) AS total_revenue
+FROM m6_sales_global
+GROUP BY _table, city ORDER BY shard_name, city;
+
+SELECT uniqExact(_table) AS shards_cnt, count() AS total_rows, sum(amount) AS global_revenue
+FROM m6_sales_global;</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 04. УРОК 6.4 ==================== -->
+    <section id="sec-6-4" data-section-lesson="6_4">
+      <h2><span class="sec-num">6.4</span> Потоки данных ELT, идемпотентность и SCD Type 2 (4 задания)</h2>
+      <p>
+        Возвращаемся в <strong>PostgreSQL 16</strong> (схема <code>m6_elt</code>): собираем идемпотентные загрузчики, тестируем предохранитель от «раздвоения» клиента, строим отчёт <strong>As-Was vs As-Is</strong> и запускаем 2-шаговый конвейер <strong>SCD Type 2</strong>.
+      </p>
+
+      <!-- 6.4.1 -->
+      <div class="task-card design-card" data-task-id="6_4_1" data-lesson="6_4" data-tags="design">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.4.1" />
+            <div class="task-title"><span class="task-num">6.4.1</span> Два идемпотентных паттерна ELT: UPSERT (IS DISTINCT FROM) и атомарный Delete-Insert</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-design">Дизайн · ELT</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Реализуй оба базовых паттерна идемпотентной загрузки (каждый запусти <strong>дважды подряд</strong> и убедись, что дублей нет!):
+          1) <strong>UPSERT:</strong> перелей <code>m6_elt.raw_orders → m6_elt.dwh_orders</code> через <code>ON CONFLICT (order_id) DO UPDATE</code>, обновляя строку <em>только если</em> <code>amount</code> или <code>note</code> реально изменились (помни про <code>NULL</code> в <code>note</code>!). Итог: 4 строки, <code>88000.00</code>, при 2-м запуске — 0 обновлений.
+          2) <strong>Delete-Insert окна дат:</strong> в одной атомарной транзакции замени весь день <code>'2026-01-15'</code> в <code>dwh_orders</code> двумя уточнёнными заказами: <code>(102, '2026-01-15', 2, 19500.00, 'Финальная скидка')</code> и <code>(105, '2026-01-15', 3, 12000.00, 'Дозаказ')</code> (итого за день <code>31500.00</code>).
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Почему в <code>WHERE</code> внутри <code>DO UPDATE</code> нельзя писать <code>dwh_orders.note &lt;&gt; EXCLUDED.note</code>?</li>
+            <li>Зачем оборачивать <code>DELETE + INSERT</code> в явный блок <code>BEGIN ... COMMIT</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать оба паттерна и разбор</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> 1) UPSERT с IS DISTINCT FROM · 2) Атомарный Delete-Insert</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- Паттерн 1: Идемпотентный UPSERT (запусти дважды: 2-й раз затронет 0 строк!)
+INSERT INTO m6_elt.dwh_orders (order_id, order_date, customer_bk, amount, note)
+SELECT order_id, order_date, customer_bk, amount, note FROM m6_elt.raw_orders
+ON CONFLICT (order_id) DO UPDATE
+SET order_date = EXCLUDED.order_date, customer_bk = EXCLUDED.customer_bk,
+    amount = EXCLUDED.amount, note = EXCLUDED.note
+WHERE m6_elt.dwh_orders.amount IS DISTINCT FROM EXCLUDED.amount
+   OR m6_elt.dwh_orders.note   IS DISTINCT FROM EXCLUDED.note;
+
+SELECT COUNT(*) AS orders_cnt, SUM(amount) AS total_revenue FROM m6_elt.dwh_orders;
+
+-- Паттерн 2: Атомарный Delete-Insert окна дат (читатели не увидят «дырку»!)
+BEGIN;
+    DELETE FROM m6_elt.dwh_orders WHERE order_date = DATE '2026-01-15';
+    INSERT INTO m6_elt.dwh_orders (order_id, order_date, customer_bk, amount, note) VALUES
+        (102, '2026-01-15', 2, 19500.00, 'Финальная скидка'),
+        (105, '2026-01-15', 3, 12000.00, 'Дозаказ');
+COMMIT;
+
+SELECT order_date, COUNT(*) AS orders_cnt, SUM(amount) AS day_revenue
+FROM m6_elt.dwh_orders GROUP BY order_date ORDER BY order_date;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Разбор:</strong> сравнение <code>NULL &lt;&gt; 'Применена скидка'</code> в SQL даёт <code>UNKNOWN</code> (ложь), и строка бы не обновилась! Оператор <code>IS DISTINCT FROM</code> безопасно работает с <code>NULL</code>.</p>
+        </details>
+      </div>
+
+      <!-- 6.4.2 -->
+      <div class="task-card bug-card" data-task-id="6_4_2" data-lesson="6_4" data-tags="bugfix">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.4.2" />
+            <div class="task-title"><span class="task-num">6.4.2</span> Краш-тест предохранителя SCD Type 2 и аудит истории изменений</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-bug">Баг-фикс</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Представь, что в ETL-скрипте сломался шаг закрытия старой версии клиента, и он попытался вставить для Айгерим (<code>customer_bk = 1</code>) вторую активную запись (<code>is_current = true</code>):
+        </p>
+        <div class="code-block bug-code">
+          <div class="code-header"><span class="code-lang">❌ БАГ В КОНВЕЙЕРЕ SCD2 (вставка новой активной версии без закрытия старой)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-sql">INSERT INTO m6_elt.dim_customer_scd2
+    (customer_bk, full_name, city, segment, valid_from, valid_to, is_current)
+VALUES (1, 'Айгерим Сатова', 'Астана', 'VIP', '2026-03-01', '9999-12-31', true);</code></pre>
+        </div>
+        <p class="task-desc">
+          <strong>Задача:</strong> 1) запусти этот <code>INSERT</code> и убедись, что частичный уникальный индекс <code>idx_m6_cust_scd2_active</code> физически остановил «раздвоение личности» клиента; 2) выведи всех клиентов в <code>dim_customer_scd2</code>, у которых накопилось больше 1 версии (<code>HAVING COUNT(*) &gt; 1</code>).
+        </p>
+        <details class="solution">
+          <summary>Показать ожидаемую ошибку и запрос аудита</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> Проверка защиты + клиенты с историей &gt; 1 версии</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. Вернёт ERROR: duplicate key value violates unique constraint "idx_m6_cust_scd2_active"
+-- (индекс создан как CREATE UNIQUE INDEX ... ON dim_customer_scd2 (customer_bk) WHERE is_current = true)
+
+-- 2. Кто из клиентов менял атрибуты? (Айгерим — город, Тимур — сегмент)
+SELECT customer_bk, MIN(full_name) AS full_name, COUNT(*) AS versions_cnt
+FROM m6_elt.dim_customer_scd2
+GROUP BY customer_bk
+HAVING COUNT(*) &gt; 1
+ORDER BY customer_bk;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Почему частичный индекс критичен:</strong> если у одного клиента появятся две строки с <code>is_current = true</code>, любой отчёт с <code>JOIN ... AND is_current = true</code> мгновенно удвоит выручку по этому клиенту (скрытый Fan-out).</p>
+        </details>
+      </div>
+
+      <!-- 6.4.3 -->
+      <div class="task-card" data-task-id="6_4_3" data-lesson="6_4" data-tags="dwh">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.4.3" />
+            <div class="task-title"><span class="task-num">6.4.3</span> Машина времени: исторический Point-in-Time отчёт и сравнение As-Was vs As-Is</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-sql">DWH · SQL</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          В <code>m6_elt.fact_sales_hist</code> заказы привязаны к историческому суррогатному ключу <code>customer_sk</code>:
+          1) построй правдивую помесячную выручку по городам <strong>на момент покупки</strong> (<code>sale_month</code>, <code>city</code>, <code>revenue</code>);
+          2) для всех 5 заказов выведи рядом <strong>город и сегмент на момент покупки</strong> (<code>hist_city</code>, <code>hist_segment</code>) и <strong>текущие</strong> (<code>curr_city</code>, <code>curr_segment</code>), соединив <code>fact_sales_hist</code> с <code>dim_customer_scd2</code> дважды!
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Ожидаемый результат</div>
+          <ul>
+            <li>Костанай сохраняет январскую выручку <code>35000.00</code> (Айгерим до переезда), февраль Алматы — <code>40000.00</code>.</li>
+            <li>В заказе <code>201</code>: <code>hist_city = Костанай</code> → <code>curr_city = Алматы</code>; в заказе <code>202</code>: <code>Standard</code> → <code>VIP</code>.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать решение (2 запроса)</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> Point-in-Time и As-Was vs As-Is</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. Правдивая историческая выручка по городам на момент покупки
+SELECT TO_CHAR(f.order_date, 'YYYY-MM') AS sale_month, dc.city, SUM(f.amount) AS revenue
+FROM m6_elt.fact_sales_hist f
+JOIN m6_elt.dim_customer_scd2 dc ON dc.customer_sk = f.customer_sk
+GROUP BY TO_CHAR(f.order_date, 'YYYY-MM'), dc.city
+ORDER BY sale_month, revenue DESC;
+
+-- 2. Сравнение As-Was (как было тогда) против As-Is (как сейчас)
+SELECT f.order_id, f.order_date, dh.full_name,
+       dh.city AS hist_city, dc.city AS curr_city,
+       dh.segment AS hist_segment, dc.segment AS curr_segment, f.amount
+FROM m6_elt.fact_sales_hist f
+JOIN m6_elt.dim_customer_scd2 dh ON dh.customer_sk = f.customer_sk
+JOIN m6_elt.dim_customer_scd2 dc ON dc.customer_bk = dh.customer_bk AND dc.is_current = true
+ORDER BY f.order_id;</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- 6.4.4 -->
+      <div class="task-card design-card" data-task-id="6_4_4" data-lesson="6_4" data-tags="design">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 6.4.4" />
+            <div class="task-title"><span class="task-num">6.4.4</span> Живой идемпотентный 2-шаговый цикл SCD Type 2 за 1 марта 2026</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg">PostgreSQL 16</span>
+            <span class="lvl-badge lvl-design">Дизайн · ELT</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          В буфере <code>m6_elt.raw_customers_stage</code> лежит снимок клиентов на <code>2026-03-01</code>: Данияр (<code>bk = 4</code>) переехал из Костаная в Астану, появилась новая клиентка София Ким (<code>bk = 5</code>), остальные не менялись.
+          Напиши <strong>единую идемпотентную транзакцию</strong> (<code>BEGIN ... COMMIT</code>): Шаг 1 закрывает устаревшие активные версии (<code>valid_to = '2026-02-28'</code>, <code>is_current = false</code>), Шаг 2 вставляет новые активные версии через <code>LEFT JOIN</code>. Прогони транзакцию <strong>дважды подряд</strong>!
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Критерий приёмки</div>
+          <ul>
+            <li>В таблице ровно <strong>8 строк</strong> (у Данияра 2 версии, у Софии 1, дублей нет).</li>
+            <li>При повторном запуске <code>UPDATE</code> затронет <code>0</code> строк, а <code>INSERT</code> — <code>0</code> строк.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать эталонный 2-шаговый конвейер SCD Type 2</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">PostgreSQL</span> Идемпотентный SCD Type 2 (запусти 2 раза подряд!)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">BEGIN;
+    -- Шаг 1: закрываем старую активную версию изменившихся клиентов
+    UPDATE m6_elt.dim_customer_scd2 d
+    SET valid_to = DATE '2026-03-01' - INTERVAL '1 day', is_current = false
+    FROM m6_elt.raw_customers_stage s
+    WHERE d.customer_bk = s.customer_bk
+      AND d.is_current = true
+      AND (d.full_name IS DISTINCT FROM s.full_name
+        OR d.city      IS DISTINCT FROM s.city
+        OR d.segment   IS DISTINCT FROM s.segment);
+
+    -- Шаг 2: вставляем новые активные версии (изменившиеся + новые клиенты)
+    INSERT INTO m6_elt.dim_customer_scd2
+        (customer_bk, full_name, city, segment, valid_from, valid_to, is_current)
+    SELECT s.customer_bk, s.full_name, s.city, s.segment,
+           DATE '2026-03-01', DATE '9999-12-31', true
+    FROM m6_elt.raw_customers_stage s
+    LEFT JOIN m6_elt.dim_customer_scd2 d
+           ON d.customer_bk = s.customer_bk AND d.is_current = true
+    WHERE d.customer_bk IS NULL
+    ORDER BY s.customer_bk;
+COMMIT;
+
+SELECT customer_sk, customer_bk, full_name, city, segment, valid_from, valid_to, is_current
+FROM m6_elt.dim_customer_scd2 ORDER BY customer_bk, valid_from;</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 05. УРОК 6.5 (ИТОГОВЫЙ ПРОЕКТ) ==================== -->
+    <section id="sec-6-5" data-section-lesson="6_5">
+      <h2><span class="sec-num">6.5</span> Итоговый проект курса: сквозной контур PG (OLTP) → ClickHouse (OLAP)</h2>
+      <p>
+        Финальный проект объединяет <strong>PostgreSQL 16</strong> (Окно 1) и <strong>ClickHouse</strong> (Окно 2) по сети Docker <code>db_net</code>. Пройди <strong>4 последовательных Milestone-этапа</strong> — от поимки расхождения в данных до боевого инцидента на продакшене!
+      </p>
+
+      <div class="milestone-roadmap">
+        <div class="ms-step"><strong>Этап 1 · Мост и DQ</strong>Читаем PG по <code>db_net</code>, ловим <code>MISMATCH ✗</code>.</div>
+        <div class="ms-step"><strong>Этап 2 · Заливка и BI</strong><code>REPLACE PARTITION</code> → <code>OK ✓</code> + дашборд + <code>SummingMergeTree</code>.</div>
+        <div class="ms-step"><strong>Этап 3 · Релиз Марта</strong>2 окна: новые данные в PG → <code>202603</code> в CH + <code>FULL JOIN</code> DQ.</div>
+        <div class="ms-step"><strong>Этап 4 · Инцидент</strong>Лечим задвоенную партицию <code>202602</code> без простоя.</div>
+      </div>
+
+      <div class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Правило Docker-сети <code>db_net</code>:</strong> из ClickHouse обращайся к PostgreSQL строго по имени сервиса <code>'pg_primary:5432'</code> (а не <code>localhost:5432</code>!). Перед стартом проекта при необходимости обнови оба стенда через <code>init.sql</code> и <code>init_clickhouse.sql</code>.
+        </div>
+      </div>
+
+      <!-- 6.5.1 -->
+      <div class="task-card project-card" data-task-id="6_5_1" data-lesson="6_5" data-tags="project clickhouse">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить этап 6.5.1" />
+            <div class="task-title"><span class="task-num">6.5.1</span> Этап 1: Сетевой мост PG → ClickHouse и первый аудит Data Quality (MISMATCH ✗)</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-both">PG + ClickHouse</span>
+            <span class="lvl-badge lvl-project">Проект · Этап 1</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          1) В <strong>Окне 1 (PostgreSQL)</strong> проверь витрину-шлюз <code>m6_elt.export_sales_mart</code> по месяцам (<code>2026-01</code>: 89 000, <code>2026-02</code>: 63 000; итого 6 строк / <code>152 000.00</code>).
+          2) В <strong>Окне 2 (ClickHouse)</strong> прочти эту таблицу напрямую по сети через <code>postgresql('pg_primary:5432', ...)</code> (убедившись, что <code>localhost:5432</code> даёт <code>Connection refused</code>).
+          3) Напиши автоматическую DQ-сверку с двумя CTE (<code>pg_stats</code> vs <code>ch_stats</code> из <code>m6_mart_sales</code>) и поймай честный сигнал тревоги <strong><code>MISMATCH ✗</code></strong> (в ClickHouse пока только январь!).
+        </p>
+        <details class="solution">
+          <summary>Показать решение Этапа 1</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">Окно 1 · PostgreSQL</span> Проверяем эталон в шлюзе</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT TO_CHAR(order_date, 'YYYY-MM') AS part_month,
+       COUNT(*) AS rows_cnt, SUM(qty) AS total_qty, SUM(total_amount) AS revenue
+FROM m6_elt.export_sales_mart
+GROUP BY 1 ORDER BY 1;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-ch">Окно 2 · ClickHouse</span> Прямой мост + DQ-сверка (покажет MISMATCH ✗)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">WITH
+    pg_stats AS (
+        SELECT count() AS pg_rows, sum(total_amount) AS pg_revenue
+        FROM postgresql('pg_primary:5432', 'learning_db', 'export_sales_mart',
+                        'student', 'student_pass', 'm6_elt')
+    ),
+    ch_stats AS (
+        SELECT count() AS ch_rows, sum(total_amount) AS ch_revenue
+        FROM m6_mart_sales
+    )
+SELECT pg_rows, ch_rows, pg_revenue, ch_revenue,
+       if(pg_rows = ch_rows AND pg_revenue = ch_revenue, 'OK ✓', 'MISMATCH ✗') AS dq_status
+FROM pg_stats, ch_stats;
+-- Результат: 6 vs 3, 152000.00 vs 89000.00 -&gt; MISMATCH ✗</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- 6.5.2 -->
+      <div class="task-card project-card" data-task-id="6_5_2" data-lesson="6_5" data-tags="project clickhouse">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить этап 6.5.2" />
+            <div class="task-title"><span class="task-num">6.5.2</span> Этап 2: Атомарный REPLACE PARTITION, BI-дашборд и потоковый MATERIALIZED VIEW</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-ch">ClickHouse</span>
+            <span class="lvl-badge lvl-project">Проект · Этап 2</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          В <strong>Окне 2 (ClickHouse)</strong>:
+          1) очисти буфер <code>m6_mart_sales_stage</code>, загрузи в него данные из <code>postgresql(...)</code> и атомарно подмени партиции <code>202601</code> и <code>202602</code> в <code>m6_mart_sales</code> (прогони <code>REPLACE PARTITION 202602</code> дважды подряд для проверки идемпотентности!) — убедись, что DQ стал <strong><code>OK ✓</code></strong>;
+          2) построй директорский BI-дашборд по категориям с долей в процентах <code>share_pct</code> (через <code>sum(sum(total_amount)) OVER ()</code>);
+          3) создай потоковую витрину кликов: <code>lab_raw_clicks</code> (<code>MergeTree</code>) → триггерный <code>MATERIALIZED VIEW lab_mv_daily_clicks</code> → накопитель <code>lab_daily_clicks_agg</code> (<code>SummingMergeTree</code>), вставь 2 пачки кликов и проверь автосуммирование без ручного <code>REFRESH</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Критерии приёмки Этапа 2</div>
+          <ul>
+            <li>DQ-сверка: <code>6 = 6</code>, <code>152000.00 = 152000.00</code> → <code>OK ✓</code>.</li>
+            <li>Дашборд: Электроника <code>44.7%</code>, Мерч <code>39.5%</code>, Аксессуары <code>15.8%</code>.</li>
+            <li>В <code>lab_daily_clicks_agg</code>: <code>/home = 150</code>, <code>/catalog = 80</code>, <code>/checkout = 45</code>.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать решение Этапа 2</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-ch">ClickHouse</span> 1) Stage → REPLACE PARTITION → BI-дашборд</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">TRUNCATE TABLE m6_mart_sales_stage;
+
+INSERT INTO m6_mart_sales_stage
+SELECT item_bk, order_bk, order_date, customer_bk,
+       city_name, segment, product_title, category_name, qty, total_amount
+FROM postgresql('pg_primary:5432', 'learning_db', 'export_sales_mart',
+                'student', 'student_pass', 'm6_elt');
+
+ALTER TABLE m6_mart_sales REPLACE PARTITION 202601 FROM m6_mart_sales_stage;
+ALTER TABLE m6_mart_sales REPLACE PARTITION 202602 FROM m6_mart_sales_stage;
+ALTER TABLE m6_mart_sales REPLACE PARTITION 202602 FROM m6_mart_sales_stage; -- идемпотентно!
+
+-- Директорский BI-дашборд с долями %
+SELECT category_name,
+       uniqExact(order_bk) AS orders_cnt,
+       sum(qty)            AS items_sold,
+       sum(total_amount)   AS revenue,
+       round(100.0 * sum(total_amount) / sum(sum(total_amount)) OVER (), 1) AS share_pct
+FROM m6_mart_sales
+GROUP BY category_name ORDER BY revenue DESC;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-ch">ClickHouse</span> 2) Потоковая витрина: MATERIALIZED VIEW + SummingMergeTree</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">DROP VIEW  IF EXISTS lab_mv_daily_clicks;
+DROP TABLE IF EXISTS lab_daily_clicks_agg;
+DROP TABLE IF EXISTS lab_raw_clicks;
+
+CREATE TABLE lab_raw_clicks (click_date Date, page LowCardinality(String), clicks UInt32)
+ENGINE = MergeTree() ORDER BY (click_date, page);
+
+CREATE TABLE lab_daily_clicks_agg (click_date Date, page LowCardinality(String), clicks UInt64)
+ENGINE = SummingMergeTree() ORDER BY (click_date, page);
+
+CREATE MATERIALIZED VIEW lab_mv_daily_clicks TO lab_daily_clicks_agg AS
+SELECT click_date, page, sum(clicks) AS clicks FROM lab_raw_clicks GROUP BY click_date, page;
+
+INSERT INTO lab_raw_clicks VALUES ('2026-03-01', '/home', 120), ('2026-03-01', '/catalog', 80);
+INSERT INTO lab_raw_clicks VALUES ('2026-03-01', '/home',  30), ('2026-03-01', '/checkout', 45);
+
+SELECT click_date, page, sum(clicks) AS total_clicks
+FROM lab_daily_clicks_agg GROUP BY click_date, page ORDER BY total_clicks DESC;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Помни:</strong> при чтении из <code>SummingMergeTree</code> всегда оборачивай числовую метрику в <code>sum(...)</code> с <code>GROUP BY</code>, так как фоновое слияние пачек в ClickHouse асинхронно.</p>
+        </details>
+      </div>
+
+      <!-- 6.5.3 -->
+      <div class="task-card project-card" data-task-id="6_5_3" data-lesson="6_5" data-tags="project clickhouse">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить этап 6.5.3" />
+            <div class="task-title"><span class="task-num">6.5.3</span> Этап 3: Боевой мартовский релиз (2 окна: PG → ClickHouse) + помесячный FULL JOIN DQ</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-both">2 окна · PG → CH</span>
+            <span class="lvl-badge lvl-project">Проект · Этап 3</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Проведи инкрементальный релиз нового месяца <strong>Март 2026</strong>, не трогая январь и февраль:
+          1) в <strong>Окне 1 (PostgreSQL)</strong> идемпотентно (<code>ON CONFLICT (item_bk) DO NOTHING</code>) добавь в <code>m6_elt.export_sales_mart</code> 2 мартовские позиции: <code>(8, 1006, '2026-03-05', 4, 'Астана', 'Standard', 'Худи «SQL Master»', 'Мерч', 2, 42000.00)</code> и <code>(9, 1006, '2026-03-05', 4, 'Астана', 'Standard', 'Термокружка кодера', 'Аксессуары', 1, 8000.00)</code>;
+          2) в <strong>Окне 2 (ClickHouse)</strong> перелей в <code>stage</code> <em>только март</em> и подключи партицию <code>202603</code> через <code>REPLACE PARTITION 202603</code>;
+          3) напиши <strong>помесячный DQ-мониторинг</strong> через <code>FULL OUTER JOIN</code> по <code>toYYYYMM(order_date)</code> и подтверди <code>OK ✓</code> по всем трём месяцам (итого 8 строк / <code>202 000.00</code>).
+        </p>
+        <details class="solution">
+          <summary>Показать решение Этапа 3 (Окно 1 + Окно 2)</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-pg">Окно 1 · PostgreSQL</span> Идемпотентно добавляем Март 2026</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">INSERT INTO m6_elt.export_sales_mart VALUES
+    (8, 1006, '2026-03-05', 4, 'Астана', 'Standard', 'Худи «SQL Master»',  'Мерч',       2, 42000.00),
+    (9, 1006, '2026-03-05', 4, 'Астана', 'Standard', 'Термокружка кодера', 'Аксессуары', 1,  8000.00)
+ON CONFLICT (item_bk) DO NOTHING;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-ch">Окно 2 · ClickHouse</span> Инкрементальная заливка 202603 + помесячный FULL JOIN DQ</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">TRUNCATE TABLE m6_mart_sales_stage;
+
+INSERT INTO m6_mart_sales_stage
+SELECT item_bk, order_bk, order_date, customer_bk,
+       city_name, segment, product_title, category_name, qty, total_amount
+FROM postgresql('pg_primary:5432', 'learning_db', 'export_sales_mart',
+                'student', 'student_pass', 'm6_elt')
+WHERE order_date &gt;= toDate('2026-03-01') AND order_date &lt; toDate('2026-04-01');
+
+ALTER TABLE m6_mart_sales REPLACE PARTITION 202603 FROM m6_mart_sales_stage;
+
+-- Помесячный DQ-аудит (все 3 партиции: 202601, 202602, 202603 -&gt; OK ✓!)
+WITH
+    pg_m AS (
+        SELECT toYYYYMM(order_date) AS part_month, count() AS pg_rows, sum(total_amount) AS pg_rev
+        FROM postgresql('pg_primary:5432', 'learning_db', 'export_sales_mart',
+                        'student', 'student_pass', 'm6_elt')
+        GROUP BY part_month
+    ),
+    ch_m AS (
+        SELECT toYYYYMM(order_date) AS part_month, count() AS ch_rows, sum(total_amount) AS ch_rev
+        FROM m6_mart_sales GROUP BY part_month
+    )
+SELECT coalesce(pg_m.part_month, ch_m.part_month) AS part_month,
+       pg_m.pg_rows, ch_m.ch_rows, pg_m.pg_rev, ch_m.ch_rev,
+       pg_m.pg_rev - ch_m.ch_rev AS diff_rev,
+       if(pg_m.pg_rows = ch_m.ch_rows AND pg_m.pg_rev = ch_m.ch_rev, 'OK ✓', 'MISMATCH ✗') AS dq_status
+FROM pg_m FULL OUTER JOIN ch_m ON pg_m.part_month = ch_m.part_month
+ORDER BY part_month;</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- 6.5.4 -->
+      <div class="task-card project-card" data-task-id="6_5_4" data-lesson="6_5" data-tags="project clickhouse boss">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить этап 6.5.4" />
+            <div class="task-title"><span class="task-num">6.5.4</span> Этап 4 (Финал курса): аварийное лечение задвоенной партиции 202602 без простоя</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-ch">ClickHouse</span>
+            <span class="lvl-badge lvl-boss">Финал курса</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          <strong>Инцидент в продакшене:</strong> джуниор случайно запустил прямой <code>INSERT INTO m6_mart_sales</code> за февраль — выручка в партиции <code>202602</code> удвоилась (<code>126 000</code> вместо <code>63 000</code>)!<br />
+          1) Воспроизведи аварию прямым <code>INSERT</code> за февраль.<br />
+          2) Запусти помесячный DQ-запрос из <code>6.5.3</code> — он точно укажет на битую партицию <code>202602</code> (<code>diff_rev = -63000.00</code>).<br />
+          3) Вылечи <strong>только партицию <code>202602</code></strong> через чистый <code>m6_mart_sales_stage + REPLACE PARTITION 202602</code>, не затрагивая январь и март, и снова подтверди <strong><code>OK ✓</code></strong>!
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Финальный чек-лист приёмки проекта</div>
+          <ul>
+            <li>В <code>m6_mart_sales</code> ровно 3 партиции: <code>202601</code> (89 000), <code>202602</code> (63 000), <code>202603</code> (50 000).</li>
+            <li>Итоговая сумма = <code>202 000.00</code>, <code>diff_rev = 0</code>, все статусы <code>OK ✓</code>.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать решение Этапа 4 (имитация аварии и точечное лечение)</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="db-pill db-ch">ClickHouse</span> Воспроизведение дубля → Точечное лечение 202602</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. Имитируем ошибку наивного прямого INSERT за февраль (создаём дубли: 126 000!)
+INSERT INTO m6_mart_sales
+SELECT item_bk, order_bk, order_date, customer_bk,
+       city_name, segment, product_title, category_name, qty, total_amount
+FROM postgresql('pg_primary:5432', 'learning_db', 'export_sales_mart',
+                'student', 'student_pass', 'm6_elt')
+WHERE order_date &gt;= toDate('2026-02-01') AND order_date &lt; toDate('2026-03-01');
+
+-- Видим поломку именно в 202602 (6 строк, 126 000):
+SELECT toYYYYMM(order_date) AS part_month, count() AS rows_cnt, sum(total_amount) AS rev
+FROM m6_mart_sales GROUP BY part_month ORDER BY part_month;
+
+-- 2. Точечно лечим ТОЛЬКО партицию 202602 через stage + REPLACE PARTITION!
+TRUNCATE TABLE m6_mart_sales_stage;
+
+INSERT INTO m6_mart_sales_stage
+SELECT item_bk, order_bk, order_date, customer_bk,
+       city_name, segment, product_title, category_name, qty, total_amount
+FROM postgresql('pg_primary:5432', 'learning_db', 'export_sales_mart',
+                'student', 'student_pass', 'm6_elt')
+WHERE order_date &gt;= toDate('2026-02-01') AND order_date &lt; toDate('2026-03-01');
+
+ALTER TABLE m6_mart_sales REPLACE PARTITION 202602 FROM m6_mart_sales_stage;
+
+-- 3. Финальная проверка: 202601 (89k), 202602 (63k), 202603 (50k) — всё чисто!
+SELECT toYYYYMM(order_date) AS part_month, count() AS rows_cnt, sum(total_amount) AS rev
+FROM m6_mart_sales GROUP BY part_month ORDER BY part_month;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Поздравляю с завершением курса!</strong> Ты прошёл полный путь от первого <code>SELECT</code> до боевого сквозного контура <strong>OLTP (PostgreSQL) → ELT / SCD2 → OLAP (ClickHouse)</strong> с автоматическим контролем Data Quality и мгновенным лечением инцидентов без простоя дашбордов.</p>
+        </details>
+      </div>
+    </section>
+
+    <div class="empty-filter" id="empty-filter">
+      Нет заданий по выбранному фильтру — либо они все уже выполнены! Отличная работа 🎉
+    </div>
+
+  </article>
+
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Автоматическое оглавление из <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = Array.from(document.querySelectorAll('article.lecture > section'));
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${clone.textContent.trim()}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Разделы практикума</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 3. Копирование кода (с fallback для file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (_) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => { btn.textContent = originalText; }, 1800);
+          }
+        });
+      });
+
+      // 4. Прогресс и фильтрация (по урокам, статусу и форматам)
+      const STORAGE_KEY = 'db_course_practice_m6_v2';
+      const cards = Array.from(document.querySelectorAll('.task-card[data-task-id]'));
+      const progressText = document.getElementById('progress-text');
+      const progressFill = document.getElementById('progress-fill');
+      const resetBtn = document.getElementById('reset-progress');
+      const filterBtns = Array.from(document.querySelectorAll('.filter-btn'));
+      const emptyFilter = document.getElementById('empty-filter');
+      let currentFilter = 'all';
+
+      function loadDone() {
+        try {
+          return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+        } catch (_) {
+          return new Set();
+        }
+      }
+
+      function saveDone(set) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(set)));
+        } catch (_) {}
+      }
+
+      const doneSet = loadDone();
+
+      function applyFilter() {
+        let visibleCards = 0;
+
+        cards.forEach((card) => {
+          const id = card.dataset.taskId;
+          const lesson = card.dataset.lesson;
+          const tags = (card.dataset.tags || '').split(/\s+/).filter(Boolean);
+          const isDone = doneSet.has(id);
+          let show = true;
+
+          if (currentFilter === 'todo') {
+            show = !isDone;
+          } else if (currentFilter.startsWith('tag:')) {
+            const targetTag = currentFilter.slice(4);
+            show = tags.includes(targetTag);
+          } else if (currentFilter !== 'all') {
+            show = lesson === currentFilter;
+          }
+
+          card.classList.toggle('hidden', !show);
+          if (show) visibleCards++;
+        });
+
+        sections.forEach((sec) => {
+          const secLesson = sec.dataset.sectionLesson;
+          if (secLesson === 'init') {
+            sec.classList.toggle('hidden', currentFilter !== 'all' && currentFilter !== 'todo');
+            return;
+          }
+          const secCards = Array.from(sec.querySelectorAll('.task-card'));
+          const anyVisible = secCards.some((c) => !c.classList.contains('hidden'));
+          sec.classList.toggle('hidden', !anyVisible);
+        });
+
+        emptyFilter.classList.toggle('visible', visibleCards === 0);
+      }
+
+      function syncUI() {
+        let doneCount = 0;
+        cards.forEach((card) => {
+          const id = card.dataset.taskId;
+          const cb = card.querySelector('.task-check');
+          const isDone = doneSet.has(id);
+          cb.checked = isDone;
+          card.classList.toggle('done', isDone);
+          if (isDone) doneCount++;
+        });
+
+        const total = cards.length;
+        const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+        progressText.textContent = `${doneCount} / ${total} (${pct}%)`;
+        progressFill.style.width = `${pct}%`;
+        resetBtn.classList.toggle('visible', doneCount > 0);
+        applyFilter();
+      }
+
+      cards.forEach((card) => {
+        const cb = card.querySelector('.task-check');
+        cb.addEventListener('change', () => {
+          const id = card.dataset.taskId;
+          if (cb.checked) doneSet.add(id);
+          else doneSet.delete(id);
+          saveDone(doneSet);
+          syncUI();
+        });
+      });
+
+      filterBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          currentFilter = btn.dataset.filter;
+          filterBtns.forEach((b) => b.classList.toggle('active', b === btn));
+          applyFilter();
+        });
+      });
+
+      resetBtn.addEventListener('click', () => {
+        doneSet.clear();
+        saveDone(doneSet);
+        syncUI();
+      });
+
+      syncUI();
+    });
+  </script>
+</body>
+</html>

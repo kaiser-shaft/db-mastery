@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Базы Данных: Полный справочник курса (PostgreSQL, MySQL/InnoDB, ClickHouse, DWH)</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 8.2pt;
+      line-height: 1.28;
+      color: #000000;
+      background-color: #ffffff;
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 4mm;
+    }
+
+    @media print {
+      body {
+        max-width: none;
+        padding: 0;
+        font-size: 8pt;
+      }
+      .module {
+        break-before: auto;
+      }
+      .page-break {
+        break-before: page;
+        page-break-before: always;
+      }
+    }
+
+    header.doc-header {
+      border-bottom: 2px solid #000000;
+      padding-bottom: 3px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    header.doc-header h1 {
+      font-size: 13pt;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      text-transform: uppercase;
+    }
+
+    header.doc-header .meta {
+      font-size: 7.5pt;
+      color: #333333;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    .module {
+      margin-bottom: 8px;
+    }
+
+    .module-title {
+      background-color: #e2e8f0;
+      color: #000000;
+      font-size: 9.8pt;
+      font-weight: 800;
+      padding: 2.5px 6px;
+      border: 1px solid #000000;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      break-after: avoid;
+      page-break-after: avoid;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      align-items: start;
+    }
+
+    .col-span-2 {
+      grid-column: span 2;
+    }
+
+    .card {
+      border: 1px solid #94a3b8;
+      padding: 4px 5px;
+      background-color: #ffffff;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .card h3 {
+      font-size: 8.4pt;
+      font-weight: 700;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 1.5px;
+      margin-bottom: 3.5px;
+      color: #000000;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .card h3 span.lesson-tag {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 7.2pt;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 7.3pt;
+      line-height: 1.24;
+      background-color: #f8fafc;
+      border: 1px solid #cbd5e1;
+      padding: 3px 4px;
+      margin-bottom: 3px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #000000;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    pre:last-child {
+      margin-bottom: 0;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 7.4pt;
+      background-color: #f1f5f9;
+      padding: 0 2px;
+      border: 1px solid #e2e8f0;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      border: none;
+      font-size: inherit;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.4pt;
+      margin-bottom: 3px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    table:last-child {
+      margin-bottom: 0;
+    }
+
+    th, td {
+      border: 1px solid #94a3b8;
+      padding: 1.8px 3.5px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: #f1f5f9;
+      font-weight: 700;
+      color: #000000;
+    }
+
+    ul.compact {
+      list-style: none;
+      font-size: 7.5pt;
+      margin-bottom: 2px;
+    }
+
+    ul.compact li {
+      margin-bottom: 1.5px;
+    }
+
+    .formula {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 7.4pt;
+      background-color: #f1f5f9;
+      border-left: 2.5px solid #000000;
+      padding: 2px 4px;
+      margin-bottom: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="doc-header">
+    <h1>Базы Данных: Справочник (PostgreSQL · MySQL/InnoDB · ClickHouse · DWH)</h1>
+    <div class="meta">6 модулей · 26 уроков · Формат A4 Portrait</div>
+  </header>
+
+  <!-- ==================== МОДУЛЬ 1 ==================== -->
+  <section class="module">
+    <div class="module-title">Модуль 1. Фундамент реляционных БД и базовый SQL (Уроки 1.1 – 1.4)</div>
+    <div class="grid-2">
+
+      <div class="card">
+        <h3><span>Архитектура, Docker и мета-команды psql</span><span class="lesson-tag">Урок 1.1</span></h3>
+        <div class="formula">Cluster (:5432) → Database → Schema (public) → Table</div>
+        <pre><code># Управление контейнером БД
+docker compose up -d
+docker compose ps
+docker compose stop && docker compose start
+docker compose down                  # Без -v (сохраняет том!)
+docker exec course_pg_primary pg_isready -U student -d learning_db
+docker exec -it course_pg_primary psql -U student -d learning_db
+docker exec -it course_pg_primary psql -U student -d learning_db -c "SELECT 1;"</code></pre>
+        <table>
+          <thead>
+            <tr><th>psql</th><th>Назначение</th><th>psql</th><th>Назначение</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>\l</code> / <code>\l+</code></td><td>Список баз данных</td><td><code>\dt</code></td><td>Список таблиц</td></tr>
+            <tr><td><code>\c db</code></td><td>Сменить базу</td><td><code>\d tbl</code></td><td>Структура таблицы</td></tr>
+            <tr><td><code>\dn</code></td><td>Список схем</td><td><code>\timing</code></td><td>Время запроса (мс)</td></tr>
+            <tr><td><code>\pset null 'NULL'</code></td><td>Явный вывод NULL</td><td><code>\q</code></td><td>Выход из psql</td></tr>
+          </tbody>
+        </table>
+        <pre><code>SELECT 10 / 3 AS int_div, 10.0 / 3 AS num_div, 'PG' || ' 16';
+SELECT current_database(), current_schema(), current_user, current_date;
+SHOW server_version;
+SHOW max_connections;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Типы данных, Constraints, DDL и INSERT</span><span class="lesson-tag">Урок 1.2</span></h3>
+        <table>
+          <thead>
+            <tr><th>Тип PG</th><th>Применение</th><th>Ограничение</th><th>Назначение</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>INT / BIGINT</code></td><td>Целые числа, ID</td><td><code>PRIMARY KEY</code></td><td><code>UNIQUE + NOT NULL</code></td></tr>
+            <tr><td><code>NUMERIC(p,s)</code></td><td>Деньги (без потерь)</td><td><code>NOT NULL</code></td><td>Запрет пустых значений</td></tr>
+            <tr><td><code>TEXT / VARCHAR(n)</code></td><td>Строки</td><td><code>UNIQUE (a, b)</code></td><td>Уникальность</td></tr>
+            <tr><td><code>BOOLEAN</code></td><td><code>true / false</code></td><td><code>CHECK (price >= 0)</code></td><td>Проверка условия</td></tr>
+            <tr><td><code>DATE / TIMESTAMPTZ</code></td><td>Дата / Дата+часовой пояс</td><td><code>REFERENCES t(id)</code></td><td>Внешний ключ (FK)</td></tr>
+          </tbody>
+        </table>
+        <div class="formula">ON DELETE: RESTRICT (по умолч. запрет) | CASCADE (удалить) | SET NULL</div>
+        <pre><code>DROP TABLE IF EXISTS order_items, products CASCADE;
+
+CREATE TABLE products (
+    id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title      VARCHAR(150) NOT NULL UNIQUE,
+    price      NUMERIC(10, 2) NOT NULL CHECK (price >= 0),
+    is_active  BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE reviews (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    product_id  BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    customer_id BIGINT NOT NULL,
+    rating      INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    UNIQUE (customer_id, product_id)
+);
+
+INSERT INTO products (title, price)
+VALUES ('Мышь', 4500.00), ('Кабель', 990.00)
+ON CONFLICT (title) DO NOTHING
+RETURNING id, title, price::NUMERIC;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>SELECT, WHERE, ORDER BY, Пагинация и NULL</span><span class="lesson-tag">Урок 1.3</span></h3>
+        <div class="formula">Порядок SQL: 1.FROM → 2.WHERE → 3.SELECT → 4.DISTINCT → 5.ORDER BY → 6.LIMIT/OFFSET</div>
+        <table>
+          <thead>
+            <tr><th>Оператор WHERE</th><th>Описание / Особенности</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>=</code>, <code>&lt;&gt;</code> (<code>!=</code>), <code>&gt;</code>, <code>&lt;=</code></td><td>Базовые сравнения</td></tr>
+            <tr><td><code>BETWEEN a AND b</code></td><td>Включительно: <code>&gt;= a AND &lt;= b</code></td></tr>
+            <tr><td><code>IN ('a', 'b')</code></td><td>Совпадение со списком</td></tr>
+            <tr><td><code>LIKE</code> / <code>ILIKE</code></td><td>Шаблон (<code>%</code> — любая строка, <code>_</code> — 1 символ)</td></tr>
+            <tr><td><code>AND</code>, <code>OR</code>, <code>NOT</code></td><td>Приоритет <code>AND</code> выше <code>OR</code> (нужны скобки!)</td></tr>
+            <tr><td><code>IS [NOT] NULL</code></td><td>Проверка на <code>NULL</code> (<code>= NULL</code> всегда <code>UNKNOWN</code>)</td></tr>
+            <tr><td><code>IS DISTINCT FROM</code></td><td>Безопасное сравнение с учётом <code>NULL</code></td></tr>
+          </tbody>
+        </table>
+        <pre><code>SELECT DISTINCT category, ROUND(price * 0.85, 2) AS sale_price
+FROM products
+WHERE (category = 'Electronics' OR category = 'Books')
+  AND title ILIKE '%pro%'
+  AND discount IS NOT NULL
+ORDER BY discount DESC NULLS LAST, id ASC
+LIMIT 10 OFFSET 20;                  -- OFFSET = (page - 1) * LIMIT
+
+-- Keyset (курсорная) пагинация без деградации OFFSET
+SELECT id, title FROM products WHERE id > 1000 ORDER BY id ASC LIMIT 20;
+
+-- Замена NULL и защита от ловушки NOT IN (..., NULL)
+SELECT COALESCE(discount, 0) AS disc FROM products;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>UPDATE, DELETE, Soft Delete и INNER JOIN</span><span class="lesson-tag">Урок 1.4</span></h3>
+        <pre><code>-- Точечное обновление с возвратом изменённой строки
+UPDATE products
+SET stock = stock + 15, price = 4200.00
+WHERE id = 6
+RETURNING id, title, stock, price;
+
+-- Физическое удаление vs Мягкое удаление (Soft Delete)
+DELETE FROM products WHERE id = 9 RETURNING *;
+UPDATE products SET is_active = false WHERE id = 4 RETURNING id, is_active;
+
+-- Внутреннее соединение 3 таблиц (INNER JOIN)
+SELECT
+    o.id         AS order_id,
+    c.name       AS category_name,
+    p.title      AS product_title,
+    o.quantity,
+    (p.price * o.quantity) AS total_cost
+FROM orders AS o
+INNER JOIN products AS p   ON o.product_id = p.id
+INNER JOIN categories AS c ON p.category_id = c.id
+WHERE o.status = 'paid'
+ORDER BY total_cost DESC;</code></pre>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== МОДУЛЬ 2 ==================== -->
+  <section class="module">
+    <div class="module-title">Модуль 2. Проектирование схем и продвинутый SQL (Уроки 2.1 – 2.5)</div>
+    <div class="grid-2">
+
+      <div class="card">
+        <h3><span>Нормализация (1НФ–3НФ), M:N и Миграции</span><span class="lesson-tag">Урок 2.1</span></h3>
+        <table>
+          <thead>
+            <tr><th>Форма</th><th>Правило проектирования</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>1НФ</strong></td><td>Атомарность ячеек (нет списков/массивов в строке), есть PK</td></tr>
+            <tr><td><strong>2НФ</strong></td><td>1НФ + неключевые поля зависят от <em>всего</em> составного PK</td></tr>
+            <tr><td><strong>3НФ</strong></td><td>2НФ + нет транзитивных зависимостей (<code>PK → A → B</code>)</td></tr>
+          </tbody>
+        </table>
+        <pre><code>-- Разбор строки с разделителями в строки (приведение к 1НФ)
+SELECT id, TRIM(unnest(string_to_array(items_list, ','))) AS item FROM raw_orders;
+
+-- Таблица-мостик (Junction Table) для связи M:N
+CREATE TABLE product_tags (
+    product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    tag_id     INT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (product_id, tag_id)
+);
+
+-- Безопасная миграция: добавление NOT NULL в 3 шага (psql -v ON_ERROR_STOP=1)
+BEGIN;
+ALTER TABLE products ADD COLUMN sku VARCHAR(30);
+UPDATE products SET sku = 'SKU-' || id WHERE sku IS NULL;
+ALTER TABLE products ALTER COLUMN sku SET NOT NULL,
+                     ADD CONSTRAINT products_sku_key UNIQUE (sku);
+INSERT INTO schema_migrations (version) VALUES ('002_add_sku');
+COMMIT;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>JOIN-ы, UNION, CASE, GROUP BY и HAVING</span><span class="lesson-tag">Урок 2.2</span></h3>
+        <div class="formula">Порядок: 1.FROM/JOIN → 2.WHERE → 3.GROUP BY → 4.HAVING → 5.SELECT → 6.ORDER BY</div>
+        <pre><code>-- LEFT JOIN: фильтр правой таблицы строго в ON (иначе станет INNER JOIN!)
+SELECT c.name, COUNT(o.id) AS paid_cnt
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id AND o.status = 'paid'
+GROUP BY c.id, c.name;
+
+-- Anti-Join: поиск клиентов без единого заказа
+SELECT c.id, c.name FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+WHERE o.id IS NULL;
+
+-- Условная агрегация: FILTER и CASE WHEN + HAVING
+SELECT
+    c.city,
+    COUNT(*) AS total_orders,
+    COUNT(o.id) FILTER (WHERE o.status = 'paid') AS paid_orders,
+    COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.amount END), 0) AS revenue
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+GROUP BY c.city
+HAVING SUM(o.amount) FILTER (WHERE o.status = 'paid') >= 10000;
+
+-- UNION (удаляет дубли) vs UNION ALL (быстро, без дедупликации)
+SELECT email FROM customers UNION ALL SELECT email FROM leads;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Подзапросы, CTE, Даты, Строки и JSONB</span><span class="lesson-tag">Урок 2.3</span></h3>
+        <table>
+          <thead>
+            <tr><th>Оператор JSONB</th><th>Тип возврата / Назначение</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>col -&gt; 'key'</code></td><td>Возвращает <code>JSONB</code> (объект/массив)</td></tr>
+            <tr><td><code>col -&gt;&gt; 'key'</code></td><td>Возвращает <code>TEXT</code>: <code>(specs -&gt;&gt; 'ram')::int</code></td></tr>
+            <tr><td><code>col #&gt;&gt; '{a,b}'</code></td><td>Извлечение вложенного пути как <code>TEXT</code></td></tr>
+            <tr><td><code>col @&gt; '{"k":"v"}'::jsonb</code></td><td>Проверка вхождения (ускоряется индексом <code>GIN</code>)</td></tr>
+          </tbody>
+        </table>
+        <pre><code>-- NOT EXISTS безопасен при NULL (в отличие от NOT IN)
+SELECT p.id, p.title FROM products p
+WHERE NOT EXISTS (SELECT 1 FROM order_items oi WHERE oi.product_id = p.id);
+
+-- CTE, работа с датами и строками
+WITH monthly AS MATERIALIZED (
+    SELECT
+        DATE_TRUNC('month', created_at)::date AS m,
+        EXTRACT(YEAR FROM created_at) AS yr,
+        SPLIT_PART(LOWER(TRIM(email)), '@', 2) AS domain,
+        LPAD(id::text, 5, '0') AS code
+    FROM orders
+    WHERE created_at >= '2026-01-01' AND created_at < '2027-01-01'
+      AND created_at >= now() - INTERVAL '3 months'
+)
+SELECT domain, COUNT(*) FROM monthly GROUP BY domain;
+
+-- Разворот массива JSONB и сборка объекта
+SELECT p.title, tag
+FROM products p, jsonb_array_elements_text(p.specs -> 'tags') AS tag
+WHERE p.specs @> '{"in_stock": true}'::jsonb;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Оконные функции и аналитические паттерны</span><span class="lesson-tag">Уроки 2.4 – 2.5</span></h3>
+        <table>
+          <thead>
+            <tr><th>Функция</th><th>Назначение / Ранжирование дублей</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>ROW_NUMBER()</code></td><td>Уникальные номера: <code>1, 2, 3, 4</code> (нужен тай-брейкер <code>id</code>)</td></tr>
+            <tr><td><code>RANK()</code></td><td>Ранг с пропусками: <code>1, 2, 2, 4</code></td></tr>
+            <tr><td><code>DENSE_RANK()</code></td><td>Ранг без пропусков: <code>1, 2, 2, 3</code></td></tr>
+            <tr><td><code>LAG(c,1,0) / LEAD(c,1,0)</code></td><td>Предыдущая / следующая строка без self-join</td></tr>
+          </tbody>
+        </table>
+        <pre><code>-- Топ-N в каждой категории (фильтрация окна только через CTE/подзапрос)
+WITH ranked AS (
+    SELECT category_id, title, price,
+           ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY price DESC, id) AS rn
+    FROM products
+)
+SELECT * FROM ranked WHERE rn <= 3;
+
+-- Накопительный итог, скользящее среднее, MoM% и доля от общего
+SELECT
+    dt, revenue,
+    LAG(revenue, 1) OVER w AS prev_rev,
+    ROUND((revenue - LAG(revenue, 1) OVER w) * 100.0
+          / NULLIF(LAG(revenue, 1) OVER w, 0), 1) AS mom_pct,
+    SUM(revenue) OVER (w ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS run_total,
+    ROUND(AVG(revenue) OVER (w ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2) AS ma_3,
+    ROUND(revenue * 100.0 / SUM(revenue) OVER (), 2) AS share_pct
+FROM daily_sales
+WINDOW w AS (PARTITION BY store_id ORDER BY dt);</code></pre>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== МОДУЛЬ 3 ==================== -->
+  <section class="module">
+    <div class="module-title">Модуль 3. Внутреннее устройство PostgreSQL: диск, память, индексы и WAL (Уроки 3.1 – 3.4)</div>
+    <div class="grid-2">
+
+      <div class="card">
+        <h3><span>Страница 8 КБ, Heap, TOAST и Shared Buffers</span><span class="lesson-tag">Урок 3.1</span></h3>
+        <div class="formula">Page (8192 B): Header (24 B) → Line Pointers (↓) ... Free Space ... (↑) Tuples | TOAST (>2 KB)</div>
+        <pre><code>SHOW block_size;                     -- 8192 (8 КБ)
+SHOW shared_buffers;                 -- RAM кэш PG (~25% ОЗУ сервера)
+ALTER SYSTEM SET shared_buffers = '4GB'; -- Требует рестарта кластера
+
+-- Физический адрес строки ctid = (номер_страницы, слот) и размеры
+SELECT ctid, id, title FROM products LIMIT 5;
+SELECT pg_relation_filepath('products'),
+       pg_size_pretty(pg_relation_size('products')) AS heap_size,
+       pg_size_pretty(pg_total_relation_size('products')) AS total_with_idx;
+
+-- Защита от пустых UPDATE (не плодит dead tuples и не меняет ctid)
+UPDATE products SET price = 500 WHERE id = 1 AND price IS DISTINCT FROM 500;
+
+-- Инспекция кэша памяти (pg_buffercache) и мёртвых строк
+CREATE EXTENSION IF NOT EXISTS pg_buffercache;
+SELECT c.relname, COUNT(*) AS buffers_8kb,
+       COUNT(*) FILTER (WHERE b.isdirty) AS dirty_pages
+FROM pg_buffercache b
+JOIN pg_class c ON b.relfilenode = pg_relation_filenode(c.oid)
+GROUP BY c.relname ORDER BY buffers_8kb DESC LIMIT 5;
+
+SELECT relname, n_live_tup, n_dead_tup FROM pg_stat_user_tables;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Индексы: B-Tree, INCLUDE, Partial, GIN, BRIN</span><span class="lesson-tag">Урок 3.2</span></h3>
+        <table>
+          <thead>
+            <tr><th>Тип</th><th>Структура и операторы</th><th>Кейс использования</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>B-Tree</strong></td><td>Дерево (<code>=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>BETWEEN</code>, <code>IN</code>)</td><td>По умолч.; правило левого префикса</td></tr>
+            <tr><td><strong>GIN</strong></td><td>Инвертированный (<code>@&gt;</code>, <code>?</code>, <code>?&amp;</code>, <code>@@</code>)</td><td>Массивы, <code>JSONB</code>, полнотекст</td></tr>
+            <tr><td><strong>BRIN</strong></td><td>Min/Max на 128 стр. (<code>=</code>, <code>&lt;</code>, <code>&gt;</code>)</td><td>Огромные append-only таймсерии</td></tr>
+          </tbody>
+        </table>
+        <div class="formula">Составной B-Tree: сначала колонки на равенство (=), затем на диапазон (&gt;, BETWEEN)</div>
+        <pre><code>-- Составной, покрывающий (Index Only Scan), частичный и функциональный
+CREATE INDEX idx_ord_cust_dt ON orders (customer_id, created_at);
+CREATE INDEX idx_ord_cov     ON orders (customer_id) INCLUDE (total_amount);
+CREATE INDEX idx_ord_pending ON orders (created_at) WHERE status = 'pending';
+CREATE INDEX idx_usr_email   ON users (LOWER(email));
+
+-- Специализированные индексы GIN и BRIN
+CREATE INDEX idx_prod_specs_gin ON products USING gin (specs);
+CREATE INDEX idx_logs_dt_brin   ON app_logs USING brin (logged_at);</code></pre>
+        <ul class="compact">
+          <li><strong>5 причин отказа индекса:</strong> 1) функция вокруг колонки; 2) <code>LIKE '%abc'</code>; 3) низкая селективность (&gt;15–20% строк); 4) несовпадение типов; 5) малая таблица.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3><span>Планы запросов: EXPLAIN (ANALYZE, BUFFERS)</span><span class="lesson-tag">Урок 3.3</span></h3>
+        <div class="formula">cost=старт..итог rows=прогноз width=байт | actual time=мс..мс rows=факт loops=N</div>
+        <table>
+          <thead>
+            <tr><th>Узел плана</th><th>Механика выполнения</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>Seq Scan</code></td><td>Сплошное чтение всей таблицы (норма для &gt;20% строк)</td></tr>
+            <tr><td><code>Index Scan</code></td><td>Спуск по B-Tree + случайные переходы в Heap по <code>ctid</code></td></tr>
+            <tr><td><code>Index Only Scan</code></td><td>Все поля в индексе; при актуальной VM <code>Heap Fetches: 0</code></td></tr>
+            <tr><td><code>Bitmap Heap Scan</code></td><td>Сортировка <code>ctid</code> из индекса → последовательное чтение страниц</td></tr>
+            <tr><td><code>Nested Loop</code></td><td>Вложенный цикл (быстро при малом внешнем наборе + индекс)</td></tr>
+            <tr><td><code>Hash / Merge Join</code></td><td>Хэш-таблица в <code>work_mem</code> / Слияние отсортированных потоков</td></tr>
+          </tbody>
+        </table>
+        <pre><code>-- Реальный запуск с замером страниц кэша (shared hit) и диска (read)
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM orders WHERE customer_id = 42;
+
+-- Безопасное профилирование модифицирующих запросов
+BEGIN;
+EXPLAIN (ANALYZE, BUFFERS) DELETE FROM orders WHERE status = 'cancelled';
+ROLLBACK;
+
+-- Обновление статистики планировщика и проверка памяти сортировки
+VACUUM ANALYZE orders;               -- Лечит Heap Fetches и промахи rows
+SET LOCAL work_mem = '64MB';         -- Лечит Sort Method: external merge Disk</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Журнал предзаписи (WAL), LSN и Crash Recovery</span><span class="lesson-tag">Урок 3.4</span></h3>
+        <div class="formula">COMMIT OK только после fsync записи в pg_wal/ (сегменты по 16 МБ) | REDO от redo_lsn</div>
+        <pre><code>-- Текущая позиция LSN, имя файла сегмента и объём сгенерированного WAL
+SELECT pg_current_wal_lsn() AS lsn,
+       pg_walfile_name(pg_current_wal_lsn()) AS wal_segment;
+SELECT pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), '0/1500000'));
+
+-- Статистика WAL (FPI = Full Page Images для защиты от torn pages) и Checkpoint
+SELECT wal_records, wal_fpi, pg_size_pretty(wal_bytes) FROM pg_stat_wal;
+CHECKPOINT;
+SELECT checkpoint_lsn, redo_lsn, redo_wal_file FROM pg_control_checkpoint();
+
+-- UNLOGGED-таблица (0 байт в WAL, быстрая, но очищается при краше)
+CREATE UNLOGGED TABLE cache_sessions (id INT, payload TEXT);
+
+-- Ослабление ожидания fsync только для текущей некритичной транзакции
+BEGIN;
+SET LOCAL synchronous_commit = off;  -- fsync=on глобально НЕ выключать!
+INSERT INTO app_logs (msg) VALUES ('batch event');
+COMMIT;</code></pre>
+        <table>
+          <thead>
+            <tr><th>Параметр WAL</th><th>Назначение</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>wal_level</code></td><td><code>minimal</code> | <code>replica</code> (по умолч.) | <code>logical</code></td></tr>
+            <tr><td><code>max_wal_size</code> / <code>checkpoint_timeout</code></td><td>Пороги запуска фонового <code>CHECKPOINT</code></td></tr>
+            <tr><td><code>full_page_writes = on</code></td><td>Запись FPI после чекпоинта (защита от разорванных страниц)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== МОДУЛЬ 4 ==================== -->
+  <section class="module page-break">
+    <div class="module-title">Модуль 4. Транзакции, MVCC, блокировки и сравнение с MySQL/InnoDB (Уроки 4.1 – 4.4)</div>
+    <div class="grid-2">
+
+      <div class="card">
+        <h3><span>Транзакции, ACID, SAVEPOINT и Аномалии</span><span class="lesson-tag">Урок 4.1</span></h3>
+        <div class="formula">ACID: Atomicity (всё/ничего) · Consistency (инварианты) · Isolation · Durability (WAL)</div>
+        <table>
+          <thead>
+            <tr><th>Аномалия</th><th>Суть проблемы</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Dirty Read</strong></td><td>Чтение незакоммиченных данных (в PG невозможен никогда)</td></tr>
+            <tr><td><strong>Non-Repeatable Read</strong></td><td>Повторный <code>SELECT</code> строки видит изменённые значения</td></tr>
+            <tr><td><strong>Phantom Read</strong></td><td>Повторный <code>SELECT</code> диапазона видит новые строки</td></tr>
+            <tr><td><strong>Lost Update</strong></td><td>Перезапись чужого апдейта (лечится <code>SET col = col + N</code> / блокировкой)</td></tr>
+          </tbody>
+        </table>
+        <pre><code>-- Индикаторы psql: =# (обычный), =*# (в транзакции), =!# (ошибка, нужен ROLLBACK)
+BEGIN;
+UPDATE accounts SET balance = balance - 500 WHERE id = 1;
+SAVEPOINT sp_bonus;
+UPDATE accounts SET balance = balance + 999999 WHERE id = 2; -- Ошибка/отмена
+ROLLBACK TO SAVEPOINT sp_bonus;      -- Откат только к точке сохранения
+UPDATE accounts SET balance = balance + 500 WHERE id = 2;
+COMMIT;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>MVCC, xmin/xmax, Table Bloat и VACUUM</span><span class="lesson-tag">Урок 4.2</span></h3>
+        <div class="formula">MVCC: Читатели НЕ блокируют писателей, писатели НЕ блокируют читателей</div>
+        <table>
+          <thead>
+            <tr><th>Системное поле / Команда</th><th>Назначение и поведение</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>xmin</code> / <code>xmax</code></td><td>ID транзакции создания / удаления (или <code>0</code>) версии строки</td></tr>
+            <tr><td><code>VACUUM [ANALYZE]</code></td><td>Не блокирует DML; помечает слоты dead tuples свободными</td></tr>
+            <tr><td><code>VACUUM FULL</code></td><td><code>ACCESS EXCLUSIVE LOCK</code>! Перезаписывает файл, отдаёт место ОС</td></tr>
+          </tbody>
+        </table>
+        <pre><code>SELECT pg_current_xact_id(), ctid, xmin, xmax, * FROM accounts;
+
+-- Очистка вне блока транзакции (для прод-сжатия без лока используют pg_repack)
+VACUUM (VERBOSE, ANALYZE) accounts;
+
+-- Агрессивный Autovacuum для горячей таблицы (по умолч. scale_factor = 0.2)
+ALTER TABLE accounts SET (
+    autovacuum_vacuum_scale_factor = 0.01,
+    autovacuum_vacuum_threshold = 50
+);
+
+-- Защита от удержания снимков (bloat) и Transaction ID Wraparound
+SET idle_in_transaction_session_timeout = '30s';</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Уровни изоляции, Блокировки строк и Deadlocks</span><span class="lesson-tag">Урок 4.3</span></h3>
+        <table>
+          <thead>
+            <tr><th>Уровень изоляции в PG</th><th>Снимок (Snapshot)</th><th>Защита / Ошибки конкуренции</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>READ COMMITTED</code> (дефолт)</td><td>Новый на каждый запрос</td><td>Защита от Dirty Read</td></tr>
+            <tr><td><code>REPEATABLE READ</code></td><td>Один на всю транзакцию</td><td>Защита от Non-Rep. и Phantom; ошибка <code>40001</code> при конфликте записи</td></tr>
+            <tr><td><code>SERIALIZABLE</code></td><td>Снимок + граф SIREAD</td><td>Защита от Write Skew; обязателен retry при <code>40001</code></td></tr>
+          </tbody>
+        </table>
+        <pre><code>BEGIN ISOLATION LEVEL REPEATABLE READ;
+SHOW transaction_isolation;
+
+-- Пессимистичные блокировки строк и паттерн очереди воркеров
+SELECT * FROM accounts WHERE id IN (1, 2) ORDER BY id FOR UPDATE; -- Против Deadlock!
+SELECT * FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;
+SELECT * FROM tasks WHERE status = 'new' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
+
+-- Таймаут ожидания и поиск блокирующих процессов
+SET lock_timeout = '2s';
+SELECT pid, state, wait_event_type, pg_blocking_pids(pid) AS blockers, query
+FROM pg_stat_activity WHERE cardinality(pg_blocking_pids(pid)) > 0;
+SELECT pg_terminate_backend(12345);</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Архитектурная дуэль: PostgreSQL vs MySQL (InnoDB)</span><span class="lesson-tag">Урок 4.4</span></h3>
+        <table>
+          <thead>
+            <tr><th>Критерий</th><th>PostgreSQL</th><th>MySQL (InnoDB)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Хранение таблицы</td><td><code>Heap</code> (куча) + физический <code>ctid</code></td><td><code>Clustered Index</code> (B+Tree по PK)</td></tr>
+            <tr><td>Вторичный индекс</td><td>Хранит <code>ctid</code> (1 шаг в Heap)</td><td>Хранит <code>PK</code> (2 шага: Sec → PK)</td></tr>
+            <tr><td>Реализация MVCC</td><td>Версии в Heap + <code>VACUUM</code> + <code>HOT</code></td><td>Перезапись на месте + <code>Undo Log</code></td></tr>
+            <tr><td>Скорость <code>ROLLBACK</code></td><td>Мгновенно <code>O(1)</code> (битовая маска)</td><td>Медленно (физический откат Undo)</td></tr>
+            <tr><td>Изоляция по умолч.</td><td><code>READ COMMITTED</code> (нет Gap Locks)</td><td><code>REPEATABLE READ</code> + <code>Gap Locks</code></td></tr>
+            <tr><td>DDL в транзакции</td><td>Транзакционный (можно откатить)</td><td>Вызывает неявный <code>COMMIT</code></td></tr>
+            <tr><td>Процессы / Пулинг</td><td>Процесс на коннект (нужен PgBouncer)</td><td>Поток (Thread) на коннект</td></tr>
+            <tr><td>UPSERT и возврат</td><td><code>ON CONFLICT DO UPDATE RETURNING</code></td><td><code>ON DUPLICATE KEY UPDATE</code></td></tr>
+          </tbody>
+        </table>
+        <pre><code>-- Оптимизация HOT-обновлений (Heap-Only Tuples) в PostgreSQL
+-- Работает, если изменяемый столбец НЕ входит ни в один индекс
+ALTER TABLE products SET (fillfactor = 80);
+SELECT pg_stat_force_next_flush();
+SELECT relname, n_tup_upd, n_tup_hot_upd FROM pg_stat_user_tables;</code></pre>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== МОДУЛЬ 5 ==================== -->
+  <section class="module">
+    <div class="module-title">Модуль 5. Репликация, резервное копирование и эксплуатация (HA &amp; Ops) (Уроки 5.1 – 5.4)</div>
+    <div class="grid-2">
+
+      <div class="card">
+        <h3><span>Физическая потоковая репликация и Слоты</span><span class="lesson-tag">Урок 5.1</span></h3>
+        <div class="formula">Primary (walsender) ──WAL stream──▶ Hot Standby (walreceiver → startup replay)</div>
+        <pre><code># Инициализация реплики (создаёт standby.signal и primary_conninfo)
+pg_basebackup -h pg_primary -p 5432 -U student -D /var/lib/postgresql/data -Fp -Xs -P -R</code></pre>
+        <pre><code>-- Проверка роли узла (f = Primary RW, t = Standby RO; на Standby запрещён TEMP TABLE)
+SELECT pg_is_in_recovery();
+
+-- На Primary: мониторинг реплик и управление физическими слотами
+SELECT application_name, state, sync_state, sent_lsn, write_lsn, flush_lsn, replay_lsn,
+       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)) AS lag_bytes
+FROM pg_stat_replication;
+
+SELECT pg_create_physical_replication_slot('standby_a_slot', true);
+SELECT slot_name, active, restart_lsn, wal_status FROM pg_replication_slots;
+SELECT pg_drop_replication_slot('standby_a_slot');
+
+-- Защита диска Primary от переполнения при падении реплики со слотом
+ALTER SYSTEM SET max_slot_wal_keep_size = '2GB';
+SELECT pg_reload_conf();</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Sync vs Async, Лаг репликации и Конфликты</span><span class="lesson-tag">Урок 5.2</span></h3>
+        <table>
+          <thead>
+            <tr><th>synchronous_commit</th><th>Условие ответа COMMIT OK клиенту</th><th>Риск потери (RPO)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>off</code> / <code>local</code></td><td>В RAM Primary / На диск Primary (Async)</td><td>RPO &gt; 0 (при гибели Primary)</td></tr>
+            <tr><td><code>remote_write</code></td><td>В OS Page Cache реплики (без fsync)</td><td>Низкий (при двойном сбое)</td></tr>
+            <tr><td><code>on</code> (Sync дефолт)</td><td>Записан на диск WAL реплики (<code>flush_lsn</code>)</td><td><strong>RPO = 0</strong> (но ещё не виден в SELECT)</td></tr>
+            <tr><td><code>remote_apply</code></td><td>Проигран на реплике (<code>replay_lsn</code>)</td><td><strong>RPO = 0</strong> + Read-your-writes</td></tr>
+          </tbody>
+        </table>
+        <pre><code>-- Включение кворумной синхронной репликации на Primary (и аварийный сброс)
+ALTER SYSTEM SET synchronous_standby_names = 'ANY 1 (standby_a, standby_b)';
+ALTER SYSTEM RESET synchronous_standby_names; -- Если единственная реплика упала
+SELECT pg_reload_conf();
+
+-- На Standby: безопасный расчёт лага в секундах и управление проигрыванием
+SELECT CASE WHEN pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() THEN 0
+            ELSE EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))::INT
+       END AS lag_sec;
+SELECT pg_wal_replay_pause(), pg_is_wal_replay_paused(), pg_wal_replay_resume();
+
+-- Диагностика конфликтов чтения на Hot Standby (max_standby_streaming_delay, hot_standby_feedback)
+SELECT datname, confl_snapshot, confl_lock, confl_bufferpin FROM pg_stat_database_conflicts;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Логическая репликация, Switchover и Failover</span><span class="lesson-tag">Урок 5.3</span></h3>
+        <table>
+          <thead>
+            <tr><th>Характеристика</th><th>Физическая репликация</th><th>Логическая (<code>wal_level = logical</code>)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Объект и фильтрация</td><td>Весь кластер байт-в-байт</td><td>Отдельные таблицы, колонки и строки <code>WHERE</code></td></tr>
+            <tr><td>Запись на реплике</td><td>Строго Read-Only</td><td>Subscriber открыт для Read/Write</td></tr>
+            <tr><td>DDL и Sequences</td><td>Реплицируются автоматически</td><td><strong>НЕ реплицируются</strong> (нужен PK / <code>REPLICA IDENTITY</code>)</td></tr>
+            <tr><td>Версии / Архитектура</td><td>Только одинаковые</td><td>Между разными мажорными версиями и ОС</td></tr>
+          </tbody>
+        </table>
+        <pre><code>-- На Publisher (источник): создание публикации с фильтром строк и колонок
+CREATE PUBLICATION pub_active_users
+FOR TABLE users (id, email, created_at) WHERE (is_active = true);
+
+-- На Subscriber (приёмник): создание подписки
+CREATE SUBSCRIPTION sub_active_users
+CONNECTION 'host=pg_primary port=5432 dbname=learning_db user=student password=student_pass'
+PUBLICATION pub_active_users;
+SELECT subname, received_lsn, latest_end_lsn FROM pg_stat_subscription;
+
+-- Failover / Switchover: промоут Standby в новый Primary (меняет Timeline TLI 1 → 2)
+SELECT pg_promote(wait => true, wait_seconds => 30);
+SELECT timeline_id FROM pg_control_checkpoint(); -- Возврат старого узла: pg_rewind</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Бэкапы (pg_dump, PITR) и пулер PgBouncer</span><span class="lesson-tag">Урок 5.4</span></h3>
+        <pre><code># Логический бэкап (Custom format -Fc) и выборочное восстановление
+pg_dump -U student -d learning_db -Fc -f /backups/db.dump
+pg_restore --list /backups/db.dump
+pg_restore -U student -d learning_db --no-owner -t orders /backups/db.dump
+
+# Физический базовый бэкап для PITR
+pg_basebackup -U student -D /backups/base_tar -Ft -z -P</code></pre>
+        <pre><code>-- Точка восстановления PITR и принудительная ротация сегмента WAL
+SELECT pg_create_restore_point('before_drop_table');
+SELECT pg_switch_wal();
+SELECT archived_count, failed_count, last_archived_wal FROM pg_stat_archiver;
+
+-- Конфигурация PITR (файл recovery.signal + postgresql.auto.conf):
+-- restore_command = 'cp /backups/wal/%f %p'
+-- recovery_target_name = 'before_drop_table' (или recovery_target_time = '...')
+-- recovery_target_action = 'promote'</code></pre>
+        <table>
+          <thead>
+            <tr><th>Режим PgBouncer</th><th>Когда серверный коннект возвращается в пул</th><th>Ограничения</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>session</code></td><td>При дисконнекте клиента</td><td>Слабая экономия процессов</td></tr>
+            <tr><td><code>transaction</code></td><td>После каждого <code>COMMIT / ROLLBACK</code> (стандарт: 10x–50x)</td><td>Только <code>SET LOCAL</code> и <code>TEMP TABLE ON COMMIT DROP</code></td></tr>
+            <tr><td><code>statement</code></td><td>После каждого отдельного запроса</td><td>Запрещены многошаговые транзакции</td></tr>
+          </tbody>
+        </table>
+        <pre><code>SHOW POOLS;      -- В админ-БД pgbouncer: cl_active, cl_waiting, sv_active, maxwait</code></pre>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== МОДУЛЬ 6 ==================== -->
+  <section class="module">
+    <div class="module-title">Модуль 6. Архитектура DWH, OLAP-движки и итоговый проект (Уроки 6.1 – 6.5)</div>
+    <div class="grid-2">
+
+      <div class="card">
+        <h3><span>OLTP vs OLAP, Звезда, Снежинка и Fan-out</span><span class="lesson-tag">Урок 6.1</span></h3>
+        <table>
+          <thead>
+            <tr><th>Параметр</th><th>OLTP (Операционная БД)</th><th>OLAP / DWH (Хранилище)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Нагрузка и объём</td><td>Тысячи коротких <code>INSERT/UPDATE</code> по 1 строке</td><td>Тяжёлые агрегации <code>SUM/COUNT</code> по млн строк</td></tr>
+            <tr><td>Модель схемы</td><td>Нормализация 3НФ (без дублей)</td><td><strong>Star Schema</strong> (денормализация) / Snowflake</td></tr>
+            <tr><td>Таблицы Кимбалла</td><td>Сущности предметной области</td><td><code>fact_*</code> (метрики, Grain) + <code>dim_*</code> (контекст)</td></tr>
+            <tr><td>Ключи</td><td>Натуральные / <code>IDENTITY</code></td><td>Суррогатные (<code>_sk</code>), бизнес-ключи (<code>_bk</code>), <code>date_sk</code> (<code>YYYYMMDD</code>)</td></tr>
+          </tbody>
+        </table>
+        <pre><code>-- Генерация умного ключа даты date_sk (формат YYYYMMDD)
+SELECT TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INT AS date_sk;
+
+-- Защита от ловушки гранулярности (Fan-out): агрегация в CTE ДО соединения!
+WITH sales_agg AS (
+    SELECT store_sk, SUM(revenue) AS rev FROM fact_sales GROUP BY store_sk
+),
+plan_agg AS (
+    SELECT store_sk, SUM(target) AS tgt FROM fact_plans GROUP BY store_sk
+)
+SELECT d.store_name, s.rev, p.tgt
+FROM dim_store d
+LEFT JOIN sales_agg s ON d.store_sk = s.store_sk
+LEFT JOIN plan_agg  p ON d.store_sk = p.store_sk;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Партиционирование и MATERIALIZED VIEW в PG</span><span class="lesson-tag">Урок 6.2</span></h3>
+        <div class="formula">Типы: RANGE ([FROM, TO)) · LIST (IN) · HASH | Ключ партиции обязан входить в PK!</div>
+        <pre><code>CREATE TABLE sales (
+    sale_id   BIGINT GENERATED ALWAYS AS IDENTITY,
+    sale_date DATE NOT NULL,
+    amount    NUMERIC(12, 2) NOT NULL,
+    PRIMARY KEY (sale_id, sale_date)
+) PARTITION BY RANGE (sale_date);
+
+CREATE TABLE sales_2026_01 PARTITION OF sales
+    FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
+CREATE TABLE sales_default PARTITION OF sales DEFAULT;
+
+-- Проверка распределения строк по секциям и мгновенное отключение архива
+SELECT tableoid::regclass AS part, COUNT(*) FROM sales GROUP BY tableoid;
+ALTER TABLE sales DETACH PARTITION sales_2026_01 CONCURRENTLY;
+
+-- Материализованная витрина и неблокирующее обновление
+CREATE MATERIALIZED VIEW mv_monthly_sales AS
+SELECT DATE_TRUNC('month', sale_date)::date AS m, SUM(amount) AS rev
+FROM sales GROUP BY 1 WITH DATA;
+
+CREATE UNIQUE INDEX idx_mv_m ON mv_monthly_sales (m); -- Обязателен для CONCURRENTLY
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_monthly_sales;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>ClickHouse: Колончатое хранение, Кодеки и MPP</span><span class="lesson-tag">Урок 6.3</span></h3>
+        <table>
+          <thead>
+            <tr><th>Критерий</th><th>Построчная (PostgreSQL)</th><th>Колончатая (ClickHouse)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Чтение с диска</td><td>Читает все поля строки (страницы 8 КБ)</td><td>Читает файлы только нужных колонок</td></tr>
+            <tr><td>Индексация</td><td>Плотный B-Tree на каждую строку</td><td>Разреженный индекс (1 засечка на гранулу <code>8192</code> строки)</td></tr>
+            <tr><td>Запись / Векторизация</td><td>Поштучные <code>INSERT / UPDATE</code></td><td>Батчи от 10 000 строк + SIMD + сжатие 5x–15x</td></tr>
+          </tbody>
+        </table>
+        <pre><code>-- ClickHouse: ORDER BY от меньшей кардинальности к большей + кодеки сжатия
+CREATE TABLE ch_events (
+    event_date Date          CODEC(DoubleDelta, ZSTD(3)),
+    country    LowCardinality(String),
+    user_id    UInt64        CODEC(Delta, ZSTD(3)),
+    revenue    Decimal(12,2) CODEC(ZSTD(3))
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_date)
+ORDER BY (country, event_date, user_id);
+
+-- Аналитика, проверка отсечения гранул и коэффициента сжатия колонок
+SELECT country, count(), uniqExact(user_id), quantile(0.95)(revenue)
+FROM ch_events WHERE country = 'RU' GROUP BY country;
+
+EXPLAIN indexes = 1 SELECT sum(revenue) FROM ch_events WHERE country = 'RU';
+
+SELECT name, formatReadableSize(sum(data_uncompressed_bytes)) AS raw,
+       formatReadableSize(sum(data_compressed_bytes)) AS comp
+FROM system.columns WHERE table = 'ch_events' GROUP BY name;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3><span>Пайплайны ELT, Идемпотентность и SCD Type 2</span><span class="lesson-tag">Урок 6.4</span></h3>
+        <div class="formula">Слои DWH: RAW / STAGE → DWH / CORE → MART | SCD0 (const) · SCD1 (overwrite) · SCD2 (history)</div>
+        <pre><code>-- Идемпотентный паттерн 1: UPSERT только при реальном изменении данных
+INSERT INTO dim_product (product_bk, title, price)
+VALUES (101, 'Ноутбук', 95000)
+ON CONFLICT (product_bk) DO UPDATE
+SET title = EXCLUDED.title, price = EXCLUDED.price
+WHERE (dim_product.title, dim_product.price)
+      IS DISTINCT FROM (EXCLUDED.title, EXCLUDED.price);
+
+-- SCD Type 2: частичный индекс (1 активная версия на бизнес-ключ)
+CREATE UNIQUE INDEX idx_cust_curr ON dim_customer_scd2 (customer_bk) WHERE is_current = true;
+
+-- SCD Type 2: 2-шаговое обновление истории + Point-in-Time JOIN фактов
+BEGIN;
+UPDATE dim_customer_scd2 d
+SET valid_to = DATE '2026-02-01' - 1, is_current = false
+FROM stg_customers s
+WHERE d.customer_bk = s.customer_bk AND d.is_current = true AND d.city <> s.city;
+
+INSERT INTO dim_customer_scd2 (customer_bk, city, valid_from, valid_to, is_current)
+SELECT s.customer_bk, s.city, DATE '2026-02-01', DATE '9999-12-31', true
+FROM stg_customers s
+LEFT JOIN dim_customer_scd2 d ON d.customer_bk = s.customer_bk AND d.is_current = true
+WHERE d.customer_bk IS NULL;
+COMMIT;
+
+-- Исторический джойн факта строго на дату совершения заказа
+SELECT f.order_id, c.city AS city_at_order_moment
+FROM fact_orders f
+JOIN dim_customer_scd2 c ON f.customer_bk = c.customer_bk
+ AND f.order_date BETWEEN c.valid_from AND c.valid_to;</code></pre>
+      </div>
+
+      <div class="card col-span-2">
+        <h3><span>Сквозной контур: PostgreSQL (ELT) → Сетевой мост → ClickHouse (REPLACE PARTITION &amp; DQ)</span><span class="lesson-tag">Урок 6.5</span></h3>
+        <div class="grid-2">
+          <pre><code>-- 1. Хранимая процедура инкрементального ELT в PostgreSQL
+CREATE OR REPLACE PROCEDURE proj_dwh.run_elt(p_load_date DATE)
+LANGUAGE plpgsql AS $$
+BEGIN
+    DELETE FROM proj_dwh.fact_sales WHERE sale_date = p_load_date;
+    INSERT INTO proj_dwh.fact_sales (sale_date, product_sk, amount)
+    SELECT s.sale_date, d.product_sk, s.amount
+    FROM proj_stg.sales s
+    JOIN proj_dwh.dim_product d ON d.product_bk = s.product_id
+    WHERE s.sale_date = p_load_date;
+END;
+$$;
+CALL proj_dwh.run_elt(DATE '2026-02-01');
+
+-- 2. Потоковая витрина-триггер в ClickHouse (SummingMergeTree)
+CREATE TABLE ch_daily_agg (
+    sale_date Date, city LowCardinality(String),
+    orders_cnt UInt64, revenue Decimal(14,2)
+) ENGINE = SummingMergeTree() ORDER BY (sale_date, city);
+
+CREATE MATERIALIZED VIEW mv_to_daily_agg TO ch_daily_agg AS
+SELECT sale_date, city, count() AS orders_cnt, sum(amount) AS revenue
+FROM mart_sales GROUP BY sale_date, city;</code></pre>
+
+          <pre><code>-- 3. ClickHouse: идемпотентный вытягивающий мост из PG без дубликатов
+CREATE TABLE IF NOT EXISTS mart_sales_stage AS mart_sales;
+TRUNCATE TABLE mart_sales_stage;
+
+INSERT INTO mart_sales_stage
+SELECT * FROM postgresql(
+    'pg_primary:5432', 'learning_db', 'export_sales_mart',
+    'student', 'student_pass', 'proj_dwh'
+) WHERE toYYYYMM(sale_date) = 202601;
+
+-- Атомарная подмена партиции в боевой витрине ClickHouse
+ALTER TABLE mart_sales REPLACE PARTITION 202601 FROM mart_sales_stage;
+
+-- 4. Автоматическая сверка качества данных (Data Quality Reconciliation)
+WITH
+  pg AS (SELECT count() AS r, sum(amount) AS s
+         FROM postgresql('pg_primary:5432','learning_db','export_sales_mart',
+                         'student','student_pass','proj_dwh')),
+  ch AS (SELECT count() AS r, sum(amount) AS s FROM mart_sales)
+SELECT pg.r AS pg_rows, ch.r AS ch_rows, pg.s AS pg_sum, ch.s AS ch_sum,
+       if(pg.r = ch.r AND pg.s = ch.s, 'OK', 'MISMATCH') AS dq_status
+FROM pg CROSS JOIN ch;</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</body>
+</html>

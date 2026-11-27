@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 5.4: Резервное копирование и PITR (почему репликация — не бэкап) + пулинг соединений (PgBouncer)</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_5/practice.html#sec-5-4">Практикум 5.4</a>
+        <a class="course-nav-btn" href="../slides/module-5.html#5.4">Слайды урока 5.4</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 5 · Репликация, резервное копирование и эксплуатация (HA &amp; Ops)</span>
+        <span class="pill pill-neutral">Урок 5.4</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Резервное копирование и PITR (почему репликация — не бэкап) + пулинг соединений (PgBouncer)</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Поймёшь, почему <strong>репликация никогда не заменяет бэкап</strong>, и в чём разница между логическим (<code>pg_dump</code> / <code>pg_restore</code>) и физическим (<code>pg_basebackup</code>) копированием.</li>
+          <li>Освоишь «машину времени» PostgreSQL — <strong>PITR (Point-in-Time Recovery)</strong>: включишь архивирование <code>WAL</code> (<code>archive_mode</code>), создашь точку восстановления и откатишь базу ровно на секунду до катастрофы.</li>
+          <li>Узнаешь, почему 500 открытых соединений от приложений способны положить мощный сервер PostgreSQL, и как <strong>PgBouncer</strong> решает эту проблему через пулинг соединений.</li>
+          <li>Протестируешь <code>course_pgbouncer</code> (порт <code>6432</code>) в режиме <code>transaction</code> pooling, посмотришь его админ-консоль <code>SHOW POOLS</code> и разберёшь главные ловушки <code>SET</code> / <code>PREPARE</code>.</li>
+        </ul>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== РАЗДЕЛ 01 ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Почему репликация — это НЕ бэкап (и два вида бэкапов)</h2>
+      <p>
+        Представь двух друзей на контрольной, где второй мгновенно списывает всё из тетради первого. Если у первого порвалась тетрадь (сгорел диск сервера) — копия у друга спасёт! Это <strong>репликация</strong>. Но представь другую ситуацию: первый ученик случайно зачеркнул всю решённую задачу жирной чёрной ручкой (разработчик выполнил <code>DELETE FROM orders;</code> без <code>WHERE</code> или <code>DROP TABLE users;</code>). Что сделает верный друг-реплика? Через 2 миллисекунды он <strong>точно так же зачеркнёт задачу у себя</strong>!
+      </p>
+      <p>
+        Отсюда главное правило эксплуатации баз данных:
+      </p>
+      <ul>
+        <li><strong>Репликация</strong> защищает от <em>поломки железа</em> (доступность, High Availability).</li>
+        <li><strong>Резервное копирование (Backup)</strong> защищает от <em>ошибок людей, багов кода и вирусов-шифровальщиков</em> — это «сфотографированная» тетрадь, запертая в отдельном сейфе, куда случайная команда <code>DROP TABLE</code> не дотянется.</li>
+      </ul>
+      <p>
+        В PostgreSQL есть два основных способа сделать резервную копию:
+      </p>
+
+      <div class="table-wrapper">
+        <table class="table-wide">
+          <thead>
+            <tr>
+              <th>Критерий</th>
+              <th>Логический бэкап (<code>pg_dump</code> / <code>pg_restore</code>)</th>
+              <th>Физический бэкап (<code>pg_basebackup</code> + WAL)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Жизненная аналогия</td>
+              <td>Рецепт блюда текстом (SQL-команды <code>CREATE</code> + <code>COPY</code>)</td>
+              <td>Полная копия файлов диска всего кластера</td>
+            </tr>
+            <tr>
+              <td>Что копирует</td>
+              <td>Одну базу, схему или даже 1 конкретную таблицу</td>
+              <td>Весь кластер целиком (все базы, роли, индексы)</td>
+            </tr>
+            <tr>
+              <td>Скорость восстановления</td>
+              <td>Медленнее на больших БД (нужно заново строить индексы)</td>
+              <td><strong>Очень быстро</strong> (просто распаковываем готовые файлы)</td>
+            </tr>
+            <tr>
+              <td>Откат на точную секунду (PITR)</td>
+              <td>Нет (только на момент старта <code>pg_dump</code>)</td>
+              <td><strong>Да!</strong> Вместе с архивом <code>WAL</code> — с точностью до миллисекунды</td>
+            </tr>
+            <tr>
+              <td>Когда использовать</td>
+              <td>Малые/средние БД (до ~50–100 ГБ), перенос таблиц, апгрейды</td>
+              <td>Боевые продакшен-кластеры любого размера</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Практика 1: Делаем логический бэкап, «уничтожаем» таблицу и спасаем её через pg_restore</h3>
+      <p>
+        В нашем <code>docker-compose.yaml</code> папка <code>./backups</code> на твоём компьютере уже примонтирована внутрь контейнера <code>course_pg_primary</code> как <code>/backups</code>. Давай проведём полный цикл спасения данных: создадим таблицу, снимем сжатый бинарный дамп (формат <code>-Fc</code> — <em>custom</em>, лучший формат для <code>pg_dump</code>!), случайно удалим таблицу и восстановим её!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash · Шаг 1: создаём важные данные и снимаем бэкап в /backups</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># 1. Создаём учебную таблицу с заказами на Primary
+docker exec course_pg_primary psql -U student -d learning_db -c "
+  DROP TABLE IF EXISTS critical_orders;
+  CREATE TABLE critical_orders (
+    id       SERIAL PRIMARY KEY,
+    customer TEXT NOT NULL,
+    total    NUMERIC(10, 2) NOT NULL
+  );
+  INSERT INTO critical_orders (customer, total) VALUES
+    ('Алина', 14500.00),
+    ('Тимур',  8900.00),
+    ('Дамир', 23100.00);
+"
+
+# 2. Делаем сжатый логический бэкап (-Fc = custom format, -t = конкретная таблица)
+docker exec course_pg_primary pg_dump \
+  -U student -d learning_db -Fc -t critical_orders \
+  -f /backups/critical_orders.dump
+
+# 3. Проверяем, что файл бэкапа появился и не пустой!
+docker exec course_pg_primary ls -lh /backups/critical_orders.dump</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ терминала</div>
+        <pre>INSERT 0 3
+-rw-r--r-- 1 root root 1.8K Nov 26 10:15 /backups/critical_orders.dump</pre>
+      </div>
+
+      <p>
+        А теперь моделируем катастрофу: кто-то по ошибке выполнил <code>DROP TABLE critical_orders;</code>! Проверим, как <code>pg_restore</code> мгновенно вернёт таблицу на место.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash · Шаг 2: катастрофа (DROP TABLE) и восстановление из дампа</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># 1. Имитируем ошибку инженера: удаляем таблицу
+docker exec course_pg_primary psql -U student -d learning_db \
+  -c "DROP TABLE critical_orders;"
+
+# 2. Восстанавливаем таблицу из файла /backups/critical_orders.dump
+docker exec course_pg_primary pg_restore \
+  -U student -d learning_db --no-owner \
+  /backups/critical_orders.dump
+
+# 3. Проверяем, что все 3 заказа целы и невредимы!
+docker exec course_pg_primary psql -U student -d learning_db \
+  -c "SELECT * FROM critical_orders ORDER BY id;"</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ терминала</div>
+        <pre>DROP TABLE
+ id | customer |  total
+----+----------+----------
+  1 | Алина    | 14500.00
+  2 | Тимур    |  8900.00
+  3 | Дамир    | 23100.00
+(3 rows)</pre>
+      </div>
+
+      <p>
+        Таблица спасена! Но у <code>pg_dump</code> есть слабое место: если бэкап делался в 03:00 ночи, а катастрофа случилась в 15:40 дня, то <strong>все заказы за 12 часов потеряются</strong>. Чтобы не терять ни минуты, нам нужна «машина времени» — <strong>PITR</strong>!
+      </p>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 02 ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Машина времени: PITR (Point-in-Time Recovery) и архивирование WAL</h2>
+      <p>
+        Представь видеокамеру наблюдения, которая в 00:00 делает <strong>чёткий базовый кадр</strong> (<code>pg_basebackup</code>), а дальше всю ночь и весь день складывает в несгораемый архив каждый листок журнала изменений (<strong>WAL Archiving</strong>).
+      </p>
+      <p>
+        В <code>14:05:12</code> стажёр случайно удалил таблицу клиентов. Что делает <strong>PITR (Point-in-Time Recovery)</strong> — восстановление на конкретный момент времени?
+      </p>
+      <ol>
+        <li>Берём базовый ночной снимок <code>pg_basebackup</code> (состояние базы в <code>00:00</code>).</li>
+        <li>Кладём рядом файл-маркер <code>recovery.signal</code> и пишем команду: <em>«Воспроизводи сохранённые в архиве WAL-сегменты от 00:00 до ровно <code>14:05:10</code> — и СТОП!»</em></li>
+        <li>PostgreSQL перематывает историю вперёд, применяет все честные заказы за 14 часов и <strong>останавливается за 2 секунды до рокового <code>DROP TABLE</code></strong>!</li>
+      </ol>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            B["Базовый бэкап 00:00 (pg_basebackup)"] --> W1["Архив WAL: 00:00 - 12:00"]
+            W1 --> W2["Архив WAL: 12:00 - 14:05:10"]
+            W2 --> STOP["СТОП! recovery_target_time = 14:05:10"]
+            W2 -.->|"Пропускаем ошибку!"| ERR["14:05:12: DROP TABLE orders!"]
+            STOP --> OK["Восстановленная база без потерь!"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Как PITR сочетает базовый снимок и архив WAL для отката ровно на секунду до ошибки.</figcaption>
+      </figure>
+
+      <h3>Практика 2: Включаем архивирование WAL и делаем базовый снимок для PITR</h3>
+      <p>
+        Загляни в наш <code>docker-compose.yaml</code> в блок <code>pg_primary</code> — там специально для Урока 5.4 уже подготовлены 4 закомментированные строки! Раскомментируй их (убери символ <code>#</code> в начале этих 4 строк):
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">YAML · Фрагмент docker-compose.yaml (сервис pg_primary)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-yaml">      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=mkdir -p /backups/wal &amp;&amp; test ! -f /backups/wal/%f &amp;&amp; cp %p /backups/wal/%f</code></pre>
+      </div>
+
+      <p>
+        Что означают загадочные <code>%p</code> и <code>%f</code> в <code>archive_command</code>? PostgreSQL сам подставляет вместо <code>%p</code> полный путь к заполненному 16-мегабайтному файлу WAL, а вместо <code>%f</code> — его короткое имя. Проверка <code>test ! -f</code> защищает от случайной перезаписи уже сохранённого архивного файла. Теперь применим изменение, сделаем базовый бэкап и проверим работу архиватора!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash · Перезапускаем Primary с архивированием и снимаем базу для PITR</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># 1. Пересоздаём контейнер pg_primary с включённым archive_mode=on
+docker compose up -d pg_primary
+
+# 2. Делаем физический базовый бэкап в /backups/base_pitr
+docker exec course_pg_primary bash -c "
+  rm -rf /backups/base_pitr &amp;&amp;
+  pg_basebackup -U student -D /backups/base_pitr -Ft -z -P
+"
+
+# 3. Записываем данные и ставим именованную точку восстановления (restore point)
+docker exec course_pg_primary psql -U student -d learning_db -c "
+  DROP TABLE IF EXISTS pitr_ledger;
+  CREATE TABLE pitr_ledger (id SERIAL PRIMARY KEY, note TEXT, ts TIMESTAMPTZ DEFAULT now());
+  INSERT INTO pitr_ledger (note) VALUES ('Платёж №1 — валидный'), ('Платёж №2 — валидный');
+
+  -- Ставим закладку в WAL перед опасной операцией!
+  SELECT pg_create_restore_point('before_danger_release');
+
+  -- Имитируем ошибку после релиза
+  DELETE FROM pitr_ledger;
+
+  -- Принудительно закрываем текущий сегмент WAL, чтобы он сразу ушёл в /backups/wal
+  SELECT pg_switch_wal();
+"
+
+# 4. Проверяем статистику архиватора и реальные файлы WAL на диске!
+docker exec course_pg_primary psql -U student -d learning_db -c "
+  SELECT archived_count, last_archived_wal, failed_count FROM pg_stat_archiver;
+"
+docker exec course_pg_primary ls -lh /backups/wal | tail -n 5</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ терминала и PostgreSQL</div>
+        <pre>32768/32768 kB (100%), 1/1 tablespace
+ pg_create_restore_point
+-------------------------
+ 0/501B240
+(1 row)
+
+ pg_switch_wal
+---------------
+ 0/501B3A8
+(1 row)
+
+ archived_count |    last_archived_wal     | failed_count
+----------------+--------------------------+--------------
+              2 | 000000010000000000000005 |            0
+(1 row)
+
+-rw------- 1 postgres postgres 16M Nov 26 10:20 000000010000000000000004
+-rw------- 1 postgres postgres 16M Nov 26 10:20 000000010000000000000005</pre>
+      </div>
+
+      <h3>Практика 3: Как запускается само восстановление PITR (конфиг и частая ошибка)</h3>
+      <p>
+        Когда наступает реальная авария, ты разворачиваешь <code>base.tar.gz</code> из <code>/backups/base_pitr</code> на чистый экземпляр PostgreSQL (никогда не затирай живую папку данных без копии!), кладёшь в каталог данных пустой файл <code>recovery.signal</code> и добавляешь в <code>postgresql.auto.conf</code> всего 3 строчки:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">INI · Настройки PITR в postgresql.auto.conf для восстановления до нашей закладки</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-ini"># Откуда забирать архивные 16-мегабайтные сегменты WAL
+restore_command = 'cp /backups/wal/%f %p'
+
+# Остановиться ровно на нашей закладке (или recovery_target_time = '2026-11-26 10:19:50+05')
+recovery_target_name = 'before_danger_release'
+
+# После достижения цели открыть базу на запись (или 'pause', чтобы сначала проверить SELECT!)
+recovery_target_action = 'promote'</code></pre>
+      </div>
+
+      <p>
+        А что будет, если в <code>archive_command</code> забыли создать папку, закончилось место или права на запись пропали? PostgreSQL <strong>не удалит</strong> неархивированные сегменты WAL и начнёт ругаться в логах, пока <code>failed_count</code> в <code>pg_stat_archiver</code> не вырастет до небес (и не забьёт диск Primary!):
+      </p>
+
+      <div class="error-block standalone">
+        <div class="output-label">Ошибка в логах PostgreSQL при сломанном archive_command</div>
+        <pre>LOG:  archive command failed with exit code 1
+DETAIL:  The failed archive command was: cp pg_wal/000000010000000000000006 /backups/wal/000000010000000000000006
+WARNING:  archiving write-ahead log file "000000010000000000000006" failed too many times, will try again</pre>
+      </div>
+
+      <div class="compare-grid stacked">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-bash"># 1. Хранить бэкапы на том же сервере, где живёт база
+# 2. Написать cron-скрипт 2 года назад и НИ РАЗУ не проверять восстановление!</code></pre>
+            </div>
+            <p>Это «бэкап Шрёдингера»: он вроде лежит на диске, но в день аварии выясняется, что файл пустой, побитый или диск сгорел вместе с сервером.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-bash"># Правило 3-2-1 + боевые инструменты (pgBackRest / WAL-G) + автотест восстановления
+# 3 копии данных · 2 разных хранилища · 1 копия в другом дата-центре / S3
+# Раз в неделю скрипт сам разворачивает последний бэкап на тестовый сервер и сверяет данные!</code></pre>
+            </div>
+            <p>В продакшене вместо ручного <code>cp</code> используют <strong>pgBackRest</strong> или <strong>WAL-G</strong>: они умеют сжимать, шифровать, делать инкрементальные копии прямо в S3 и проверять целостность.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Золотой закон SRE:</strong> У тебя нет бэкапов, пока ты не прогнал <strong>восстановление</strong> из них. При PITR ставь <code>recovery_target_action = 'pause'</code>, если хочешь сначала подключиться к восстановленной копии через <code>SELECT</code>, убедиться, что нужные строки на месте, и только потом вручную выполнить <code>SELECT pg_wal_replay_resume();</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 03 ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Проблема «тысячи соединений» и зачем нужен PgBouncer</h2>
+      <p>
+        С отказоустойчивостью и бэкапами мы разобрались. Теперь давай решим самую частую проблему эксплуатации растущего сайта!
+      </p>
+      <p>
+        Представь ресторан на <strong>500 гостей</strong>. Большинство гостей 98% времени просто болтают друг с другом (в базе данных это состояние <code>idle</code>) и лишь на пару секунд просят принести кофе. Как работает «голый» PostgreSQL без помощников? Он использует архитектуру <strong>process-per-connection</strong>: на <em>каждое</em> входящее подключение клиента операционная система запускает <strong>отдельный тяжёлый процесс ОС</strong> (<code>fork()</code>), который съедает <strong>5–10 МБ оперативной памяти</strong>!
+      </p>
+      <p>
+        Если 50 микросервисов откроют по 20 соединений (итого 1000 процессов), наш ресторан наймёт 1000 личных официантов. Они будут толкаться локтями на кухне (переключение контекста CPU и борьба за блокировки внутри PostgreSQL), съедят 10 ГБ RAM впустую — и сервер либо упадёт по нехватке памяти (<code>OOM Killer</code>), либо начнёт отказывать новым клиентам с ошибкой:
+      </p>
+
+      <div class="error-block standalone">
+        <div class="output-label">Знаменитая ошибка перегрузки соединений PostgreSQL</div>
+        <pre>FATAL:  sorry, too many clients already</pre>
+      </div>
+
+      <p>
+        Как спасти ресторан? Поставить на входе <strong>метрдотеля — пулер соединений PgBouncer</strong>!
+      </p>
+      <p>
+        <strong>PgBouncer</strong> — это сверхлёгкий прокси-сервер (написанный на C, он тратит всего ~2 КБ памяти на одного клиента!). Он принимает хоть <strong>2000 клиентских подключений</strong>, но внутрь PostgreSQL держит открытым маленький эффективный пул из <strong>10–50 реальных соединений</strong> (<code>DEFAULT_POOL_SIZE</code>). Пока клиент думает или рендерит страницу, его реальное соединение к PostgreSQL мгновенно отдаётся другому клиенту!
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            C1["Микросервис 1 (50 коннектов)"] --> PB["PgBouncer (порт 6432): до 200 клиентов"]
+            C2["Микросервис 2 (80 коннектов)"] --> PB
+            C3["Воркеры (70 коннектов)"] --> PB
+            PB ==>|"Пул всего из 10 процессов (transaction mode)"| PG[("PostgreSQL Primary (порт 5432)")]
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Мультиплексирование 200 клиентских подключений в 10 реальных процессов PostgreSQL через PgBouncer.</figcaption>
+      </figure>
+
+      <p>
+        У PgBouncer есть <strong>3 режима работы</strong> (<code>pool_mode</code>), которые определяют, как часто метрдотель забирает официанта у одного клиента и передаёт другому:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Режим <code>pool_mode</code></th>
+              <th>Когда соединение возвращается в пул</th>
+              <th>Плюсы и минусы</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>session</code></td>
+              <td>Только когда клиент полностью отключился</td>
+              <td>100% совместимость со всеми фичами Postgres, но <strong>слабая экономия</strong> соединений (простаивающие <code>idle</code>-клиенты всё равно держат процесс).</td>
+            </tr>
+            <tr>
+              <td><code>transaction</code> (стандарт!)</td>
+              <td>Сразу после каждого <code>COMMIT</code> или <code>ROLLBACK</code></td>
+              <td><strong>Огромная экономия (10x–50x)!</strong> Именно этот режим настроен у нас в <code>docker-compose.yaml</code>. Но нельзя полагаться на «память сессии» между транзакциями.</td>
+            </tr>
+            <tr>
+              <td><code>statement</code></td>
+              <td>После каждого отдельного SQL-запроса</td>
+              <td>Максимальная плотность, но <strong>нельзя использовать многозапросные транзакции</strong> <code>BEGIN ... COMMIT</code> (применяется очень редко).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 04 ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> Практика с PgBouncer: админ-консоль, тест пула и ловушки transaction mode</h2>
+      <p>
+        В нашем <code>docker-compose.yaml</code> сервис <code>pgbouncer</code> (контейнер <code>course_pgbouncer</code>) уже настроен со следующими параметрами:
+        <code>POOL_MODE=transaction</code>, <code>MAX_CLIENT_CONN=200</code>, <code>DEFAULT_POOL_SIZE=10</code>. Снаружи он доступен на порту <code>6432</code>, а внутри сети Docker — по адресу <code>host=pgbouncer port=5432</code>.
+      </p>
+
+      <h3>Практика 4: Заглядываем внутрь пула через админ-консоль PgBouncer</h3>
+      <p>
+        У PgBouncer есть встроенная «виртуальная» база данных с именем <code>pgbouncer</code>. Если подключиться к ней через <code>psql</code>, можно отдавать команды мониторинга <code>SHOW POOLS;</code>, <code>SHOW DATABASES;</code> и <code>SHOW STATS;</code>! Запусти (убедись, что профиль запущен через <code>docker compose --profile mod5 up -d</code>):
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash · Проверка работы и статистики course_pgbouncer</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># 1. Делаем обычный SQL-запрос к learning_db ЧЕРЕЗ PgBouncer
+docker exec -e PGPASSWORD=student_pass course_pg_primary \
+  psql -h pgbouncer -p 5432 -U student -d learning_db \
+  -c "SELECT 'Привет через PgBouncer!' AS greeting, pg_backend_pid() AS pg_pid;"
+
+# 2. Подключаемся к виртуальной админ-базе pgbouncer и смотрим пулы
+docker exec -e PGPASSWORD=student_pass course_pg_primary \
+  psql -h pgbouncer -p 5432 -U student -d pgbouncer \
+  -c "SHOW POOLS;" -c "SHOW DATABASES;"</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PgBouncer</div>
+        <pre>        greeting         | pg_pid
+-------------------------+--------
+ Привет через PgBouncer! |    142
+(1 row)
+
+ database    |  user   | cl_active | cl_waiting | sv_active | sv_idle | sv_used | maxwait
+-------------+---------+-----------+------------+-----------+---------+---------+---------
+ learning_db | student |         0 |          0 |         0 |       1 |       0 |       0
+ pgbouncer   | student |         1 |          0 |         0 |       0 |       0 |       0
+(2 rows)
+
+    name     |    host    | port |  database   | pool_size | current_connections
+-------------+------------+------+-------------+-----------+---------------------
+ learning_db | pg_primary | 5432 | learning_db |        10 |                   1
+(1 row)</pre>
+      </div>
+
+      <p>
+        Главные колонки в <code>SHOW POOLS</code>, на которые смотрят инженеры на дежурстве:
+      </p>
+      <ul>
+        <li><code>cl_active</code> — сколько клиентов сейчас подключено к PgBouncer.</li>
+        <li><code>cl_waiting</code> — сколько клиентов <strong>стоят в очереди</strong>, потому что все <code>10</code> соединений пула заняты. В норме здесь <code>0</code>!</li>
+        <li><code>sv_active</code> / <code>sv_idle</code> — сколько реальных соединений к PostgreSQL сейчас работают или ждут задачу.</li>
+        <li><code>maxwait</code> — сколько секунд самый невезучий клиент прождал в очереди. Если <code>maxwait &gt; 0</code> постоянно — пора ускорять медленные запросы или слегка увеличить <code>pool_size</code>.</li>
+      </ul>
+
+      <h3>Практика 5: Доказываем экономию — 25 клиентов работают через пул из 10 процессов</h3>
+      <p>
+        Давай прямо сейчас запустим <strong>25 одновременных клиентских соединений</strong> к PgBouncer (каждое сделает <code>SELECT pg_sleep(2)</code>) и одновременно посмотрим в <code>pg_stat_activity</code> на Primary, сколько реальных процессов PostgreSQL при этом занято!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash · Нагружаем PgBouncer 25 клиентами и считаем процессы на Primary</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># Запускаем 25 параллельных клиентов через PgBouncer в фоне
+for i in $(seq 1 25); do
+  docker exec -e PGPASSWORD=student_pass course_pg_primary \
+    psql -h pgbouncer -p 5432 -U student -d learning_db \
+    -q -c "SELECT pg_sleep(2);" &amp;
+done
+
+# Через 0.5 секунды снимаем срез со стороны PgBouncer и со стороны PostgreSQL Primary
+sleep 0.5
+
+echo "--- Взгляд PgBouncer (cl_active + cl_waiting vs sv_active) ---"
+docker exec -e PGPASSWORD=student_pass course_pg_primary \
+  psql -h pgbouncer -p 5432 -U student -d pgbouncer \
+  -c "SELECT database, cl_active, cl_waiting, sv_active, sv_idle FROM (VALUES (1)) t;" 2&gt;/dev/null || \
+docker exec -e PGPASSWORD=student_pass course_pg_primary \
+  psql -h pgbouncer -p 5432 -U student -d pgbouncer -c "SHOW POOLS;"
+
+echo "--- Взгляд PostgreSQL Primary (реальных процессов НЕ больше 10!) ---"
+docker exec course_pg_primary psql -U student -d learning_db -c "
+  SELECT state, count(*) AS real_pg_backends
+  FROM pg_stat_activity
+  WHERE datname = 'learning_db' AND pid &lt;&gt; pg_backend_pid()
+  GROUP BY state;
+"
+
+wait</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ терминала (во время работы 25 клиентов)</div>
+        <pre>--- Взгляд PgBouncer ---
+  database   |  user   | cl_active | cl_waiting | sv_active | sv_idle
+-------------+---------+-----------+------------+-----------+---------
+ learning_db | student |        10 |         15 |        10 |       0
+
+--- Взгляд PostgreSQL Primary (реальных процессов НЕ больше 10!) ---
+ state  | real_pg_backends
+--------+------------------
+ active |               10
+(1 row)</pre>
+      </div>
+
+      <p>
+        Посмотри на эту красоту! К PgBouncer пришли <strong>25 клиентов</strong>: <code>10</code> мгновенно получили работу (<code>sv_active = 10</code>), а <code>15</code> вежливо подождали 2 секунды в очереди (<code>cl_waiting = 15</code>), и <strong>ни один не получил ошибку <code>too many clients</code></strong>! При этом PostgreSQL Primary спокойно обслуживал ровно 10 процессов без лишней нагрузки на RAM и CPU. Проблема «тысячи официантов» полностью решена!
+      </p>
+
+      <h3>Практика 6: Главная ловушка Transaction Pooling (PREPARE и SET)</h3>
+      <p>
+        У режима <code>transaction</code> есть один важный подвох, о который обжигаются разработчики, впервые включившие PgBouncer. Поскольку после каждого <code>COMMIT</code> клиент может получить <strong>другой процесс PostgreSQL</strong> (другой <code>pg_backend_pid()</code>), всё, что хранилось в «памяти сессии» (<code>TEMP TABLE</code>, <code>LISTEN / NOTIFY</code>, сессионный <code>SET</code> и старые версии <code>PREPARE</code>), может внезапно исчезнуть или «протечь» в чужой запрос!
+      </p>
+      <p>
+        Давай поймаем эту ошибку вживую: создадим временную таблицу вне транзакции (автокоммит!), параллельно «пошевелим» пул другим запросом и попробуем прочитать её.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Опасный паттерн в PgBouncer (transaction mode)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Транзакция 1: создаём временную таблицу (попала на backend PID 142)
+CREATE TEMP TABLE my_cart (item TEXT);
+INSERT INTO my_cart VALUES ('Кроссовки');
+
+-- (Между запросами другой клиент забрал PID 142, а нам выдали PID 149!)
+
+-- Транзакция 2: пытаемся прочитать свою временную таблицу на другом backend!
+SELECT * FROM my_cart;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка при переключении серверного соединения в Transaction Mode</div>
+        <pre>ERROR:  relation "my_cart" does not exist
+LINE 1: SELECT * FROM my_cart;</pre>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо (в transaction mode)</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Утечёт к чужому клиенту!
+SET search_path TO analytics;
+SELECT * FROM reports;
+
+-- Может пропасть после COMMIT:
+CREATE TEMP TABLE tmp (id INT);</code></pre>
+            </div>
+            <p>Обычный <code>SET</code> остаётся висеть на бэкенде после возврата в пул и ломает следующего клиента!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно (в transaction mode)</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Внутри одной транзакции:
+BEGIN;
+SET LOCAL search_path TO analytics;
+SELECT * FROM reports;
+COMMIT; -- сам сбросится!</code></pre>
+            </div>
+            <p><code>SET LOCAL</code> и <code>CREATE TEMP TABLE ... ON COMMIT DROP</code> действуют строго внутри одной транзакции и безопасны в пуле.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Сколько ставить в <code>DEFAULT_POOL_SIZE</code>?</strong> Новички часто ставят 500, но от этого база только замедляется! В реальных проектах оптимальный размер пула к PostgreSQL — примерно <strong>2–4 соединения на одно ядро CPU</strong> (например, <code>20–40</code> для 8-ядерного сервера), тогда как <code>MAX_CLIENT_CONN</code> в PgBouncer можно смело ставить <code>1000–5000</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 05 ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Шпаргалка урока и мини-практикум</h2>
+
+      <h3>Короткая шпаргалка перед практикой</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Инструмент / правило</th>
+              <th>Зачем нужен</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>pg_dump -Fc</code> + <code>pg_restore</code></td>
+              <td>Логический сжатый бэкап отдельных баз или таблиц и быстрое выборочное восстановление.</td>
+            </tr>
+            <tr>
+              <td><code>archive_mode = on</code> + <code>pg_basebackup</code></td>
+              <td>Фундамент для <strong>PITR</strong>: базовый физический снимок + непрерывный архив сегментов WAL.</td>
+            </tr>
+            <tr>
+              <td><code>pg_create_restore_point()</code> / <code>pg_switch_wal()</code></td>
+              <td>Создание именованной закладки в WAL перед опасным релизом и принудительная отправка сегмента в архив.</td>
+            </tr>
+            <tr>
+              <td><code>PgBouncer</code> (<code>POOL_MODE=transaction</code>)</td>
+              <td>Сжимает тысячи клиентских подключений в компактный пул процессов PostgreSQL (мониторинг через <code>SHOW POOLS;</code>).</td>
+            </tr>
+            <tr>
+              <td><code>SET LOCAL</code> и <code>ON COMMIT DROP</code></td>
+              <td>Безопасный способ менять настройки и использовать временные таблицы в режиме <code>transaction</code> pooling.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Мини-практикум для закрепления</h3>
+      <p>
+        Все 4 задания полностью автономны и выполняются в нашем кластере (<code>docker compose --profile mod5 up -d</code>). Реши каждую задачу сам, прежде чем открывать эталонное решение.
+      </p>
+
+      <!-- Задание 1 -->
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый). Точечный бэкап и проверка содержимого архива без восстановления</div>
+        <p style="margin-bottom: 0;">
+          Создай на <strong>Primary (5432)</strong> таблицу <code>backup_lab (id INT PRIMARY KEY, title TEXT)</code> с двумя строками. Сделай её сжатый бэкап в файл <code>/backups/backup_lab.dump</code> с помощью <code>pg_dump -Fc</code>. Затем, <strong>не восстанавливая таблицу</strong>, выведи оглавление (список объектов внутри дампа) командой <code>pg_restore --list</code>, а потом удали таблицу, восстанови её из дампа и проверь <code>SELECT</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">Bash · Бэкап, инспекция через --list и восстановление</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-bash"># 1. Готовим таблицу
+docker exec course_pg_primary psql -U student -d learning_db -c "
+  DROP TABLE IF EXISTS backup_lab;
+  CREATE TABLE backup_lab (id INT PRIMARY KEY, title TEXT NOT NULL);
+  INSERT INTO backup_lab VALUES (1, 'Ноутбук'), (2, 'Монитор');
+"
+
+# 2. Снимаем сжатый дамп одной таблицы
+docker exec course_pg_primary pg_dump \
+  -U student -d learning_db -Fc -t backup_lab \
+  -f /backups/backup_lab.dump
+
+# 3. Инспектируем оглавление дампа без восстановления
+docker exec course_pg_primary pg_restore --list /backups/backup_lab.dump
+
+# 4. Удаляем, восстанавливаем и проверяем
+docker exec course_pg_primary psql -U student -d learning_db -c "DROP TABLE backup_lab;"
+docker exec course_pg_primary pg_restore -U student -d learning_db --no-owner /backups/backup_lab.dump
+docker exec course_pg_primary psql -U student -d learning_db -c "SELECT * FROM backup_lab ORDER BY id;"</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задание 2 -->
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Практический). Мониторинг здоровья WAL-архиватора</div>
+        <p style="margin-bottom: 0;">
+          Напиши SQL-запрос для <strong>Primary (5432)</strong> к <code>pg_stat_archiver</code>, который проверит: включён ли <code>archive_mode</code>, сколько файлов успешно заархивировано (<code>archived_count</code>), сколько было ошибок (<code>failed_count</code>), и выведет понятный статус <code>archiver_health</code>: <code>'DISABLED'</code> (если <code>archive_mode = 'off'</code>), <code>'ERROR'</code> (если последняя ошибка была позже последнего успешного архивирования: <code>last_failed_time &gt; last_archived_time</code> или успешных ещё не было при <code>failed_count &gt; 0</code>) или <code>'OK'</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Выполнять на Primary (порт 5432)</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+    current_setting('archive_mode') AS archive_mode,
+    archived_count,
+    failed_count,
+    last_archived_wal,
+    CASE
+        WHEN current_setting('archive_mode') = 'off' THEN 'DISABLED'
+        WHEN failed_count &gt; 0
+             AND (last_archived_time IS NULL OR last_failed_time &gt; last_archived_time)
+            THEN 'ERROR'
+        ELSE 'OK'
+    END AS archiver_health
+FROM pg_stat_archiver;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задание 3 -->
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Инженерный). Аудит соединений в pg_stat_activity (аргумент в пользу PgBouncer)</div>
+        <p style="margin-bottom: 0;">
+          Напиши SQL-запрос для <strong>Primary (5432)</strong>, который покажет текущую картину всех клиентских подключений из <code>pg_stat_activity</code> (где <code>backend_type = 'client backend'</code>): сгруппируй их по <code>state</code> (<code>active</code>, <code>idle</code>, <code>idle in transaction</code>), посчитай количество соединений в каждом состоянии, а рядом в той же строке выведи лимит сервера <code>max_connections</code> и процент занятости лимита (округлённый до 1 знака после запятой).
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Выполнять на Primary (порт 5432)</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">WITH limits AS (
+    SELECT current_setting('max_connections')::INT AS max_conn
+)
+SELECT
+    COALESCE(a.state, 'unknown') AS conn_state,
+    count(*) AS connections_cnt,
+    l.max_conn,
+    round(100.0 * count(*) / l.max_conn, 1) AS pct_of_limit
+FROM pg_stat_activity AS a
+CROSS JOIN limits AS l
+WHERE a.backend_type = 'client backend'
+GROUP BY a.state, l.max_conn
+ORDER BY connections_cnt DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задание 4 -->
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Отладка). Исправляем «протекающий» запрос для работы через PgBouncer (transaction mode)</div>
+        <p style="margin-bottom: 0;">
+          Разработчик переключил сервис на <code>course_pgbouncer</code> (порт <code>6432</code>, режим <code>transaction</code>), и его скрипт начал портить настройки соседним запросам! В скрипте выполнялось: <code>SET work_mem = '32MB'; CREATE TEMP TABLE tmp_calc (x INT); INSERT INTO tmp_calc SELECT generate_series(1, 5); SELECT sum(x) FROM tmp_calc;</code>. Перепиши этот блок так, чтобы он выполнялся <strong>через PgBouncer</strong> в одной транзакции, гарантированно сбрасывал <code>work_mem</code> и автоматически удалял <code>tmp_calc</code> после завершения (подсказка: <code>SET LOCAL</code> и <code>ON COMMIT DROP</code>), и проверь его выполнение!
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">Bash · Безопасный запуск через course_pgbouncer</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-bash">docker exec -e PGPASSWORD=student_pass course_pg_primary \
+  psql -h pgbouncer -p 5432 -U student -d learning_db -c "
+  BEGIN;
+    -- Настройка действует ТОЛЬКО внутри этой транзакции
+    SET LOCAL work_mem = '32MB';
+
+    -- Временная таблица автоматически исчезнет при COMMIT
+    CREATE TEMP TABLE tmp_calc (x INT) ON COMMIT DROP;
+    INSERT INTO tmp_calc SELECT generate_series(1, 5);
+
+    SELECT
+      sum(x) AS total_sum,
+      current_setting('work_mem') AS tx_work_mem
+    FROM tmp_calc;
+  COMMIT;
+
+  -- Проверяем: после COMMIT настройка work_mem вернулась к дефолту (4MB)!
+  SHOW work_mem;
+"</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_5/practice.html#sec-5-4"><strong>Практикум по Уроку 5.4 →</strong></a> — там 11 пошаговых заданий с ответами на <code>pg_dump / pg_restore</code>, архивирование WAL и <strong>PITR</strong>, стресс-тест <strong>PgBouncer</strong> под 25 клиентами и финальный дашборд дежурного DBA.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока и Модуля 5</span>
+      Поздравляю — ты только что завершил <strong>Модуль 5 (HA &amp; Ops)</strong>! Теперь в твоём инженерном арсенале есть полный цикл защиты боевого PostgreSQL: физическая потоковая репликация (<code>Primary + Hot Standby</code>), осознанный выбор между <code>async</code> и <code>sync</code> с диагностикой <code>Replication Lag</code>, гибкая логическая репликация, безопасное переключение ролей (<code>Switchover / Failover</code>), настоящая «машина времени» <strong>PITR</strong> (<code>pg_basebackup</code> + архив <code>WAL</code>) и пулинг соединений через <strong>PgBouncer</strong>, защищающий сервер от лавины подключений. Твой OLTP-кластер теперь готов выдержать и сбой железа, и ошибку человека, и наплыв пользователей! Но что делать, когда бизнес попросит за секунду посчитать аналитику по <strong>миллиардам</strong> событий, с которыми строчный PostgreSQL уже начинает задыхаться? В следующем <strong>Модуле 6</strong> мы откроем мир аналитических систем (<strong>OLAP</strong>) и познакомимся с колончатой СУБД <strong>ClickHouse</strong>, которая уже ждёт нас в нашем <code>docker-compose.yaml</code>!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_5_3.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">5.3 · Логическая репликация и переключение при сбоях (S…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_6_1.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">6.1 · OLTP vs OLAP и размерное моделирование («Звезда»…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

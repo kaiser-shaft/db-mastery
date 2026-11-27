@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Изучение Баз Данных — Содержание курса</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --accent-border: #bfdbfe;
+      --tip-bg: #f0fdf4;
+      --tip-border: #bbf7d0;
+      --tip-text: #166534;
+      --tip-solid: #16a34a;
+      --warn-bg: #fffbeb;
+      --warn-border: #fde68a;
+      --warn-text: #92400e;
+      --purple-bg: #f5f3ff;
+      --purple-border: #ddd6fe;
+      --purple-text: #6d28d9;
+      --err-text: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* ==================== ШАПКА ==================== */
+    .hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.35rem 2.75rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+      margin-bottom: 1.75rem;
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 0.65rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    .hero-sub {
+      margin: 0 0 1.5rem;
+      color: var(--muted);
+      font-size: 0.97rem;
+      max-width: 72ch;
+    }
+
+    /* Кнопка быстрого продолжения */
+    .quick-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .quick-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      text-decoration: none;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.15rem;
+      transition: border-color 0.15s ease, transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .quick-card:hover {
+      border-color: var(--accent);
+      background: #ffffff;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .quick-card.primary-cta {
+      background: var(--accent-soft);
+      border-color: var(--accent-border);
+    }
+
+    .quick-card.primary-cta:hover {
+      background: #dbeafe;
+      border-color: var(--accent);
+    }
+
+    .quick-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .quick-card.primary-cta .quick-title {
+      color: #1d4ed8;
+    }
+
+    .quick-desc {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    /* Прогресс + Поиск */
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr minmax(240px, 310px);
+      gap: 1rem;
+      align-items: center;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .progress-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .progress-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.86rem;
+    }
+
+    .progress-label {
+      color: var(--text-body);
+      font-weight: 600;
+    }
+
+    .progress-label strong {
+      color: var(--tip-solid);
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    .reset-btn {
+      appearance: none;
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.18rem 0.58rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: none;
+    }
+
+    .reset-btn:hover {
+      border-color: var(--err-text);
+      color: var(--err-text);
+    }
+
+    .reset-btn.visible {
+      display: inline-block;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #16a34a);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .search-box {
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--surface-soft);
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      padding: 0.6rem 0.9rem 0.6rem 2.35rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .search-input::placeholder {
+      color: var(--muted);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+      background: #ffffff;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.78rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* Быстрая навигация по модулям */
+    .mod-jump {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 1.05rem;
+    }
+
+    .mod-jump a {
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-body);
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      padding: 0.3rem 0.72rem;
+      border-radius: 8px;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .mod-jump a:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* ==================== КАРТОЧКИ МОДУЛЕЙ ==================== */
+    .modules {
+      display: flex;
+      flex-direction: column;
+      gap: 1.35rem;
+    }
+
+    .module-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
+      scroll-margin-top: 1.25rem;
+    }
+
+    .module-card.hidden {
+      display: none;
+    }
+
+    .module-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.85rem;
+      padding: 1.2rem 1.5rem;
+      background: var(--surface-soft);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .module-head-left {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      min-width: 0;
+    }
+
+    .module-tags {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .mod-num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      padding: 0.16rem 0.55rem;
+      border-radius: 6px;
+    }
+
+    .prof-badge {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.73rem;
+      font-weight: 600;
+      padding: 0.16rem 0.55rem;
+      border-radius: 999px;
+    }
+
+    .p-default { background: var(--tip-bg); color: var(--tip-text); border: 1px solid var(--tip-border); }
+    .p-mod4    { background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn-border); }
+    .p-mod5    { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); }
+    .p-mod6    { background: var(--purple-bg); color: var(--purple-text); border: 1px solid var(--purple-border); }
+
+    .module-title {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    .module-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .slides-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      text-decoration: none;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-body);
+      background: #ffffff;
+      border: 1px solid var(--border-strong);
+      padding: 0.46rem 0.85rem;
+      border-radius: 9px;
+      white-space: nowrap;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .slides-link:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .slides-link.practice-link {
+      color: var(--tip-text);
+      background: var(--tip-bg);
+      border-color: var(--tip-border);
+    }
+
+    .slides-link.practice-link:hover {
+      border-color: var(--tip-solid);
+      color: var(--tip-text);
+      background: #dcfce7;
+    }
+
+    /* Список уроков: строго 1 урок в строке */
+    .lesson-list {
+      list-style: none;
+      margin: 0;
+      padding: 0.25rem 0;
+    }
+
+    .lesson-row {
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background-color 0.15s ease;
+    }
+
+    .lesson-row:last-child {
+      border-bottom: none;
+    }
+
+    .lesson-row:hover {
+      background: #f8fafc;
+    }
+
+    .lesson-row.hidden {
+      display: none;
+    }
+
+    .lesson-check-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 0.25rem 0 1.25rem;
+    }
+
+    .lesson-check {
+      appearance: none;
+      width: 19px;
+      height: 19px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-strong);
+      background: #ffffff;
+      cursor: pointer;
+      display: grid;
+      place-content: center;
+      transition: all 0.15s ease;
+      margin: 0;
+    }
+
+    .lesson-check:hover {
+      border-color: var(--accent);
+    }
+
+    .lesson-check:checked {
+      background: var(--tip-solid);
+      border-color: var(--tip-solid);
+    }
+
+    .lesson-check:checked::after {
+      content: "✓";
+      color: #ffffff;
+      font-size: 0.78rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .lesson-link {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 0.88rem 1.4rem 0.88rem 0.75rem;
+      text-decoration: none;
+      color: var(--text-body);
+      min-width: 0;
+    }
+
+    .lesson-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2.5rem;
+      padding: 0.16rem 0.45rem;
+      border-radius: 7px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .lesson-name {
+      flex: 1;
+      font-size: 0.95rem;
+      font-weight: 500;
+      line-height: 1.45;
+      color: var(--text);
+    }
+
+    .lesson-row.done .lesson-name {
+      color: var(--muted);
+    }
+
+    .lesson-row.done .lesson-num {
+      color: var(--tip-text);
+      border-color: var(--tip-border);
+      background: var(--tip-bg);
+    }
+
+    .lesson-arrow {
+      color: var(--muted);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+      transition: transform 0.15s ease, color 0.15s ease;
+    }
+
+    .lesson-row:hover .lesson-arrow {
+      color: var(--accent);
+      transform: translateX(3px);
+    }
+
+    .lesson-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-right: 1.15rem;
+      flex-shrink: 0;
+    }
+
+    .lesson-actions .lesson-slides-btn {
+      margin-right: 0;
+    }
+
+    .lesson-slides-btn {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 1.15rem;
+      padding: 0.28rem 0.62rem;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .lesson-slides-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .lesson-slides-btn.practice-btn {
+      color: var(--tip-text);
+      background: var(--tip-bg);
+      border-color: var(--tip-border);
+    }
+
+    .lesson-slides-btn.practice-btn:hover {
+      border-color: var(--tip-solid);
+      color: var(--tip-text);
+      background: #dcfce7;
+    }
+
+    .empty-state {
+      display: none;
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+      background: var(--surface);
+      border: 1px dashed var(--border-strong);
+      border-radius: 16px;
+      color: var(--muted);
+    }
+
+    .empty-state.visible {
+      display: block;
+    }
+
+    @media (max-width: 780px) {
+      .quick-grid {
+        grid-template-columns: 1fr;
+      }
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 1rem 0.75rem 3.5rem;
+      }
+      .hero {
+        padding: 1.5rem 1.25rem;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      .module-head {
+        padding: 1rem 1.15rem;
+      }
+      .lesson-link {
+        padding: 0.8rem 1rem 0.8rem 0.55rem;
+        gap: 0.65rem;
+      }
+      .lesson-check-wrap {
+        padding-left: 0.95rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Курс по Базам Данных</span>
+        <span class="pill pill-neutral">6 модулей · 26 уроков</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · MySQL 8.4 · ClickHouse · DWH</span>
+      </div>
+
+      <h1>Изучение Баз Данных — Содержание курса</h1>
+      <p class="hero-sub">
+        Полный маршрут от первого SQL-запроса и устройства страниц на диске до транзакций, репликации, резервного копирования и аналитических хранилищ OLAP.
+      </p>
+
+      <div class="quick-grid">
+        <a class="quick-card primary-cta" id="continue-btn" href="lessons/lesson_1_1.html">
+          <span class="quick-title"><span id="continue-title">Начать с Урока 1.1</span> <span>→</span></span>
+          <span class="quick-desc" id="continue-desc">Как устроены реляционные БД и запуск PostgreSQL</span>
+        </a>
+      </div>
+
+      <div class="toolbar">
+        <div class="progress-wrap">
+          <div class="progress-head">
+            <span class="progress-label">Прогресс: <strong id="progress-text">0 / 26 (0%)</strong></span>
+            <button type="button" class="reset-btn" id="reset-progress">Сбросить</button>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="search" class="search-input" id="search-input" placeholder="Поиск: JOIN, индексы, MVCC, PITR..." autocomplete="off" />
+        </div>
+      </div>
+
+      <nav class="mod-jump" aria-label="Быстрый переход к модулям">
+        <a href="#mod-1">Модуль 1 · Базовый SQL</a>
+        <a href="#mod-2">Модуль 2 · Продвинутый SQL</a>
+        <a href="#mod-3">Модуль 3 · Внутри PG</a>
+        <a href="#mod-4">Модуль 4 · ACID и InnoDB</a>
+        <a href="#mod-5">Модуль 5 · Репликация и HA</a>
+        <a href="#mod-6">Модуль 6 · DWH и ClickHouse</a>
+      </nav>
+    </header>
+
+    <main class="modules" id="modules-list">
+
+      <!-- МОДУЛЬ 1 -->
+      <section class="module-card" id="mod-1">
+        <div class="module-head">
+          <div class="module-head-left">
+            <div class="module-tags">
+              <span class="mod-num">Модуль 1</span>
+              <span class="prof-badge p-default">Docker: по умолчанию</span>
+            </div>
+            <h2 class="module-title">Фундамент реляционных БД и базовый SQL</h2>
+          </div>
+          <div class="module-actions">
+            <a class="slides-link practice-link" href="practice/module_1/practice.html">Практикум модуля 1 →</a>
+            <a class="slides-link" href="slides/module-1.html#1.1">Слайды модуля 1 →</a>
+          </div>
+        </div>
+        <ul class="lesson-list">
+          <li class="lesson-row" data-id="1_1">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_1_1.html"><span class="lesson-num">1.1</span><span class="lesson-name">Как устроены реляционные БД и запуск PostgreSQL</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_1/practice.html#sec-1-1" title="Открыть практические задания к уроку 1.1">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-1.html#1.1" title="Открыть презентацию к уроку 1.1">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="1_2">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_1_2.html"><span class="lesson-num">1.2</span><span class="lesson-name">Создание таблиц, типы данных, ограничения (PRIMARY/FOREIGN KEY, UNIQUE, CHECK) и INSERT</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_1/practice.html#sec-1-2" title="Открыть практические задания к уроку 1.2">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-1.html#1.2" title="Открыть презентацию к уроку 1.2">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="1_3">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_1_3.html"><span class="lesson-num">1.3</span><span class="lesson-name">Чтение, фильтрация и сортировка: SELECT, WHERE, ORDER BY, пагинация и коварство NULL</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_1/practice.html#sec-1-3" title="Открыть практические задания к уроку 1.3">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-1.html#1.3" title="Открыть презентацию к уроку 1.3">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="1_4">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_1_4.html"><span class="lesson-num">1.4</span><span class="lesson-name">Изменение и удаление данных (UPDATE, DELETE) и первое объединение таблиц (INNER JOIN)</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_1/practice.html#sec-1-4" title="Открыть практические задания к уроку 1.4">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-1.html#1.4" title="Открыть презентацию к уроку 1.4">Слайды</a>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- МОДУЛЬ 2 -->
+      <section class="module-card" id="mod-2">
+        <div class="module-head">
+          <div class="module-head-left">
+            <div class="module-tags">
+              <span class="mod-num">Модуль 2</span>
+              <span class="prof-badge p-default">Docker: по умолчанию</span>
+            </div>
+            <h2 class="module-title">Проектирование схем и продвинутый SQL</h2>
+          </div>
+          <div class="module-actions">
+            <a class="slides-link practice-link" href="practice/module_2/practice.html">Практикум модуля 2 →</a>
+            <a class="slides-link" href="slides/module-2.html#2.1">Слайды модуля 2 →</a>
+          </div>
+        </div>
+        <ul class="lesson-list">
+          <li class="lesson-row" data-id="2_1">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_2_1.html"><span class="lesson-num">2.1</span><span class="lesson-name">Нормализация (1НФ–3НФ), связи «многие-ко-многим» и основы миграций схемы БД</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_2/practice.html#sec-2-1" title="Открыть практические задания к уроку 2.1">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-2.html#2.1" title="Открыть презентацию к уроку 2.1">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="2_2">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_2_2.html"><span class="lesson-num">2.2</span><span class="lesson-name">Внешние объединения (LEFT JOIN), UNION, условная логика (CASE WHEN) и агрегация (GROUP BY, HAVING)</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_2/practice.html#sec-2-2" title="Открыть практические задания к уроку 2.2">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-2.html#2.2" title="Открыть презентацию к уроку 2.2">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="2_3">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_2_3.html"><span class="lesson-num">2.3</span><span class="lesson-name">Подзапросы, обобщённые табличные выражения (CTE), работа с датами, строками и JSONB</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_2/practice.html#sec-2-3" title="Открыть практические задания к уроку 2.3">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-2.html#2.3" title="Открыть презентацию к уроку 2.3">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="2_4">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_2_4.html"><span class="lesson-num">2.4</span><span class="lesson-name">Оконные функции — аналитика без схлопывания строк</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_2/practice.html#sec-2-4" title="Открыть практические задания к уроку 2.4">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-2.html#2.4" title="Открыть презентацию к уроку 2.4">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="2_5">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_2_5.html"><span class="lesson-num">2.5</span><span class="lesson-name">Практикум-чекпоинт: комплексные SQL-задачи на реальном датасете</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_2/practice.html#sec-2-5" title="Открыть практические задания к уроку 2.5">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-2.html#2.5" title="Открыть презентацию к уроку 2.5">Слайды</a>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- МОДУЛЬ 3 -->
+      <section class="module-card" id="mod-3">
+        <div class="module-head">
+          <div class="module-head-left">
+            <div class="module-tags">
+              <span class="mod-num">Модуль 3</span>
+              <span class="prof-badge p-default">Docker: по умолчанию</span>
+            </div>
+            <h2 class="module-title">Внутреннее устройство PostgreSQL: диск, память, индексы и WAL</h2>
+          </div>
+          <div class="module-actions">
+            <a class="slides-link practice-link" href="practice/module_3/practice.html">Практикум модуля 3 →</a>
+            <a class="slides-link" href="slides/module-3.html#3.1">Слайды модуля 3 →</a>
+          </div>
+        </div>
+        <ul class="lesson-list">
+          <li class="lesson-row" data-id="3_1">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_3_1.html"><span class="lesson-num">3.1</span><span class="lesson-name">Физическая архитектура PostgreSQL: страницы (8 КБ), Heap и Shared Buffers</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_3/practice.html#sec-3-1" title="Открыть практические задания к уроку 3.1">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-3.html#3.1" title="Открыть презентацию к уроку 3.1">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="3_2">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_3_2.html"><span class="lesson-num">3.2</span><span class="lesson-name">Индексы: устройство B-Tree, составные индексы, ловушки, GIN и BRIN</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_3/practice.html#sec-3-2" title="Открыть практические задания к уроку 3.2">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-3.html#3.2" title="Открыть презентацию к уроку 3.2">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="3_3">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_3_3.html"><span class="lesson-num">3.3</span><span class="lesson-name">Чтение планов выполнения запросов: EXPLAIN и EXPLAIN ANALYZE</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_3/practice.html#sec-3-3" title="Открыть практические задания к уроку 3.3">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-3.html#3.3" title="Открыть презентацию к уроку 3.3">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="3_4">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_3_4.html"><span class="lesson-num">3.4</span><span class="lesson-name">Журнал предзаписи (WAL) и восстановление после сбоев (Crash Recovery)</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_3/practice.html#sec-3-4" title="Открыть практические задания к уроку 3.4">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-3.html#3.4" title="Открыть презентацию к уроку 3.4">Слайды</a>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- МОДУЛЬ 4 -->
+      <section class="module-card" id="mod-4">
+        <div class="module-head">
+          <div class="module-head-left">
+            <div class="module-tags">
+              <span class="mod-num">Модуль 4</span>
+              <span class="prof-badge p-mod4">Docker: --profile mod4 (для 4.4)</span>
+            </div>
+            <h2 class="module-title">Транзакции, MVCC, блокировки и сравнение с MySQL/InnoDB</h2>
+          </div>
+          <div class="module-actions">
+            <a class="slides-link practice-link" href="practice/module_4/practice.html">Практикум модуля 4 →</a>
+            <a class="slides-link" href="slides/module-4.html#4.1">Слайды модуля 4 →</a>
+          </div>
+        </div>
+        <ul class="lesson-list">
+          <li class="lesson-row" data-id="4_1">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_4_1.html"><span class="lesson-num">4.1</span><span class="lesson-name">Транзакции, ACID и аномалии параллельного доступа</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_4/practice.html#sec-4-1" title="Открыть практические задания к уроку 4.1">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-4.html#4.1" title="Открыть презентацию к уроку 4.1">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="4_2">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_4_2.html"><span class="lesson-num">4.2</span><span class="lesson-name">MVCC (многоверсионность) и VACUUM в PostgreSQL</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_4/practice.html#sec-4-2" title="Открыть практические задания к уроку 4.2">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-4.html#4.2" title="Открыть презентацию к уроку 4.2">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="4_3">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_4_3.html"><span class="lesson-num">4.3</span><span class="lesson-name">Уровни изоляции и блокировки (Row-level locks и Deadlocks)</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_4/practice.html#sec-4-3" title="Открыть практические задания к уроку 4.3">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-4.html#4.3" title="Открыть презентацию к уроку 4.3">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="4_4">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_4_4.html"><span class="lesson-num">4.4</span><span class="lesson-name">Архитектурная дуэль: PostgreSQL vs MySQL (движок InnoDB)</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_4/practice.html#sec-4-4" title="Открыть практические задания к уроку 4.4">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-4.html#4.4" title="Открыть презентацию к уроку 4.4">Слайды</a>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- МОДУЛЬ 5 -->
+      <section class="module-card" id="mod-5">
+        <div class="module-head">
+          <div class="module-head-left">
+            <div class="module-tags">
+              <span class="mod-num">Модуль 5</span>
+              <span class="prof-badge p-mod5">Docker: --profile mod5</span>
+            </div>
+            <h2 class="module-title">Репликация, резервное копирование и эксплуатация (HA &amp; Ops)</h2>
+          </div>
+          <div class="module-actions">
+            <a class="slides-link practice-link" href="practice/module_5/practice.html">Практикум модуля 5 →</a>
+            <a class="slides-link" href="slides/module-5.html#5.1">Слайды модуля 5 →</a>
+          </div>
+        </div>
+        <ul class="lesson-list">
+          <li class="lesson-row" data-id="5_1">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_5_1.html"><span class="lesson-num">5.1</span><span class="lesson-name">Физическая потоковая репликация (Streaming Replication): Primary и Standby</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_5/practice.html#sec-5-1" title="Открыть практические задания к уроку 5.1">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-5.html#5.1" title="Открыть презентацию к уроку 5.1">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="5_2">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_5_2.html"><span class="lesson-num">5.2</span><span class="lesson-name">Синхронная vs асинхронная репликация и диагностика Replication Lag</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_5/practice.html#sec-5-2" title="Открыть практические задания к уроку 5.2">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-5.html#5.2" title="Открыть презентацию к уроку 5.2">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="5_3">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_5_3.html"><span class="lesson-num">5.3</span><span class="lesson-name">Логическая репликация и переключение при сбоях (Switchover / Failover)</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_5/practice.html#sec-5-3" title="Открыть практические задания к уроку 5.3">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-5.html#5.3" title="Открыть презентацию к уроку 5.3">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="5_4">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_5_4.html"><span class="lesson-num">5.4</span><span class="lesson-name">Резервное копирование и PITR (почему репликация — не бэкап) + пулинг соединений (PgBouncer)</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_5/practice.html#sec-5-4" title="Открыть практические задания к уроку 5.4">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-5.html#5.4" title="Открыть презентацию к уроку 5.4">Слайды</a>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- МОДУЛЬ 6 -->
+      <section class="module-card" id="mod-6">
+        <div class="module-head">
+          <div class="module-head-left">
+            <div class="module-tags">
+              <span class="mod-num">Модуль 6</span>
+              <span class="prof-badge p-mod6">Docker: --profile mod6 (для 6.3–6.5)</span>
+            </div>
+            <h2 class="module-title">Архитектура DWH, OLAP-движки и итоговый проект</h2>
+          </div>
+          <div class="module-actions">
+            <a class="slides-link practice-link" href="practice/module_6/practice.html">Практикум модуля 6 →</a>
+            <a class="slides-link" href="slides/module-6.html#6.1">Слайды модуля 6 →</a>
+          </div>
+        </div>
+        <ul class="lesson-list">
+          <li class="lesson-row" data-id="6_1">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_6_1.html"><span class="lesson-num">6.1</span><span class="lesson-name">OLTP vs OLAP и размерное моделирование («Звезда» и «Снежинка»)</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_6/practice.html#sec-6-1" title="Открыть практические задания к уроку 6.1">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-6.html#6.1" title="Открыть презентацию к уроку 6.1">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="6_2">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_6_2.html"><span class="lesson-num">6.2</span><span class="lesson-name">Партиционирование таблиц и материализованные представления в PostgreSQL</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_6/practice.html#sec-6-2" title="Открыть практические задания к уроку 6.2">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-6.html#6.2" title="Открыть презентацию к уроку 6.2">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="6_3">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_6_3.html"><span class="lesson-num">6.3</span><span class="lesson-name">Колончатое хранение и OLAP-движки (ClickHouse): сжатие, векторизация и основы MPP/шардирования</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_6/practice.html#sec-6-3" title="Открыть практические задания к уроку 6.3">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-6.html#6.3" title="Открыть презентацию к уроку 6.3">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="6_4">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_6_4.html"><span class="lesson-num">6.4</span><span class="lesson-name">Потоки данных ELT, идемпотентность и медленно меняющиеся измерения (SCD Type 2)</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_6/practice.html#sec-6-4" title="Открыть практические задания к уроку 6.4">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-6.html#6.4" title="Открыть презентацию к уроку 6.4">Слайды</a>
+            </div>
+          </li>
+          <li class="lesson-row" data-id="6_5">
+            <label class="lesson-check-wrap" title="Отметить пройденным"><input type="checkbox" class="lesson-check" /></label>
+            <a class="lesson-link" href="lessons/lesson_6_5.html"><span class="lesson-num">6.5</span><span class="lesson-name">Итоговый проект: сквозной контур OLTP (PostgreSQL) → ELT → аналитическая витрина в OLAP</span><span class="lesson-arrow">→</span></a>
+            <div class="lesson-actions">
+              <a class="lesson-slides-btn practice-btn" href="practice/module_6/practice.html#sec-6-5" title="Открыть практические задания к уроку 6.5">Практика</a>
+              <a class="lesson-slides-btn" href="slides/module-6.html#6.5" title="Открыть презентацию к уроку 6.5">Слайды</a>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <div class="empty-state" id="empty-state">
+        По вашему запросу уроки не найдены. Попробуйте другое ключевое слово (например, <strong>SQL</strong>, <strong>индексы</strong>, <strong>WAL</strong> или <strong>ClickHouse</strong>).
+      </div>
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const STORAGE_KEY = 'db_course_completed_lessons_v1';
+      const rows = Array.from(document.querySelectorAll('.lesson-row'));
+      const modules = Array.from(document.querySelectorAll('.module-card'));
+      const progressText = document.getElementById('progress-text');
+      const progressFill = document.getElementById('progress-fill');
+      const resetBtn = document.getElementById('reset-progress');
+      const continueBtn = document.getElementById('continue-btn');
+      const continueTitle = document.getElementById('continue-title');
+      const continueDesc = document.getElementById('continue-desc');
+      const searchInput = document.getElementById('search-input');
+      const emptyState = document.getElementById('empty-state');
+
+      function loadDone() {
+        try {
+          return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+        } catch (_) {
+          return new Set();
+        }
+      }
+
+      function saveDone(doneSet) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(doneSet)));
+        } catch (_) {}
+      }
+
+      const doneSet = loadDone();
+
+      function syncUI() {
+        let doneCount = 0;
+        let firstUnfinished = null;
+
+        rows.forEach((row) => {
+          const id = row.dataset.id;
+          const cb = row.querySelector('.lesson-check');
+          const isDone = doneSet.has(id);
+          cb.checked = isDone;
+          row.classList.toggle('done', isDone);
+          if (isDone) {
+            doneCount++;
+          } else if (!firstUnfinished) {
+            firstUnfinished = row;
+          }
+        });
+
+        const total = rows.length;
+        const pct = Math.round((doneCount / total) * 100);
+        progressText.textContent = `${doneCount} / ${total} (${pct}%)`;
+        progressFill.style.width = `${pct}%`;
+        resetBtn.classList.toggle('visible', doneCount > 0);
+
+        if (firstUnfinished) {
+          const link = firstUnfinished.querySelector('.lesson-link');
+          const num = firstUnfinished.querySelector('.lesson-num').textContent.trim();
+          const name = firstUnfinished.querySelector('.lesson-name').textContent.trim();
+          continueBtn.href = link.getAttribute('href');
+          continueTitle.textContent = doneCount === 0 ? `Начать с Урока ${num}` : `Продолжить: Урок ${num}`;
+          continueDesc.textContent = name;
+        } else {
+          continueBtn.href = 'lessons/lesson_6_5.html';
+          continueTitle.textContent = 'Все 26 уроков пройдены!';
+          continueDesc.textContent = 'Открыть итоговый проект (Урок 6.5)';
+        }
+      }
+
+      rows.forEach((row) => {
+        const cb = row.querySelector('.lesson-check');
+        cb.addEventListener('change', () => {
+          const id = row.dataset.id;
+          if (cb.checked) doneSet.add(id);
+          else doneSet.delete(id);
+          saveDone(doneSet);
+          syncUI();
+        });
+      });
+
+      resetBtn.addEventListener('click', () => {
+        doneSet.clear();
+        saveDone(doneSet);
+        syncUI();
+      });
+
+      searchInput.addEventListener('input', () => {
+        const q = searchInput.value.trim().toLowerCase();
+        let visibleTotal = 0;
+
+        modules.forEach((mod) => {
+          const modTitle = mod.querySelector('.module-title').textContent.toLowerCase();
+          const modRows = Array.from(mod.querySelectorAll('.lesson-row'));
+          let modVisible = 0;
+
+          modRows.forEach((row) => {
+            const text = row.textContent.toLowerCase();
+            const match = !q || text.includes(q) || modTitle.includes(q);
+            row.classList.toggle('hidden', !match);
+            if (match) {
+              modVisible++;
+              visibleTotal++;
+            }
+          });
+
+          mod.classList.toggle('hidden', modVisible === 0);
+        });
+
+        emptyState.classList.toggle('visible', visibleTotal === 0);
+      });
+
+      syncUI();
+    });
+  </script>
+</body>
+</html>

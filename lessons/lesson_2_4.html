@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 2.4: Оконные функции — аналитика без схлопывания строк</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_2/practice.html#sec-2-4">Практикум 2.4</a>
+        <a class="course-nav-btn" href="../slides/module-2.html#2.4">Слайды урока 2.4</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 2 · Продвинутый SQL и проектирование БД</span>
+        <span class="pill pill-neutral">Урок 2.4</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Урок 2.4: Оконные функции — аналитика без схлопывания строк</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Поймёшь, чем <strong>оконные функции</strong> (<code>OVER</code>, <code>PARTITION BY</code>) отличаются от <code>GROUP BY</code> и как считать среднее по группе, не теряя ни одной строки.</li>
+          <li>Научишься строить рейтинги и решать классическую задачу <strong>«Топ-N в каждой группе»</strong> с помощью <code>ROW_NUMBER()</code>, <code>RANK()</code> и <code>DENSE_RANK()</code>.</li>
+          <li>Сможешь сравнивать соседние периоды и заказы через функции смещения <strong><code>LAG()</code></strong> и <strong><code>LEAD()</code></strong> без громоздких самосоединений.</li>
+          <li>Освоишь <strong>накопительный итог</strong> (running total) и <strong>скользящее среднее</strong> с точным управлением рамкой окна <code>ROWS BETWEEN</code>.</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. ПОДГОТОВКА СТЕНДА ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Готовим стенд в learning_db</h2>
+      <p>
+        В конце прошлого урока мы столкнулись с неудобством: чтобы рядом с каждым товаром показать среднюю цену его категории, нам пришлось сначала считать среднее в CTE через <code>GROUP BY</code>, а потом снова приклеивать его к таблице товаров через <code>JOIN</code>. Оконные функции придуманы именно для того, чтобы решать такие задачи в один изящный проход.
+      </p>
+      <p>
+        Чтобы наглядно увидеть и ничьи в рейтингах, и динамику по месяцам, и повторные покупки клиентов, обновим учебные таблицы нашего магазина в <code>learning_db</code>. В таблице <code>products</code> мы специально добавили товары с одинаковой ценой, а в <code>orders</code> — заказы за 4 месяца подряд. Скрипт безопасно пересоздаёт таблицы при каждом запуске.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Подготовка данных для Урока 2.4</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Безопасный перезапуск таблиц нашего магазина
+DROP TABLE IF EXISTS order_items, orders, products, customers CASCADE;
+
+CREATE TABLE customers (
+  id SERIAL PRIMARY KEY,
+  full_name TEXT NOT NULL,
+  city TEXT NOT NULL
+);
+
+CREATE TABLE products (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL,
+  price NUMERIC(10, 2) NOT NULL CHECK (price &gt;= 0)
+);
+
+CREATE TABLE orders (
+  id SERIAL PRIMARY KEY,
+  customer_id INT NOT NULL REFERENCES customers(id),
+  status TEXT NOT NULL CHECK (status IN ('paid', 'cancelled')),
+  created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE order_items (
+  id SERIAL PRIMARY KEY,
+  order_id INT NOT NULL REFERENCES orders(id),
+  product_id INT NOT NULL REFERENCES products(id),
+  quantity INT NOT NULL CHECK (quantity &gt; 0),
+  unit_price NUMERIC(10, 2) NOT NULL
+);
+
+INSERT INTO customers (full_name, city) VALUES
+  ('Алексей Иванов',  'Алматы'),
+  ('Мария Смирнова',  'Астана'),
+  ('Тимур Касымов',   'Костанай'),
+  ('Елена Волкова',   'Алматы');
+
+-- 9 товаров в 3 категориях (специально есть одинаковые цены: 9000 и 6000)
+INSERT INTO products (title, category, price) VALUES
+  ('Механическая клавиатура', 'Гаджеты',    39000.00),
+  ('Беспроводная мышь',       'Гаджеты',    18000.00),
+  ('Коврик для мыши XL',      'Гаджеты',     9000.00),
+  ('Худи «SQL Master»',       'Мерч',       15000.00),
+  ('Свитшот «PostgreSQL»',    'Мерч',       12000.00),
+  ('Футболка «SELECT *»',     'Мерч',        9000.00),
+  ('Термокружка кодера',      'Аксессуары',  6000.00),
+  ('Кепка «PG 16»',           'Аксессуары',  6000.00),
+  ('Стикерпак «Postgres»',    'Аксессуары',  3000.00);
+
+-- Заказы за январь–апрель 2026 (заказ №4 отменён)
+INSERT INTO orders (customer_id, status, created_at) VALUES
+  (1, 'paid',      '2026-01-10 10:00:00+05'),
+  (2, 'paid',      '2026-01-22 14:30:00+05'),
+  (1, 'paid',      '2026-02-05 12:00:00+05'),
+  (3, 'cancelled', '2026-02-10 18:00:00+05'),
+  (4, 'paid',      '2026-02-18 11:15:00+05'),
+  (2, 'paid',      '2026-03-04 16:00:00+05'),
+  (1, 'paid',      '2026-03-20 09:45:00+05'),
+  (3, 'paid',      '2026-04-02 15:00:00+05'),
+  (4, 'paid',      '2026-04-15 13:20:00+05');
+
+INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES
+  (1, 4, 1, 15000.00), (1, 9, 1,  3000.00), -- 18000
+  (2, 2, 1, 18000.00), (2, 7, 2,  6000.00), -- 30000 (январь = 48000)
+  (3, 1, 1, 39000.00),                      -- 39000
+  (4, 5, 1, 12000.00),                      -- отменён
+  (5, 4, 1, 15000.00), (5, 8, 1,  6000.00), -- 21000 (февраль = 60000)
+  (6, 5, 2, 12000.00), (6, 7, 1,  6000.00), -- 30000
+  (7, 6, 1,  9000.00), (7, 3, 1,  9000.00), -- 18000 (март = 48000)
+  (8, 1, 1, 39000.00), (8, 2, 1, 18000.00), (8, 9, 1, 3000.00), -- 60000
+  (9, 5, 1, 12000.00);                      -- 12000 (апрель = 72000)</code></pre>
+      </div>
+    </section>
+
+    <!-- ==================== 3. ЧТО ТАКОЕ ОКОННЫЕ ФУНКЦИИ ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Оконные функции (OVER и PARTITION BY) — аналитика без потерь</h2>
+      <p>
+        Представь школьный класс, где за партами сидят ученики. Когда приходит завуч и использует <code>GROUP BY</code>, он сгребает все 25 тетрадей в одну стопку и записывает в журнал всего одну строчку: <em>«9А — средний балл 4.2»</em>. Сами ученики из отчёта пропали — строки <strong>схлопнулись</strong>.
+      </p>
+      <p>
+        А теперь представь, что учитель проходит мимо каждой парты и приклеивает прямо в тетрадь каждого ученика маленький стикер: <em>«Средний балл твоего класса: 4.2»</em>. Все 25 учеников остались на своих местах, но теперь каждый видит и свою личную оценку, и средний результат по классу! Именно так работают <strong>оконные функции (Window Functions)</strong>.
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            S["Таблица products (9 строк)"] --> G["GROUP BY category"]
+            S --> W["AVG(price) OVER (PARTITION BY category)"]
+            G --> R1["Итог: 3 строки (по 1 на категорию — товары пропали)"]
+            W --> R2["Итог: все 9 строк на месте + колонка со средним категории"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Главное отличие: GROUP BY схлопывает строки в сводку, а оконная функция дописывает расчёт к каждой строке.</figcaption>
+      </figure>
+
+      <p>
+        Узнать оконную функцию в SQL мгновенно помогает ключевое слово <strong><code>OVER (...)</code></strong>. Внутри скобок задаётся «окно» — то есть набор соседних строк, на которые функция имеет право подсматривать, пока обрабатывает текущую строку:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Часть синтаксиса</th>
+              <th>Зачем нужна (аналогия)</th>
+              <th>Обязательна ли</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>функция(...)</code></td>
+              <td>Что именно считаем: <code>AVG</code>, <code>SUM</code>, <code>COUNT</code>, <code>ROW_NUMBER</code>, <code>LAG</code></td>
+              <td>Да</td>
+            </tr>
+            <tr>
+              <td><code>OVER ()</code></td>
+              <td>Пустые скобки = «смотри сразу на всю таблицу целиком»</td>
+              <td>Да (сама фраза <code>OVER</code>)</td>
+            </tr>
+            <tr>
+              <td><code>PARTITION BY col</code></td>
+              <td>«Подели таблицу на комнаты» (категории, клиенты) и считай в каждой отдельно</td>
+              <td>Нет</td>
+            </tr>
+            <tr>
+              <td><code>ORDER BY col</code></td>
+              <td>Задай порядок строк внутри комнаты (нужен для рейтингов, <code>LAG</code> и накопительных сумм)</td>
+              <td>По задаче</td>
+            </tr>
+            <tr>
+              <td><code>ROWS BETWEEN ...</code></td>
+              <td>Подвижная рамка: сколько строк до и после текущей брать в расчёт</td>
+              <td>Нет</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Пример 1: Средняя цена по категории рядом с каждым товаром</h3>
+      <p>
+        Вернёмся к проблеме из начала урока: выведем все 9 товаров, рядом с каждым покажем среднюю цену его категории и сразу посчитаем, на сколько тенге товар дороже или дешевле среднего по своей категории. Никаких CTE и повторных <code>JOIN</code> — всё умещается в один <code>SELECT</code>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 1 — Агрегация без схлопывания строк</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Для каждого товара считаем среднюю цену его категории и отклонение от неё
+SELECT
+  category,
+  title,
+  price,
+  ROUND(AVG(price) OVER (PARTITION BY category), 2) AS cat_avg,
+  price - ROUND(AVG(price) OVER (PARTITION BY category), 2) AS diff_from_avg
+FROM products
+ORDER BY category, price DESC, id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>  category  |          title          |  price   | cat_avg  | diff_from_avg
+------------+-------------------------+----------+----------+---------------
+ Аксессуары | Термокружка кодера      |  6000.00 |  5000.00 |       1000.00
+ Аксессуары | Кепка «PG 16»           |  6000.00 |  5000.00 |       1000.00
+ Аксессуары | Стикерпак «Postgres»    |  3000.00 |  5000.00 |      -2000.00
+ Гаджеты    | Механическая клавиатура | 39000.00 | 22000.00 |      17000.00
+ Гаджеты    | Беспроводная мышь       | 18000.00 | 22000.00 |      -4000.00
+ Гаджеты    | Коврик для мыши XL      |  9000.00 | 22000.00 |     -13000.00
+ Мерч       | Худи «SQL Master»       | 15000.00 | 12000.00 |       3000.00
+ Мерч       | Свитшот «PostgreSQL»    | 12000.00 | 12000.00 |          0.00
+ Мерч       | Футболка «SELECT *»     |  9000.00 | 12000.00 |      -3000.00
+(9 rows)</pre>
+      </div>
+
+      <p>
+        Задача решена за один проход: все 9 товаров остались на месте, а в колонке <code>diff_from_avg</code> сразу видно, что клавиатура дороже среднего гаджета на <code>17000.00</code>, а свитшот попадает ровно в среднюю цену мерча (<code>0.00</code>).
+      </p>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Красивый трюк — именованное окно <code>WINDOW</code>:</strong> Если ты используешь одно и то же <code>OVER (PARTITION BY category)</code> три раза в одном запросе, вынеси его в конец: <code>WINDOW w AS (PARTITION BY category)</code>, а в <code>SELECT</code> просто пиши <code>AVG(price) OVER w</code> и <code>MAX(price) OVER w</code>. Код станет вдвое короче!
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. РЕЙТИНГИ И ТОП-N ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Рейтинги (ROW_NUMBER, RANK, DENSE_RANK) и «Топ-N в группе»</h2>
+      <p>
+        Представь школьную олимпиаду по прыжкам в длину. Первый участник прыгнул на 5 метров, а второй и третий — оба ровно на 4 метра. Как раздать им места? Есть три честных способа, и в SQL каждому соответствует своя функция:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Функция</th>
+              <th>Аналогия из спорта</th>
+              <th>Пример мест при ничьей</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>ROW_NUMBER()</code></td>
+              <td>Номерки в гардеробе: каждому строго свой уникальный номер без повторов</td>
+              <td><code>1, 2, 3, 4</code></td>
+            </tr>
+            <tr>
+              <td><code>RANK()</code></td>
+              <td>Олимпийский пьедестал: два серебра — значит, бронзу никому не дают, следующий четвёртый</td>
+              <td><code>1, 2, 2, 4</code></td>
+            </tr>
+            <tr>
+              <td><code>DENSE_RANK()</code></td>
+              <td>Школьные лиги без дырок в нумерации: два вторых места, а за ними сразу третье</td>
+              <td><code>1, 2, 2, 3</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Пример 2: Сравниваем ROW_NUMBER, RANK и DENSE_RANK на одном запросе</h3>
+      <p>
+        Отсортируем все 9 товаров от самого дорогого к самому дешёвому и посмотрим, как три функции поведут себя на наших «ничьих» — товарах за <code>9000.00</code> и <code>6000.00</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 2 — Три способа раздать места при равных ценах</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Для ROW_NUMBER добавляем id как тай-брейкер, чтобы порядок был стабильным
+SELECT
+  title,
+  price,
+  ROW_NUMBER() OVER (ORDER BY price DESC, id) AS rn,
+  RANK()       OVER (ORDER BY price DESC)     AS rnk,
+  DENSE_RANK() OVER (ORDER BY price DESC)     AS dense_rnk
+FROM products
+ORDER BY price DESC, id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>          title          |  price   | rn | rnk | dense_rnk
+-------------------------+----------+----+-----+-----------
+ Механическая клавиатура | 39000.00 |  1 |   1 |         1
+ Беспроводная мышь       | 18000.00 |  2 |   2 |         2
+ Худи «SQL Master»       | 15000.00 |  3 |   3 |         3
+ Свитшот «PostgreSQL»    | 12000.00 |  4 |   4 |         4
+ Коврик для мыши XL      |  9000.00 |  5 |   5 |         5
+ Футболка «SELECT *»     |  9000.00 |  6 |   5 |         5
+ Термокружка кодера      |  6000.00 |  7 |   7 |         6
+ Кепка «PG 16»           |  6000.00 |  8 |   7 |         6
+ Стикерпак «Postgres»    |  3000.00 |  9 |   9 |         7
+(9 rows)</pre>
+      </div>
+
+      <p>
+        Посмотри на строки с ценой <code>9000.00</code> и <code>6000.00</code>: <code>RANK()</code> пропустил 6-е и 8-е места, а <code>DENSE_RANK()</code> выдал плотные уровни от 1 до 7 без единого пропуска.
+      </p>
+
+      <h3>Главная ловушка: почему оконную функцию нельзя фильтровать в WHERE?</h3>
+      <p>
+        Теперь представим самую популярную задачу на собеседованиях: <strong>«Выведи Топ-2 самых дорогих товара в каждой категории»</strong>. Первая мысль — написать <code>WHERE ROW_NUMBER() OVER (...) &lt;= 2</code>. Проверим, что ответит PostgreSQL:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Попытка фильтрации оконной функции в WHERE</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- ОШИБКА: на этапе WHERE оконные функции ещё не вычислены!
+SELECT category, title, price
+FROM products
+WHERE ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC, id) &lt;= 2;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  window functions are not allowed in WHERE
+LINE 4: WHERE ROW_NUMBER() OVER (PARTITION BY category ORDER BY pric...
+              ^</pre>
+      </div>
+
+      <p>
+        Почему так происходит? Вспомни порядок выполнения SQL-запроса: <code>FROM</code> → <code>WHERE</code> → <code>GROUP BY</code> → <code>HAVING</code> → <strong>Оконные функции (в <code>SELECT</code>)</strong> → <code>ORDER BY</code> → <code>LIMIT</code>. Когда срабатывает <code>WHERE</code>, база ещё даже не начинала считать окна! Решение простое и красивое: считаем рейтинг внутри CTE, а фильтруем уже во внешнем <code>WHERE</code>.
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT title, price
+FROM products
+WHERE ROW_NUMBER() OVER (
+  PARTITION BY category
+  ORDER BY price DESC
+) &lt;= 2;</code></pre>
+            </div>
+            <p>Запрос упадёт с ошибкой: <code>WHERE</code> выполняется раньше оконных функций.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">WITH r AS (
+  SELECT *, ROW_NUMBER() OVER (
+    PARTITION BY category
+    ORDER BY price DESC, id
+  ) AS pos FROM products
+)
+SELECT * FROM r WHERE pos &lt;= 2;</code></pre>
+            </div>
+            <p>CTE сначала нумерует товары, а внешний <code>WHERE pos &lt;= 2</code> легко оставляет Топ-2.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Пример 3: Топ-2 самых дорогих товара в каждой категории</h3>
+      <p>
+        Запустим правильное решение в <code>learning_db</code> и убедимся, что из каждой категории выбралось ровно по два лидера цены:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 3 — Классика «Топ-N в группе» через CTE</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Шаг 1: нумеруем товары внутри каждой категории от дорогих к дешёвым
+WITH ranked_products AS (
+  SELECT
+    category,
+    title,
+    price,
+    ROW_NUMBER() OVER (
+      PARTITION BY category
+      ORDER BY price DESC, id
+    ) AS pos
+  FROM products
+)
+-- Шаг 2: оставляем только первые 2 позиции в каждой категории
+SELECT category, pos, title, price
+FROM ranked_products
+WHERE pos &lt;= 2
+ORDER BY category, pos;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>  category  | pos |          title          |  price
+------------+-----+-------------------------+----------
+ Аксессуары |   1 | Термокружка кодера      |  6000.00
+ Аксессуары |   2 | Кепка «PG 16»           |  6000.00
+ Гаджеты    |   1 | Механическая клавиатура | 39000.00
+ Гаджеты    |   2 | Беспроводная мышь       | 18000.00
+ Мерч       |   1 | Худи «SQL Master»       | 15000.00
+ Мерч       |   2 | Свитшот «PostgreSQL»    | 12000.00
+(6 rows)</pre>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Частая ошибка при использовании <code>ROW_NUMBER()</code>:</strong> Всегда добавляй уникальную колонку в конец <code>ORDER BY</code> (например, <code>ORDER BY price DESC, id</code>). Если этого не сделать, при равных ценах PostgreSQL имеет право при каждом запуске менять порядок строк, и в твой «Топ-1» сегодня попадёт термокружка, а завтра — кепка!
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 5. LAG И LEAD ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> Взгляд в прошлое и будущее — LAG и LEAD</h2>
+      <p>
+        Представь, что ты стоишь в школьной очереди в столовую. Чтобы узнать, что взял человек прямо перед тобой, не нужно выбегать из очереди и переписывать всех заново — достаточно просто заглянуть ему через плечо.
+      </p>
+      <p>
+        В SQL за такое «подглядывание» отвечают функции смещения: <strong><code>LAG(col, n, default)</code></strong> берёт значение из строки, стоящей на <code>n</code> шагов <strong>раньше</strong> (по умолчанию <code>n = 1</code>), а <strong><code>LEAD(col, n, default)</code></strong> — на <code>n</code> шагов <strong>позже</strong>. Если соседа нет (например, ты самый первый в очереди), функция вернёт <code>NULL</code> или указанное значение по умолчанию.
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            M1["Январь: 48 000"] --> M2["Февраль: 60 000 (текущая строка)"]
+            M2 --> M3["Март: 48 000"]
+            M2 -. "LAG(revenue, 1) смотрит назад" .-> M1
+            M2 -. "LEAD(revenue, 1) смотрит вперёд" .-> M3
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Функции LAG и LEAD позволяют сравнивать текущий период с прошлым и следующим без самосоединений таблицы.</figcaption>
+      </figure>
+
+      <h3>Пример 4: Рост и падение выручки по месяцам (MoM — Month-over-Month)</h3>
+      <p>
+        Любой владелец бизнеса первым делом спрашивает: <em>«Мы выросли по сравнению с прошлым месяцем или упали, и на сколько процентов?»</em>. Соберём в CTE выручку по месяцам, а затем одной строкой с <code>LAG()</code> подтянем прошлый месяц и посчитаем динамику.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 4 — Динамика выручки месяц к месяцу через LAG()</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Шаг 1: агрегируем выручку оплаченных заказов по месяцам
+WITH monthly_sales AS (
+  SELECT
+    DATE_TRUNC('month', o.created_at)::date AS sales_month,
+    SUM(oi.quantity * oi.unit_price) AS revenue
+  FROM orders o
+  JOIN order_items oi ON oi.order_id = o.id
+  WHERE o.status = 'paid'
+  GROUP BY sales_month
+)
+-- Шаг 2: подтягиваем выручку предыдущего месяца через LAG и считаем рост
+SELECT
+  sales_month,
+  revenue,
+  LAG(revenue) OVER (ORDER BY sales_month) AS prev_revenue,
+  revenue - LAG(revenue) OVER (ORDER BY sales_month) AS diff_amount,
+  ROUND(
+    (revenue - LAG(revenue) OVER (ORDER BY sales_month))
+    * 100.0
+    / LAG(revenue) OVER (ORDER BY sales_month),
+    1
+  ) AS growth_pct
+FROM monthly_sales
+ORDER BY sales_month;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> sales_month | revenue  | prev_revenue | diff_amount | growth_pct
+-------------+----------+--------------+-------------+------------
+ 2026-01-01  | 48000.00 |              |             |
+ 2026-02-01  | 60000.00 |     48000.00 |    12000.00 |       25.0
+ 2026-03-01  | 48000.00 |     60000.00 |   -12000.00 |      -20.0
+ 2026-04-01  | 72000.00 |     48000.00 |    24000.00 |       50.0
+(4 rows)</pre>
+      </div>
+
+      <p>
+        Обрати внимание, как чисто сработал январь: так как до января данных нет, <code>LAG</code> вернул <code>NULL</code>, и вместо ошибки деления на ноль вся строка аккуратно осталась пустой в расчётных колонках. А за февраль, март и апрель директор сразу видит точные проценты: <code>+25.0%</code>, <code>-20.0%</code> и <code>+50.0%</code>!
+      </p>
+
+      <h3>Пример 5: Сколько дней проходит между покупками каждого клиента?</h3>
+      <p>
+        А теперь добавим <code>PARTITION BY o.customer_id</code> внутрь <code>LAG()</code>. Тогда база будет искать предыдущий заказ <strong>строго внутри истории того же клиента</strong> — заказы Алексея никогда не смешаются с заказами Марии!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 5 — Интервал в днях между повторными покупками</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Считаем, через сколько дней каждый клиент возвращается за новым заказом
+SELECT
+  c.full_name,
+  o.id AS order_id,
+  o.created_at::date AS order_date,
+  LAG(o.created_at::date) OVER (
+    PARTITION BY o.customer_id
+    ORDER BY o.created_at, o.id
+  ) AS prev_order_date,
+  o.created_at::date - LAG(o.created_at::date) OVER (
+    PARTITION BY o.customer_id
+    ORDER BY o.created_at, o.id
+  ) AS days_between
+FROM orders o
+JOIN customers c ON c.id = o.customer_id
+WHERE o.status = 'paid'
+ORDER BY c.id, o.created_at;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>   full_name    | order_id | order_date | prev_order_date | days_between
+----------------+----------+------------+-----------------+--------------
+ Алексей Иванов |        1 | 2026-01-10 |                 |
+ Алексей Иванов |        3 | 2026-02-05 | 2026-01-10      |           26
+ Алексей Иванов |        7 | 2026-03-20 | 2026-02-05      |           43
+ Мария Смирнова |        2 | 2026-01-22 |                 |
+ Мария Смирнова |        6 | 2026-03-04 | 2026-01-22      |           41
+ Тимур Касымов  |        8 | 2026-04-02 |                 |
+ Елена Волкова  |        5 | 2026-02-18 |                 |
+ Елена Волкова  |        9 | 2026-04-15 | 2026-02-18      |           56
+(8 rows)</pre>
+      </div>
+
+      <p>
+        Отдел маркетинга теперь точно знает ритм повторных покупок: клиенты возвращаются в среднем через 26–56 дней, значит, напоминать о себе письмом со скидкой выгоднее всего примерно через месяц после заказа.
+      </p>
+    </section>
+
+    <!-- ==================== 6. НАКОПИТЕЛЬНЫЙ ИТОГ И РАМКИ ОКНА ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Накопительный итог и скользящие окна (ROWS BETWEEN)</h2>
+      <p>
+        Представь две повседневные ситуации:
+      </p>
+      <ul>
+        <li><strong>Копилка (накопительный итог / running total):</strong> каждую неделю ты бросаешь в копилку новую купюру, но хочешь видеть не только сколько положил сегодня, а <em>сколько уже накопилось с самого начала</em>.</li>
+        <li><strong>Скользящее увеличительное стекло (moving average):</strong> сегодня заказ на 60 000, а завтра — на 12 000. Чтобы не паниковать из-за резких скачков, аналитики смотрят на среднее <em>за последние 3 заказа</em> — «окно» плавно едет вниз по таблице строка за строкой.</li>
+      </ul>
+      <p>
+        Границами такого «увеличительного стекла» управляет фраза <code>ROWS BETWEEN &lt;старт&gt; AND &lt;финиш&gt;</code>. Запомни 5 простых кирпичиков:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Граница рамки</th>
+              <th>Что означает простыми словами</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>UNBOUNDED PRECEDING</code></td>
+              <td>От самой первой строки окна (с начала списка)</td>
+            </tr>
+            <tr>
+              <td><code>N PRECEDING</code></td>
+              <td>На <code>N</code> строк выше текущей (например, <code>2 PRECEDING</code>)</td>
+            </tr>
+            <tr>
+              <td><code>CURRENT ROW</code></td>
+              <td>Текущая строка, на которой сейчас стоит запрос</td>
+            </tr>
+            <tr>
+              <td><code>N FOLLOWING</code></td>
+              <td>На <code>N</code> строк ниже текущей</td>
+            </tr>
+            <tr>
+              <td><code>UNBOUNDED FOLLOWING</code></td>
+              <td>До самой последней строки окна (до конца списка)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Пример 6: Накопительная выручка магазина и скользящее среднее за 3 заказа</h3>
+      <p>
+        Соберём в CTE чеки всех 8 оплаченных заказов, а затем одновременно посчитаем: сколько денег накопилось в кассе на момент каждого заказа (<code>running_total</code>) и какой была средняя сумма последних трёх заказов (<code>moving_avg_3</code>).
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 6 — Накопительный итог и скользящее среднее</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Шаг 1: вычисляем сумму каждого оплаченного заказа
+WITH order_totals AS (
+  SELECT
+    o.id AS order_id,
+    o.created_at::date AS order_date,
+    SUM(oi.quantity * oi.unit_price) AS order_total
+  FROM orders o
+  JOIN order_items oi ON oi.order_id = o.id
+  WHERE o.status = 'paid'
+  GROUP BY o.id, o.created_at
+)
+-- Шаг 2: считаем накопительную кассу и среднее последних 3 заказов
+SELECT
+  order_id,
+  order_date,
+  order_total,
+  SUM(order_total) OVER (
+    ORDER BY order_date, order_id
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS running_total,
+  ROUND(
+    AVG(order_total) OVER (
+      ORDER BY order_date, order_id
+      ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+    ),
+    2
+  ) AS moving_avg_3
+FROM order_totals
+ORDER BY order_date, order_id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> order_id | order_date | order_total | running_total | moving_avg_3
+----------+------------+-------------+---------------+--------------
+        1 | 2026-01-10 |    18000.00 |      18000.00 |     18000.00
+        2 | 2026-01-22 |    30000.00 |      48000.00 |     24000.00
+        3 | 2026-02-05 |    39000.00 |      87000.00 |     29000.00
+        5 | 2026-02-18 |    21000.00 |     108000.00 |     30000.00
+        6 | 2026-03-04 |    30000.00 |     138000.00 |     30000.00
+        7 | 2026-03-20 |    18000.00 |     156000.00 |     23000.00
+        8 | 2026-04-02 |    60000.00 |     216000.00 |     36000.00
+        9 | 2026-04-15 |    12000.00 |     228000.00 |     30000.00
+(8 rows)</pre>
+      </div>
+
+      <p>
+        Посмотри на заказ №8 (<code>60000.00</code>) и заказ №9 (<code>12000.00</code>): сами чеки скачут в 5 раз, а скользящее среднее плавно держится в районе <code>30000.00</code> — именно такой график аналитики показывают руководству, чтобы видеть реальный тренд без случайного шума.
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо (ловушка RANGE)</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SUM(order_total) OVER (
+  ORDER BY order_date
+)</code></pre>
+            </div>
+            <p>Без <code>ROWS</code> база включает режим <code>RANGE</code>: если в один день пришло 2 заказа, они сложатся <strong>вместе сразу в обеих строках</strong>, и накопительный итог «прыгнет».</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SUM(order_total) OVER (
+  ORDER BY order_date, order_id
+  ROWS BETWEEN UNBOUNDED PRECEDING
+           AND CURRENT ROW
+)</code></pre>
+            </div>
+            <p>Явный <code>ROWS BETWEEN</code> и уникальный <code>order_id</code> гарантируют честное пошаговое накопление строка за строкой.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Суперсила пустого <code>OVER ()</code> для процентов:</strong> Хочешь узнать долю каждого товара или заказа в общей сумме? Напиши <code>ROUND(order_total * 100.0 / SUM(order_total) OVER (), 1) AS share_pct</code>. Числитель берёт сумму одной строки, а знаменатель с пустым <code>OVER ()</code> — итог по всей таблице!
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 7. ШПАРГАЛКА ПЕРЕД ПРАКТИКОЙ ==================== -->
+    <section>
+      <h2><span class="sec-num">06</span> Шпаргалка урока перед практикой</h2>
+      <p>
+        Пять главных правил оконных функций, которые стоит держать перед глазами:
+      </p>
+      <ul>
+        <li><strong><code>GROUP BY</code> схлопывает строки, <code>OVER (...)</code> — сохраняет все строки</strong> и дописывает рядом результат расчёта по группе или всей таблице.</li>
+        <li><strong>Выбирай правильный рейтинг:</strong> <code>ROW_NUMBER()</code> — строгие номера (1, 2, 3, 4), <code>RANK()</code> — с пропусками после ничьей (1, 2, 2, 4), <code>DENSE_RANK()</code> — без пропусков (1, 2, 2, 3).</li>
+        <li><strong>Не фильтруй окно в <code>WHERE</code>:</strong> сначала посчитай <code>ROW_NUMBER()</code> или <code>LAG()</code> внутри CTE (<code>WITH</code>), а потом отбери нужные строки во внешнем <code>WHERE</code>.</li>
+        <li><strong><code>LAG()</code> смотрит назад, <code>LEAD()</code> — вперёд:</strong> всегда добавляй <code>ORDER BY</code>, а если нужно считать отдельно для каждого клиента или товара — не забудь <code>PARTITION BY</code>.</li>
+        <li><strong>Для накопительных сумм и скользящих окон</strong> явно указывай <code>ROWS BETWEEN ... AND CURRENT ROW</code> и добавляй уникальный <code>id</code> в <code>ORDER BY</code>.</li>
+      </ul>
+    </section>
+
+    <!-- ==================== 8. МИНИ-ПРАКТИКУМ ==================== -->
+    <section>
+      <h2><span class="sec-num">07</span> Мини-практикум для закрепления</h2>
+      <p>
+        Выполни 4 автономных задания на таблицах из Раздела 01 в своей базе <code>learning_db</code>. Сначала напиши запрос сам и проверь результат в <code>psql</code>, а затем сверься с эталонным решением.
+      </p>
+
+      <!-- Задача 1 -->
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый). Доля цены товара внутри категории</div>
+        <p style="margin-bottom: 0;">
+          Для каждого товара из таблицы <code>products</code> выведи: категорию, название, цену, общую сумму цен всех товаров в его категории (<code>cat_total</code>) и долю этого товара в процентах (<code>share_pct</code>, округлить до 1 знака после запятой). Отсортируй по категории и убыванию цены.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 1</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  category,
+  title,
+  price,
+  SUM(price) OVER w AS cat_total,
+  ROUND(price * 100.0 / SUM(price) OVER w, 1) AS share_pct
+FROM products
+WINDOW w AS (PARTITION BY category)
+ORDER BY category, price DESC, id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задача 2 -->
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Средний). Самый крупный заказ каждого клиента</div>
+        <p style="margin-bottom: 0;">
+          Среди всех оплаченных заказов (<code>status = 'paid'</code>) найди <strong>один самый дорогой заказ</strong> для каждого клиента. Выведи имя клиента, <code>order_id</code>, дату заказа и сумму заказа (<code>order_total</code>). Используй CTE и <code>ROW_NUMBER()</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 2</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">WITH customer_orders AS (
+  SELECT
+    c.full_name,
+    o.id AS order_id,
+    o.created_at::date AS order_date,
+    SUM(oi.quantity * oi.unit_price) AS order_total
+  FROM customers c
+  JOIN orders o ON o.customer_id = c.id
+  JOIN order_items oi ON oi.order_id = o.id
+  WHERE o.status = 'paid'
+  GROUP BY c.id, c.full_name, o.id, o.created_at
+),
+ranked AS (
+  SELECT
+    *,
+    ROW_NUMBER() OVER (
+      PARTITION BY full_name
+      ORDER BY order_total DESC, order_id
+    ) AS rn
+  FROM customer_orders
+)
+SELECT full_name, order_id, order_date, order_total
+FROM ranked
+WHERE rn = 1
+ORDER BY order_total DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задача 3 -->
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Средний). Как меняется чек клиента от покупки к покупке?</div>
+        <p style="margin-bottom: 0;">
+          Для каждого оплаченного заказа выведи имя клиента, дату заказа, сумму этого заказа (<code>order_total</code>), сумму <strong>предыдущего</strong> оплаченного заказа этого же клиента (<code>prev_total</code>) и разницу между ними (<code>diff_total</code>). Для первого заказа клиента в <code>prev_total</code> должно быть <code>NULL</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 3</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">WITH order_totals AS (
+  SELECT
+    o.customer_id,
+    c.full_name,
+    o.id AS order_id,
+    o.created_at::date AS order_date,
+    SUM(oi.quantity * oi.unit_price) AS order_total
+  FROM orders o
+  JOIN customers c ON c.id = o.customer_id
+  JOIN order_items oi ON oi.order_id = o.id
+  WHERE o.status = 'paid'
+  GROUP BY o.customer_id, c.full_name, o.id, o.created_at
+)
+SELECT
+  full_name,
+  order_date,
+  order_total,
+  LAG(order_total) OVER w AS prev_total,
+  order_total - LAG(order_total) OVER w AS diff_total
+FROM order_totals
+WINDOW w AS (PARTITION BY customer_id ORDER BY order_date, order_id)
+ORDER BY customer_id, order_date, order_id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задача 4 -->
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Продвинутый). Накопительные траты каждого клиента и вклад заказа</div>
+        <p style="margin-bottom: 0;">
+          Построй клиентскую историю: для каждого оплаченного заказа покажи имя клиента, дату, сумму заказа, <strong>накопительную сумму трат этого клиента</strong> на момент покупки (<code>client_running_total</code> с явным <code>ROWS BETWEEN</code>) и какую долю в процентах (<code>pct_of_client_total</code>) этот заказ составляет от всех трат клиента за всё время.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 4</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">WITH order_totals AS (
+  SELECT
+    o.customer_id,
+    c.full_name,
+    o.id AS order_id,
+    o.created_at::date AS order_date,
+    SUM(oi.quantity * oi.unit_price) AS order_total
+  FROM orders o
+  JOIN customers c ON c.id = o.customer_id
+  JOIN order_items oi ON oi.order_id = o.id
+  WHERE o.status = 'paid'
+  GROUP BY o.customer_id, c.full_name, o.id, o.created_at
+)
+SELECT
+  full_name,
+  order_date,
+  order_total,
+  SUM(order_total) OVER (
+    PARTITION BY customer_id
+    ORDER BY order_date, order_id
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS client_running_total,
+  ROUND(
+    order_total * 100.0
+    / SUM(order_total) OVER (PARTITION BY customer_id),
+    1
+  ) AS pct_of_client_total
+FROM order_totals
+ORDER BY customer_id, order_date, order_id;</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_2/practice.html#sec-2-4"><strong>Практикум по Уроку 2.4 →</strong></a> — там ещё 10 пошаговых заданий с ответами на <code>OVER / PARTITION BY</code>, рейтинги, <code>LAG / LEAD</code> и <code>ROWS BETWEEN</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 9. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока</span>
+      Ты освоил один из самых мощных инструментов аналитического SQL: оконные функции позволяют видеть общую картину по категории, клиенту или всей компании, не теряя ни одной исходной строки. Теперь ты умеешь строить рейтинги без ловушек в <code>WHERE</code>, считать помесячную динамику через <code>LAG</code>/<code>LEAD</code>, собирать накопительные итоги и сглаживать скачки скользящими окнами. Вся теоретическая база Модуля 2 у тебя уже в руках — в следующем <strong>Уроке 2.5 «Практикум-чекпоинт: комплексные SQL-задачи на реальном датасете»</strong> ты объединишь <code>JOIN</code>, <code>CASE WHEN</code>, CTE, даты, <code>JSONB</code> и оконные функции в настоящих боевых задачах уровня продуктового аналитика и бэкенд-разработчика!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_2_3.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">2.3 · Подзапросы, CTE, работа с датами, строками и JSONB</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_2_5.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">2.5 · Практикум-чекпоинт — комплексные SQL-задачи на ре…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

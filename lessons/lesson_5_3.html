@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 5.3: Логическая репликация и переключение при сбоях (Switchover / Failover)</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_5/practice.html#sec-5-3">Практикум 5.3</a>
+        <a class="course-nav-btn" href="../slides/module-5.html#5.3">Слайды урока 5.3</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 5 · Репликация, резервное копирование и эксплуатация (HA &amp; Ops)</span>
+        <span class="pill pill-neutral">Урок 5.3</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Логическая репликация и переключение при сбоях (Switchover / Failover)</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Поймёшь, когда физического «ксерокса» уже не хватает и на сцену выходит <strong>логическая репликация</strong> (<code>Publication</code> / <code>Subscription</code>) — с фильтрацией строк, отдельными индексами и возможностью записи на подписчике.</li>
+          <li>Настроишь живую подписку между <code>course_pg_primary</code> (порт <code>5432</code>) и <code>course_pg_logical</code> (порт <code>5434</code>), поймаешь реальную ошибку отсутствия <code>REPLICA IDENTITY</code> и узнаешь, почему <code>DDL</code> не реплицируется автоматически.</li>
+          <li>Разберёшься в разнице между плановым переключением (<strong>Switchover</strong>) и аварийным спасением (<strong>Failover</strong>), поймёшь магию <strong>линий времени</strong> (<code>Timeline</code>) и смертельную опасность <strong>Split-Brain</strong>.</li>
+          <li>Проведёшь настоящее повышение реплики до главного сервера через <code>pg_promote()</code> и научишься чисто восстанавливать кластер после тренировки.</li>
+        </ul>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== РАЗДЕЛ 01 ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Зачем нужна логическая репликация: подписка на новости вместо ксерокса</h2>
+      <p>
+        В Уроках 5.1 и 5.2 мы работали с <strong>физической репликацией</strong> — она копировала весь кластер PostgreSQL целиком, байт-в-байт. Это идеальный вариант для высокой доступности, но представь три реальные задачи, где «слепой ксерокс» бессилен:
+      </p>
+      <ul>
+        <li><strong>Нужна только одна таблица:</strong> отделу маркетинга нужна таблица <code>orders</code> (и только оплаченные заказы!), а таблицы с паролями пользователей отдавать им строго запрещено.</li>
+        <li><strong>На реплике нужно писать и добавлять свои индексы:</strong> аналитики хотят на своей копии построить 5 тяжёлых индексов под отчёты и сохранять туда собственные таблицы с расчётами — но физический Standby строго <code>Read-Only</code>!</li>
+        <li><strong>Обновление версии без простоя (Zero-Downtime Upgrade):</strong> ты хочешь переехать с PostgreSQL 14 на PostgreSQL 16. Физическая репликация требует <em>одинаковой</em> мажорной версии на обоих серверах, а значит — не подойдёт.</li>
+      </ul>
+      <p>
+        Решение — <strong>логическая репликация</strong> (<code>Logical Replication</code>). Вместо ксерокопии байтов диска она работает как <strong>подписка на школьную газету</strong>:
+      </p>
+      <ul>
+        <li><strong>Издатель (<code>Publisher</code>)</strong> читает свой журнал <code>WAL</code> (для этого обязательно нужен <code>wal_level = logical</code>), декодирует сырые байты обратно в понятные события (<em>«В таблицу <code>catalog_items</code> вставили строку №5»</em>) и публикует их в именованный канал — <strong>публикацию</strong> (<code>PUBLICATION</code>).</li>
+        <li><strong>Подписчик (<code>Subscriber</code>)</strong> оформляет <strong>подписку</strong> (<code>SUBSCRIPTION</code>), забирает начальный снимок выбранных таблиц, а затем в реальном времени применяет новые события <code>INSERT</code> / <code>UPDATE</code> / <code>DELETE</code>. При этом Подписчик остаётся полноценным <strong>Read/Write сервером</strong>!</li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            subgraph Pub["Publisher: course_pg_primary (5432)"]
+              T1["Таблицы: catalog_items, users, logs"] --> W["WAL (wal_level = logical)"]
+              W --> D["Logical Decoding + Publication"]
+            end
+            subgraph Sub["Subscriber: course_pg_logical (5434)"]
+              AW["Apply Worker (Subscription)"] --> T2["Таблица catalog_items + свои индексы"]
+              L["Локальные таблицы аналитиков (Read/Write)"]
+            end
+            D ==>|"Только выбранные таблицы и строки"| AW
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Как логическая репликация передаёт данные между двумя независимыми серверами PostgreSQL.</figcaption>
+      </figure>
+
+      <div class="table-wrapper">
+        <table class="table-wide">
+          <thead>
+            <tr>
+              <th>Критерий</th>
+              <th>Физическая репликация (Standby · 5433)</th>
+              <th>Логическая репликация (Subscriber · 5434)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Что копируется</td>
+              <td>Весь кластер целиком (байт-в-байт)</td>
+              <td>Выбранные таблицы, колонки и даже отфильтрованные строки</td>
+            </tr>
+            <tr>
+              <td>Запись на приёмнике</td>
+              <td>Запрещена (строго <code>Read-Only</code>)</td>
+              <td><strong>Разрешена!</strong> Можно создавать свои таблицы и индексы</td>
+            </tr>
+            <tr>
+              <td>Разные версии PostgreSQL</td>
+              <td>Нет (строго одинаковая мажорная версия и ОС)</td>
+              <td><strong>Да!</strong> Отлично подходит для переезда с PG 14 на PG 16</td>
+            </tr>
+            <tr>
+              <td>Репликация <code>DDL</code> (<code>ALTER TABLE</code>)</td>
+              <td>Да, автоматически</td>
+              <td><strong>Нет!</strong> Схему таблиц нужно обновлять на обоих серверах</td>
+            </tr>
+            <tr>
+              <td>Главная задача</td>
+              <td>Отказоустойчивость (HA) и снятие нагрузки чтения</td>
+              <td>Интеграция микросервисов, аналитика, апгрейд без простоя</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Простая аналогия:</strong> Физическая репликация — это <em>зеркало в комнате</em> (ты видишь всю комнату целиком, но не можешь ничего переставить внутри отражения). Логическая репликация — это <em>Telegram-канал с новостями магазина</em>: ты сам выбираешь, на какие товары подписаться, и складываешь их на свои полки как угодно.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 02 ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Настраиваем логическую репликацию в бою (Publication и Subscription)</h2>
+      <p>
+        В нашем файле <code>docker-compose.yaml</code> уже есть отдельный независимый сервер <code>course_pg_logical</code> на порту <code>5434</code>. Убедись, что сервисы Модуля 5 запущены (<code>docker compose --profile mod5 up -d</code>), и давай настроим живой поток данных от <code>course_pg_primary</code> (<code>5432</code>) к <code>course_pg_logical</code> (<code>5434</code>)!
+      </p>
+
+      <h3>Практика 1: Создаём таблицу и публикацию на Publisher (порт 5432)</h3>
+      <p>
+        Подключись к <strong>Publisher</strong> (<code>docker exec -it course_pg_primary psql -U student -d learning_db</code>). Создадим таблицу товаров <code>catalog_items</code> с первичным ключом (почему он жизненно важен — узнаешь в следующем разделе!) и опубликуем её.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Выполнять на Publisher — course_pg_primary (порт 5432)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- 1. Убеждаемся, что включён уровень журнала logical
+SHOW wal_level;
+
+-- 2. Безопасный перезапуск: убираем старую публикацию и таблицу
+DROP PUBLICATION IF EXISTS catalog_pub;
+DROP TABLE IF EXISTS catalog_items;
+
+-- 3. Создаём таблицу товаров с PRIMARY KEY
+CREATE TABLE catalog_items (
+    id          INT PRIMARY KEY,
+    title       TEXT NOT NULL,
+    category    TEXT NOT NULL,
+    price       NUMERIC(10, 2) NOT NULL CHECK (price &gt; 0),
+    is_active   BOOLEAN NOT NULL DEFAULT true
+);
+
+-- 4. Наполняем начальными данными
+INSERT INTO catalog_items (id, title, category, price, is_active) VALUES
+    (1, 'Худи SQL Master',    14500.00, 'Одежда', true),
+    (2, 'Термокружка DBA',     6900.00, 'Посуда', true),
+    (3, 'Архивный стикерпак',   900.00, 'Мерч',   false)
+ON CONFLICT (id) DO NOTHING;</code></pre>
+      </div>
+
+      <p>
+        Ой, присмотрись к порядку колонок в <code>INSERT</code> выше — <code>category</code> идёт третьей, а <code>price</code> четвёртой! Давай вставим строки с правильным порядком и сразу создадим <strong>публикацию с фильтром строк</strong> (фишка PostgreSQL 15+): пусть подписчик получает только <strong>активные товары</strong> (<code>WHERE (is_active = true)</code>) и без служебной колонки <code>is_active</code>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Правильная вставка и публикация с фильтром на Publisher (5432)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Очищаем и вставляем 3 товара с корректным порядком колонок
+TRUNCATE TABLE catalog_items;
+
+INSERT INTO catalog_items (id, title, category, price, is_active) VALUES
+    (1, 'Худи SQL Master',    'Одежда', 14500.00, true),
+    (2, 'Термокружка DBA',    'Посуда',  6900.00, true),
+    (3, 'Архивный стикерпак', 'Мерч',     900.00, false);
+
+-- Создаём публикацию: отдаём только 4 колонки и только активные строки!
+CREATE PUBLICATION catalog_pub
+    FOR TABLE catalog_items (id, title, category, price)
+    WHERE (is_active = true);
+
+-- Проверяем список публикаций и фильтры
+SELECT pubname, schemaname, tablename, attnames, rowfilter
+FROM pg_publication_tables
+WHERE pubname = 'catalog_pub';</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL (Publisher · 5432)</div>
+        <pre>   pubname   | schemaname |   tablename   |         attnames          |      rowfilter
+-------------+------------+---------------+---------------------------+---------------------
+ catalog_pub | public     | catalog_items | {id,title,category,price} | (is_active = true)
+(1 row)</pre>
+      </div>
+
+      <h3>Практика 2: Создаём таблицу и подписку на Subscriber (порт 5434)</h3>
+      <p>
+        Теперь подключись во втором окне к <strong>Subscriber</strong> (<code>docker exec -it course_pg_logical psql -U student -d learning_db</code>). Помни золотое правило: <strong>логическая репликация не создаёт таблицы сама</strong>, поэтому структуру таблицы <code>catalog_items</code> нужно создать заранее. Зато мы сразу можем повесить на неё собственный индекс и создать рядом локальную таблицу!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Выполнять на Subscriber — course_pg_logical (порт 5434)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- 1. Безопасная очистка прошлой подписки и таблицы
+DROP SUBSCRIPTION IF EXISTS catalog_sub;
+DROP TABLE IF EXISTS catalog_items, local_marketing_notes;
+
+-- 2. Создаём таблицу-приёмник (колонки совпадают с публикацией!)
+CREATE TABLE catalog_items (
+    id        INT PRIMARY KEY,
+    title     TEXT NOT NULL,
+    category  TEXT NOT NULL,
+    price     NUMERIC(10, 2) NOT NULL
+);
+
+-- 3. Добавляем СВОЙ аналитический индекс, которого нет на Publisher!
+CREATE INDEX idx_catalog_category_price ON catalog_items (category, price);
+
+-- 4. Оформляем подписку на course_pg_primary по внутренней сети Docker
+CREATE SUBSCRIPTION catalog_sub
+    CONNECTION 'host=pg_primary port=5432 dbname=learning_db user=student password=student_pass'
+    PUBLICATION catalog_pub;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL (Subscriber · 5434)</div>
+        <pre>NOTICE:  created replication slot "catalog_sub" on publisher
+CREATE SUBSCRIPTION</pre>
+      </div>
+
+      <p>
+        Посмотри на строчку <code>NOTICE</code>: PostgreSQL <strong>сам создал логический слот репликации</strong> <code>catalog_sub</code> на сервере <code>pg_primary</code> и запустил начальное копирование! Проверим через пару секунд на <strong>Subscriber (5434)</strong>, какие строки доехали, и заодно проверим, что мы можем спокойно писать в локальные таблицы.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Проверка данных и локальной записи на Subscriber (порт 5434)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- 1. Смотрим скопированные товары: архивного товара id=3 здесь НЕТ!
+SELECT id, title, category, price
+FROM catalog_items
+ORDER BY id;
+
+-- 2. Проверяем, что Subscriber — полноценный Read/Write сервер
+CREATE TABLE local_marketing_notes (
+    item_id INT PRIMARY KEY,
+    note    TEXT NOT NULL
+);
+INSERT INTO local_marketing_notes VALUES (1, 'Хит продаж осени!');
+
+-- 3. Проверяем статус фонового воркера подписки
+SELECT subname, pid, received_lsn, latest_end_lsn
+FROM pg_stat_subscription
+WHERE subname = 'catalog_sub';</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL (Subscriber · 5434)</div>
+        <pre> id |      title      | category |  price
+----+-----------------+----------+----------
+  1 | Худи SQL Master | Одежда   | 14500.00
+  2 | Термокружка DBA | Посуда   |  6900.00
+(2 rows)
+
+   subname   | pid | received_lsn | latest_end_lsn
+-------------+-----+--------------+----------------
+ catalog_sub |  68 | 0/428B910    | 0/428B910
+(1 row)</pre>
+      </div>
+
+      <h3>Практика 3: Проверяем живой поток UPDATE и работу фильтра</h3>
+      <p>
+        А что будет, если на <strong>Publisher (5432)</strong> мы изменим цену у товара <code>id = 2</code> и «оживим» архивный товар <code>id = 3</code> (поставим <code>is_active = true</code>)? Запусти на <strong>Publisher (5432)</strong>, а затем сделай <code>SELECT</code> на <strong>Subscriber (5434)</strong>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Живое обновление на Publisher (порт 5432)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Меняем цену кружки и возвращаем в продажу стикерпак
+UPDATE catalog_items SET price = 7200.00 WHERE id = 2;
+UPDATE catalog_items SET is_active = true WHERE id = 3;</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Проверка на Subscriber (порт 5434)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">SELECT id, title, price FROM catalog_items ORDER BY id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL (Subscriber · 5434)</div>
+        <pre> id |       title        |  price
+----+--------------------+----------
+  1 | Худи SQL Master    | 14500.00
+  2 | Термокружка DBA    |  7200.00
+  3 | Архивный стикерпак |   900.00
+(3 rows)</pre>
+      </div>
+
+      <p>
+        Магия! Когда товар <code>id = 3</code> стал соответствовать фильтру <code>is_active = true</code>, Publisher автоматически превратил наш <code>UPDATE</code> в команду <code>INSERT</code> для подписчика — и товар появился на <code>5434</code>. Мы полностью решили задачу из начала раздела: маркетологи получили только нужные товары, смогли построить собственный индекс и записать свои заметки, не трогая главный сервер!
+      </p>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 03 ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Главные грабли логической репликации: REPLICA IDENTITY и DDL</h2>
+      <p>
+        Логическая репликация очень гибкая, но у неё есть три строгих правила, о которые спотыкаются почти все новички.
+      </p>
+      <p>
+        <strong>Ловушка №1: нет ключа — нет UPDATE и DELETE!</strong> Представь, что ты отправил другу по рации сообщение: <em>«Исправь оценку у ученика в списке на пятёрку»</em>. Друг спрашивает: <em>«У какого именно? У них нет номеров, а Иванов в классе двое!»</em>. В PostgreSQL метка, по которой Subscriber однозначно находит строку для <code>UPDATE</code> или <code>DELETE</code>, называется <strong>REPLICA IDENTITY</strong>. По умолчанию ей служит <strong>Primary Key</strong>. Если у таблицы в публикации нет Primary Key, PostgreSQL просто не даст её обновить!
+      </p>
+
+      <h3>Практика 4: Ловим ошибку REPLICA IDENTITY и чиним таблицу</h3>
+      <p>
+        Выполни этот короткий эксперимент на <strong>Publisher (порт 5432)</strong>: создадим таблицу заметок <strong>без Primary Key</strong>, добавим её в публикацию и попробуем обновить строку.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Выполнять на Publisher (порт 5432)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Безопасная подготовка таблицы БЕЗ Primary Key
+DROP PUBLICATION IF EXISTS broken_pub;
+DROP TABLE IF EXISTS audit_notes;
+
+CREATE TABLE audit_notes (
+    author TEXT NOT NULL,
+    note   TEXT NOT NULL
+);
+
+INSERT INTO audit_notes VALUES ('Аня', 'Проверить склад');
+
+-- Создаём публикацию для таблицы без ключа (это сработает!)
+CREATE PUBLICATION broken_pub FOR TABLE audit_notes;
+
+-- А вот попытка UPDATE немедленно упадёт с ошибкой:
+UPDATE audit_notes SET note = 'Склад проверен' WHERE author = 'Аня';</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL (Publisher · 5432)</div>
+        <pre>ERROR:  cannot update table "audit_notes" because it does not have a replica identity and publishes updates
+HINT:  To enable updating the table, set REPLICA IDENTITY using ALTER TABLE.</pre>
+      </div>
+
+      <p>
+        Посмотри на подсказку <code>HINT</code>: чтобы починить таблицу, есть два пути — добавить настоящий <code>PRIMARY KEY</code> (лучший вариант) или включить <code>ALTER TABLE audit_notes REPLICA IDENTITY FULL</code> (тогда в WAL будет записываться <strong>вся старая строка целиком</strong>, и подписчик будет искать её перебором!).
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- На огромной таблице без PK:
+ALTER TABLE audit_notes
+  REPLICA IDENTITY FULL;</code></pre>
+            </div>
+            <p>Раздувает журнал WAL в разы и заставляет Subscriber делать полный перебор таблицы на каждый <code>UPDATE</code>/<code>DELETE</code>!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Добавляем Primary Key:
+ALTER TABLE audit_notes
+  ADD COLUMN id BIGSERIAL
+  PRIMARY KEY;</code></pre>
+            </div>
+            <p>В WAL пишется только компактный <code>id</code>, а Subscriber мгновенно находит строку по индексу Primary Key.</p>
+          </div>
+        </div>
+      </div>
+
+      <p>
+        Почистим за собой учебную публикацию на <strong>Publisher (5432)</strong>, чтобы не оставлять лишних объектов: <code>DROP PUBLICATION IF EXISTS broken_pub; DROP TABLE IF EXISTS audit_notes;</code>.
+      </p>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Ловушки №2 и №3 (DDL и последовательности):</strong>
+          <br />1. Если ты выполнишь <code>ALTER TABLE catalog_items ADD COLUMN weight INT;</code> только на Publisher, то при следующем <code>INSERT</code> репликация на Subscriber <strong>встанет с ошибкой</strong>! Правильный порядок миграций: сначала добавляй новую колонку (с <code>NULL</code> или <code>DEFAULT</code>) на <strong>Subscriber</strong>, и только потом — на <strong>Publisher</strong>.
+          <br />2. В PostgreSQL 16 значения последовательностей (<code>SERIAL</code> / <code>IDENTITY</code>) не синхронизируются автоматически. При миграции на новый сервер обязательно подтяни счётчики через <code>setval()</code>, иначе новые вставки упадут с ошибкой <code>duplicate key</code>!
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 04 ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> Переключение при сбоях: Switchover, Failover, Timeline и Split-Brain</h2>
+      <p>
+        Теперь вернёмся к нашему физическому кластеру <code>Primary (5432) + Standby (5433)</code> и зададим главный вопрос высокой доступности (<em>High Availability</em>): <strong>что делать, когда главному серверу нужно уйти на обслуживание или он внезапно сломался?</strong>
+      </p>
+      <p>
+        Представь кабину самолёта, где сидят капитан (<code>Primary</code>) и второй пилот (<code>Standby</code>):
+      </p>
+      <ul>
+        <li><strong>Switchover (плановое переключение):</strong> капитан хочет сходить за кофе (в мире БД — обновить ядро Linux или заменить диск). Он спокойно говорит: <em>«Убери руки с кнопок, дождись, пока приборы сравняются, теперь ты главный!»</em>. Primary останавливает приём новых транзакций, отправляет <strong>100% оставшегося WAL</strong> на Standby, Standby становится новым Primary, а старый Primary превращается в Standby. <strong>Потеря данных: 0 байт (<code>RPO = 0</code>)</strong>.</li>
+        <li><strong>Failover (аварийное переключение):</strong> капитан внезапно потерял сознание (сервер Primary сгорел, пропало питание в дата-центре). Второй пилот <strong>немедленно</strong> перехватывает штурвал командой повышения роли — <strong>Promotion</strong> (<code>pg_promote()</code> или <code>pg_ctl promote</code>), чтобы спасти самолёт как можно быстрее (минимизировать время простоя — <strong>RTO, Recovery Time Objective</strong>). Если репликация была асинхронной, последние миллисекунды записи могут потеряться (<code>RPO &gt; 0</code>).</li>
+      </ul>
+
+      <h3>Что такое Timeline (линия времени) и чем страшен Split-Brain?</h3>
+      <p>
+        Как только Standby повышается до роли Primary, PostgreSQL создаёт новую <strong>линию времени</strong> (<code>Timeline ID, TLI</code>): была <code>Timeline 1</code> — стала <code>Timeline 2</code>. Зачем? Представь фильм про путешествия во времени: в момент аварии история кластера разветвилась на две параллельные вселенные. Нумерация <code>Timeline</code> гарантирует, что старые файлы WAL из «умершей вселенной 1» никогда случайно не перемешаются с новыми файлами из «вселенной 2»!
+      </p>
+      <p>
+        А теперь представь самый страшный кошмар инженера БД — <strong>Split-Brain («расщепление мозга»)</strong>:
+      </p>
+      <p>
+        Между Primary и Standby на 30 секунд пропала сеть. На самом деле старый Primary жив, просто «оглох». Администратор в панике повысил Standby до нового Primary. Сеть починили — и теперь в системе работают <strong>ДВА Primary одновременно</strong>! Половина покупателей оформляет заказы на сервере A, половина — на сервере B. Базы разошлись навсегда, и автоматически склеить их обратно <strong>невозможно</strong>!
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            T1A["Primary (TLI 1): LSN 0/400"] --> T1B["Авария Primary!"]
+            T1A ==>|"WAL поток (TLI 1)"| S1["Standby (TLI 1): LSN 0/400"]
+            S1 -->|"pg_promote()"| P2["Новый Primary (TLI 2): Read/Write"]
+            T1B -.->|"Если старый Primary ожил без изоляции!"| SB["SPLIT-BRAIN: два Primary одновременно!"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Разветвление линий времени (Timeline 1 -&gt; Timeline 2) при Failover и риск Split-Brain.</figcaption>
+      </figure>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Характеристика</th>
+              <th>Switchover (плановое)</th>
+              <th>Failover (аварийное)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Причина</td>
+              <td>Обслуживание, обновление ОС/железа, переезд</td>
+              <td>Внезапный отказ Primary, сбой питания или диска</td>
+            </tr>
+            <tr>
+              <td>Потеря данных (<code>RPO</code>)</td>
+              <td><code>0</code> (всегда ждём полного совпадения LSN)</td>
+              <td><code>0</code> при <code>sync</code>; возможны потери при <code>async</code></td>
+            </tr>
+            <tr>
+              <td>Время простоя (<code>RTO</code>)</td>
+              <td>Обычно 1–5 секунд (контролируемо)</td>
+              <td>10–60 секунд (детекция сбоя + <code>promote</code> + переключение трафика)</td>
+            </tr>
+            <tr>
+              <td>Что со старым Primary</td>
+              <td>Корректно переводится в роль Standby</td>
+              <td>Изолируется (<em>Fencing</em>), а затем чинится через <code>pg_rewind</code> или <code>pg_basebackup</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Практика 5: Проводим реальный Failover (Promotion) на course_pg_standby</h3>
+      <p>
+        Давай проживём момент переключения своими руками! Сначала посмотрим текущий номер линии времени (<code>timeline_id</code>) на <strong>Standby (порт 5433)</strong>, затем поднимем его в роль Primary функцией <code>pg_promote()</code> и проверим, что он стал принимать запись!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Шаг 1: проверяем роль и Timeline ДО повышения на Standby (порт 5433)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Смотрим статус и номер линии времени до промоушена
+SELECT
+    pg_is_in_recovery() AS is_standby,
+    (SELECT timeline_id FROM pg_control_checkpoint()) AS current_timeline;
+
+-- ПРОИЗВОДИМ FAILOVER: превращаем Standby в самостоятельный Primary!
+SELECT pg_promote(wait =&gt; true, wait_seconds =&gt; 30);</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL (course_pg_standby · 5433)</div>
+        <pre> is_standby | current_timeline
+------------+------------------
+ t          |                1
+(1 row)
+
+ pg_promote
+------------
+ t
+(1 row)</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Шаг 2: проверяем новую роль, Timeline 2 и запись на бывшем Standby (5433)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- 1. Теперь is_standby = f, а current_timeline = 2!
+SELECT
+    pg_is_in_recovery() AS is_standby,
+    (SELECT timeline_id FROM pg_control_checkpoint()) AS current_timeline;
+
+-- 2. Пробуем записать данные туда, где минуту назад была ошибка Read-Only!
+DROP TABLE IF EXISTS failover_proof;
+CREATE TABLE failover_proof (
+    id         SERIAL PRIMARY KEY,
+    message    TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO failover_proof (message)
+VALUES ('Я новый Primary на Timeline 2!');
+
+SELECT id, message FROM failover_proof;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL (course_pg_standby · 5433 — теперь это Primary!)</div>
+        <pre> is_standby | current_timeline
+------------+------------------
+ f          |                2
+(1 row)
+
+ id |            message
+----+---------------------------------
+  1 | Я новый Primary на Timeline 2!
+(1 row)</pre>
+      </div>
+
+      <p>
+        Посмотри, что произошло за доли секунды: PostgreSQL сам удалил файл <code>standby.signal</code>, перешёл на <strong>Timeline 2</strong>, закрыл старый <code>walreceiver</code> и открыл сервер на запись! А на нашем старом <code>course_pg_primary</code> (порт <code>5432</code>) представление <code>pg_stat_replication</code> сразу опустело — реплика отцепилась и стала независимым сервером.
+      </p>
+
+      <h3>Практика 6: Как вернуть учебную реплику в строй после тренировки</h3>
+      <p>
+        Сейчас в нашем учебном Docker Compose как раз получилась учебная модель <strong>Split-Brain</strong>: оба сервера (<code>5432</code> и <code>5433</code>) открыты на запись и живут в разных вселенных (<code>TLI 1</code> и <code>TLI 2</code>)! В реальной жизни старый Primary возвращают в кластер с помощью утилиты <code>pg_rewind</code> (она быстро откатывает только разошедшиеся страницы без полного копирования) или пересоздают через <code>pg_basebackup</code>. Давай чисто сбросим том <code>course_pg_standby</code>, чтобы он снова стал послушной физической репликой для следующих уроков:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash · Возвращаем course_pg_standby в режим физической реплики</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># 1. Останавливаем и удаляем контейнер бывшей реплики
+docker compose --profile mod5 stop pg_standby
+docker compose --profile mod5 rm -f pg_standby
+
+# 2. Удаляем её старый том с Timeline 2 (имя проекта в docker-compose.yaml = db-course)
+docker volume rm db-course_pg_standby_data
+
+# 3. Запускаем заново — скрипт сам выполнит свежий pg_basebackup с Primary!
+docker compose --profile mod5 up -d pg_standby
+
+# 4. Проверяем, что Standby снова в строю (должно вернуть t)
+sleep 3
+docker exec course_pg_standby psql -U student -d learning_db -c "SELECT pg_is_in_recovery();"</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ терминала</div>
+        <pre> pg_is_in_recovery
+-------------------
+ t
+(1 row)</pre>
+      </div>
+
+      <div class="compare-grid stacked">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-bash"># Выполнить pg_promote() на Standby, не убедившись, что старый Primary выключен!
+psql -h standby -c "SELECT pg_promote();"
+# Приложение продолжает писать часть запросов на старый Primary → SPLIT-BRAIN!</code></pre>
+            </div>
+            <p>Ручной failover без отключения старого Primary (<em>Fencing / STONITH</em>) и перенаправления трафика гарантированно приводит к расхождению данных.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-bash"># В продакшене переключением управляет оркестратор с кворумом (Patroni + etcd)
+patronictl -c /etc/patroni.yml switchover   # планово (RPO = 0)
+# При аварии Patroni сам проверит кворум, изолирует старый узел, сделает promote и pg_rewind!</code></pre>
+            </div>
+            <p>Оркестратор (<strong>Patroni</strong>) использует распределённое хранилище ключей (<code>etcd</code> / <code>Consul</code>) как «судью»: роль Primary всегда принадлежит ровно одному серверу, который удерживает лидерский замок (<em>Leader Lock</em>).</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет на будущее:</strong> Запомни связку, которую спрашивают на каждом собеседовании по PostgreSQL HA: <strong>Patroni + etcd + HAProxy</strong>. <code>etcd</code> решает, кто сейчас главный (защита от Split-Brain), <code>Patroni</code> управляет запуском, <code>pg_promote()</code> и <code>pg_rewind</code>, а <code>HAProxy</code> (или VIP) мгновенно перенаправляет трафик приложения на актуальный Primary.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 05 ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Шпаргалка урока и мини-практикум</h2>
+
+      <h3>Короткая шпаргалка перед практикой</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Инструмент / понятие</th>
+              <th>Зачем нужен и где выполняется</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>CREATE PUBLICATION ... FOR TABLE t WHERE (...)</code></td>
+              <td>Создаёт канал логической репликации на <strong>Publisher</strong> (можно фильтровать колонки и строки).</td>
+            </tr>
+            <tr>
+              <td><code>CREATE SUBSCRIPTION ... CONNECTION '...'</code></td>
+              <td>Подписывает <strong>Subscriber</strong> на публикацию; автоматически создаёт логический слот на Publisher.</td>
+            </tr>
+            <tr>
+              <td><code>REPLICA IDENTITY</code></td>
+              <td>Способ идентификации строк при <code>UPDATE</code>/<code>DELETE</code> (по умолчанию <code>PRIMARY KEY</code>; без него изменения в опубликованной таблице упадут с ошибкой).</td>
+            </tr>
+            <tr>
+              <td><code>pg_stat_subscription</code> / <code>pg_stat_subscription_stats</code></td>
+              <td>Мониторинг работы и счётчик ошибок (<code>apply_error_count</code>) на <strong>Subscriber</strong>.</td>
+            </tr>
+            <tr>
+              <td><code>pg_promote()</code> и <code>pg_control_checkpoint()</code></td>
+              <td>Повышает физический Standby до Primary и позволяет проверить текущий <code>timeline_id</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Switchover</strong> vs <strong>Failover</strong></td>
+              <td>Плановое переключение (<code>RPO = 0</code>) против аварийного спасения при смерти Primary (требует защиты от <strong>Split-Brain</strong>).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Мини-практикум для закрепления</h3>
+      <p>
+        Убедись, что контейнеры <code>course_pg_primary</code> (<code>5432</code>), <code>course_pg_standby</code> (<code>5433</code>) и <code>course_pg_logical</code> (<code>5434</code>) запущены (<code>docker compose --profile mod5 up -d</code>). Все 4 задания полностью автономны.
+      </p>
+
+      <!-- Задание 1 -->
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый). Логическая репликация с фильтром «только крупные заказы»</div>
+        <p style="margin-bottom: 0;">
+          На <strong>Publisher (5432)</strong> создай таблицу <code>vip_sales (id INT PRIMARY KEY, customer TEXT, amount NUMERIC(10, 2))</code>, вставь 3 заказа с суммами <code>1200</code>, <code>8500</code> и <code>24000</code>, и создай публикацию <code>vip_sales_pub</code> с фильтром <code>WHERE (amount &gt;= 5000)</code>. На <strong>Subscriber (5434)</strong> создай такую же таблицу и подписку <code>vip_sales_sub</code>. Проверь, что на <code>5434</code> приехали ровно <strong>2 строки</strong> (заказ на <code>1200</code> отфильтровался).
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Шаг 1: выполнить на Publisher (5432)</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP PUBLICATION IF EXISTS vip_sales_pub;
+DROP TABLE IF EXISTS vip_sales;
+
+CREATE TABLE vip_sales (
+    id       INT PRIMARY KEY,
+    customer TEXT NOT NULL,
+    amount   NUMERIC(10, 2) NOT NULL
+);
+
+INSERT INTO vip_sales (id, customer, amount) VALUES
+    (1, 'Иван',   1200.00),
+    (2, 'Мария',  8500.00),
+    (3, 'Алексей', 24000.00);
+
+CREATE PUBLICATION vip_sales_pub
+    FOR TABLE vip_sales
+    WHERE (amount &gt;= 5000);</code></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Шаг 2: выполнить на Subscriber (5434)</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP SUBSCRIPTION IF EXISTS vip_sales_sub;
+DROP TABLE IF EXISTS vip_sales;
+
+CREATE TABLE vip_sales (
+    id       INT PRIMARY KEY,
+    customer TEXT NOT NULL,
+    amount   NUMERIC(10, 2) NOT NULL
+);
+
+CREATE SUBSCRIPTION vip_sales_sub
+    CONNECTION 'host=pg_primary port=5432 dbname=learning_db user=student password=student_pass'
+    PUBLICATION vip_sales_pub;
+
+-- Подожди 1–2 секунды и проверь результат:
+SELECT id, customer, amount FROM vip_sales ORDER BY id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задание 2 -->
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Практический). Сравниваем возможности записи на физическом Standby и логическом Subscriber</div>
+        <p style="margin-bottom: 0;">
+          Проверь на практике ключевое архитектурное отличие двух видов репликации: напиши запрос, который создаёт аналитический индекс или локальную таблицу <code>bi_custom_summary (metric TEXT PRIMARY KEY, val INT)</code> и вставляет туда строку <code>('daily_kpi', 42)</code>. Попробуй выполнить его на <strong>Standby (5433)</strong> и на <strong>Subscriber (5434)</strong>, а также проверь на обоих узлах значение <code>pg_is_in_recovery()</code>. Объясни, почему результаты противоположны.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <p style="margin: 0.65rem 0 0.5rem; font-size: 0.92rem;">
+            На физическом <strong>Standby (5433)</strong> функция <code>pg_is_in_recovery()</code> вернёт <code>t</code>, а <code>CREATE TABLE</code> упадёт с ошибкой <code>cannot execute CREATE TABLE in a read-only transaction</code> — он копирует сырые страницы диска. На логическом <strong>Subscriber (5434)</strong> функция вернёт <code>f</code> (это самостоятельный Primary-сервер для своих баз!), поэтому таблица и строка создадутся без ошибок.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Выполнить на 5433 (будет ошибка) и на 5434 (успех)</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- 1. Проверяем режим восстановления
+SELECT pg_is_in_recovery() AS is_physical_standby;
+
+-- 2. Создаём локальную таблицу аналитиков
+DROP TABLE IF EXISTS bi_custom_summary;
+CREATE TABLE bi_custom_summary (
+    metric TEXT PRIMARY KEY,
+    val    INT NOT NULL
+);
+INSERT INTO bi_custom_summary (metric, val) VALUES ('daily_kpi', 42);
+
+SELECT * FROM bi_custom_summary;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задание 3 -->
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Инженерный). Мониторинг всех логических слотов на Publisher</div>
+        <p style="margin-bottom: 0;">
+          Помнишь из Урока 5.1, что забытый слот может заполнить диск Primary? Каждая логическая подписка автоматически создаёт <strong>логический слот</strong> на Publisher! Напиши SQL-запрос для <strong>Publisher (5432)</strong> к <code>pg_replication_slots</code>, который покажет только слоты с <code>slot_type = 'logical'</code>: имя слота, базу, статус <code>active</code>, <code>wal_status</code>, позицию <code>confirmed_flush_lsn</code> и объём удерживаемого WAL в читаемом виде (<code>pg_size_pretty</code>).
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Выполнять на Publisher (порт 5432)</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+    slot_name,
+    database,
+    active,
+    wal_status,
+    confirmed_flush_lsn,
+    pg_size_pretty(
+        pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)
+    ) AS retained_wal_size
+FROM pg_replication_slots
+WHERE slot_type = 'logical'
+ORDER BY slot_name;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задание 4 -->
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Отладка). Починить сломанную логическую репликацию после DDL-миграции</div>
+        <p style="margin-bottom: 0;">
+          Смоделируй классический баг на проде: создай пару таблиц <code>ddl_demo (id INT PRIMARY KEY, title TEXT)</code>, публикацию <code>ddl_pub</code> на <strong>Publisher (5432)</strong> и подписку <code>ddl_sub</code> на <strong>Subscriber (5434)</strong>. Затем добавь новую колонку <code>price NUMERIC DEFAULT 0</code> <strong>только на Publisher</strong> и вставь строку <code>(1, 'Книга', 1500)</code>. Посмотри на <strong>Subscriber</strong> в представление <code>pg_stat_subscription_stats</code> (колонка <code>apply_error_count</code> должна вырасти!), а затем исправь схему на Subscriber так, чтобы строка автоматически доехала без пересоздания подписки!
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Шаг 1: настройка на Publisher (5432) и Subscriber (5434)</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- На Publisher (5432):
+DROP PUBLICATION IF EXISTS ddl_pub;
+DROP TABLE IF EXISTS ddl_demo;
+CREATE TABLE ddl_demo (id INT PRIMARY KEY, title TEXT);
+CREATE PUBLICATION ddl_pub FOR TABLE ddl_demo;
+
+-- На Subscriber (5434):
+DROP SUBSCRIPTION IF EXISTS ddl_sub;
+DROP TABLE IF EXISTS ddl_demo;
+CREATE TABLE ddl_demo (id INT PRIMARY KEY, title TEXT);
+CREATE SUBSCRIPTION ddl_sub
+    CONNECTION 'host=pg_primary port=5432 dbname=learning_db user=student password=student_pass'
+    PUBLICATION ddl_pub;</code></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Шаг 2: ломаем схему на Publisher (5432)</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">ALTER TABLE ddl_demo ADD COLUMN price NUMERIC DEFAULT 0;
+INSERT INTO ddl_demo (id, title, price) VALUES (1, 'Книга', 1500);</code></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Шаг 3: диагностируем и чиним на Subscriber (5434)</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- 1. Видим растущий счётчик ошибок применения (apply_error_count &gt; 0)
+SELECT subname, apply_error_count, sync_error_count
+FROM pg_stat_subscription_stats
+WHERE subname = 'ddl_sub';
+
+-- 2. Добавляем недостающую колонку на Subscriber
+ALTER TABLE ddl_demo ADD COLUMN price NUMERIC DEFAULT 0;
+
+-- 3. Через несколько секунд apply worker сам повторит попытку, и строка появится!
+SELECT id, title, price FROM ddl_demo;</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_5/practice.html#sec-5-3"><strong>Практикум по Уроку 5.3 →</strong></a> — там 11 пошаговых заданий с ответами на <code>PUBLICATION / SUBSCRIPTION</code> с фильтрами строк и колонок, грабли <code>REPLICA IDENTITY</code> и <code>DDL</code>, живой <code>Failover (pg_promote)</code> и чистое восстановление Standby.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока</span>
+      Сегодня ты освоил два мощнейших инструмента зрелой эксплуатации PostgreSQL: <strong>логическую репликацию</strong> (<code>Publication</code> / <code>Subscription</code>, фильтрацию строк и колонок, правило <code>REPLICA IDENTITY</code> и осторожное обращение с <code>DDL</code>) и управление переключением ролей (<strong>Switchover</strong> vs <strong>Failover</strong>, <code>pg_promote()</code>, разветвление <code>Timeline</code> и защиту от <strong>Split-Brain</strong>). Но представь на секунду страшную ситуацию: уставший разработчик перепутал тестовое окно с боевым и выполнил <code>DELETE FROM orders;</code> без <code>WHERE</code>. Что сделают и физический Standby, и логический Subscriber? Они <strong>за пару миллисекунд идеально скопируют эту катастрофу и сотрут все заказы везде</strong>! Именно поэтому репликация — это <em>не резервное копирование</em>. В финальном <strong>Уроке 5.4</strong> мы разберёмся, как строить настоящие бэкапы и <strong>PITR (Point-in-Time Recovery)</strong> — машину времени для отката базы на точную секунду до ошибки, а заодно подключим пулер соединений <strong>PgBouncer</strong> (порт <code>6432</code>), чтобы тысячи клиентов не съели всю оперативную память сервера.
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_5_2.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">5.2 · Синхронная vs асинхронная репликация и диагностик…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_5_4.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">5.4 · Резервное копирование и PITR (почему репликация…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

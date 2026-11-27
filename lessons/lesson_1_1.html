@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 1.1: Как устроены реляционные БД и запуск PostgreSQL</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.8rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.85rem 1rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_1/practice.html#sec-1-1">Практикум 1.1</a>
+        <a class="course-nav-btn" href="../slides/module-1.html#1.1">Слайды урока 1.1</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 1 · Фундамент реляционных БД и базовый SQL</span>
+        <span class="pill pill-neutral">Урок 1.1</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Как устроены реляционные БД и запуск PostgreSQL</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Поймём на живых примерах, зачем миру нужны <strong>базы данных</strong>, если уже есть Excel и обычный Блокнот.</li>
+          <li>Разберёмся, как таблицы связываются между собой через <strong>ключи</strong> (на примере школьной пиццерии).</li>
+          <li>Запомним «матрёшку» PostgreSQL: <code>Кластер → База данных → Схема → Таблица</code>.</li>
+          <li>Запустим свой собственный сервер <strong>PostgreSQL 16</strong> в Docker за пару минут, подключимся через <code>psql</code> и напишем первые <code>SQL</code>-запросы.</li>
+        </ul>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. РАЗДЕЛ 01 ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Зачем нужна база данных, если есть Excel?</h2>
+      <p>
+        Представь, что вы с друзьями открыли маленький онлайн-магазин школьного мерча: продаёте худи, стикеры и значки. Сначала заказов немного — 5 штук в день. Вы записываете их в обычный файл Excel: кто купил, что купил, заплатил ли. Всё работает отлично!
+      </p>
+      <p>
+        А теперь представь, что о магазине узнала вся страна, и к вам на сайт одновременно зашли <strong>5 000 человек</strong>. В этот момент обычный файл Excel или текстовый <code>orders.txt</code> превращается в катастрофу.
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Файл Excel / CSV</div>
+          <div class="compare-body">
+            <p><strong>Толкучка:</strong> Петя и Маша одновременно купили последний значок — оба увидели «остался 1» и перезаписали файл друг другу.</p>
+            <p><strong>Тормоза:</strong> На 2 миллионах строк файл будет открываться минутами.</p>
+            <p><strong>Мусор:</strong> В колонку «Цена» кто-то вписал текст <code>«договоримся»</code>, и формулы сломались.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ СУБД (PostgreSQL)</div>
+          <div class="compare-body">
+            <p><strong>Порядок в очереди:</strong> тысячи людей работают одновременно, и никто не портит чужие записи.</p>
+            <p><strong>Молниеносный поиск:</strong> находит нужный заказ среди миллионов за 0.001 секунды.</p>
+            <p><strong>Строгий контроль:</strong> не пропустит текст туда, где должно быть число, и сохранит данные даже при отключении света.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Простая аналогия (БД vs СУБД):</strong> Представь огромную библиотеку. Сами книги и карточки читателей — это <strong>база данных (БД)</strong>. А супер-библиотекарь со сверхскоростью, который мгновенно находит нужную книгу и следит за порядком на полках, — это <strong>СУБД</strong> (система управления базами данных, в нашем курсе — <strong>PostgreSQL</strong>).
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 3. РАЗДЕЛ 02 ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Реляционные БД на примере пиццерии</h2>
+      <p>
+        Слово <strong>«реляционная»</strong> звучит сложно, но на деле всё просто: так называют базы, в которых данные разложены по <strong>таблицам</strong> (математики называют таблицу словом <em>relation</em> — «отношение»), а сами таблицы связаны между собой.
+      </p>
+
+      <h3>Почему нельзя сложить всё в одну огромную таблицу?</h3>
+      <p>
+        Допустим, мы делаем базу для пиццерии и решили записывать всё в одну таблицу:
+      </p>
+
+      <div class="table-wrapper">
+        <table class="table-wide">
+          <thead>
+            <tr>
+              <th>№ заказа</th>
+              <th>Имя клиента</th>
+              <th>Телефон</th>
+              <th>Адрес</th>
+              <th>Пицца</th>
+              <th>Цена</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>101</td>
+              <td>Артём</td>
+              <td>+7-701-111-22-33</td>
+              <td>ул. Абая, 15</td>
+              <td>Пепперони</td>
+              <td>3500</td>
+            </tr>
+            <tr>
+              <td>102</td>
+              <td>Артём</td>
+              <td>+7-701-111-22-33</td>
+              <td>ул. Абая, 15</td>
+              <td>Маргарита</td>
+              <td>2900</td>
+            </tr>
+            <tr>
+              <td>103</td>
+              <td>Артём</td>
+              <td>+7-701-111-22-33</td>
+              <td>ул. Абая, 15</td>
+              <td>Четыре сыра</td>
+              <td>3800</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Посмотри, что здесь не так: Артём любит пиццу и за год сделал 50 заказов. Каждый раз мы заново пишем его имя, телефон и адрес. Если Артём переедет на другую улицу, придётся искать и исправлять <strong>все 50 строк</strong>. Пропустим хоть одну — курьер уедет по старому адресу!
+      </p>
+
+      <h3>Решение: разделяем на две таблицы и связываем их «номерками»</h3>
+      <p>
+        В реляционной базе мы создадим две аккуратные таблицы: отдельно <strong>клиенты</strong> (<code>customers</code>) и отдельно <strong>заказы</strong> (<code>orders</code>). Каждому клиенту выдадим уникальный номер <code>id</code> (как номер паспорта), а в заказах будем указывать только этот номер!
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            subgraph C["Таблица customers (Клиенты)"]
+              C1["id = 1 | Артём | ул. Абая, 15"]
+              C2["id = 2 | Алина | пр. Аль-Фараби, 42"]
+            end
+            subgraph O["Таблица orders (Заказы)"]
+              O1["id = 101 | customer_id = 1 | Пепперони"]
+              O2["id = 102 | customer_id = 1 | Маргарита"]
+              O3["id = 103 | customer_id = 2 | Четыре сыра"]
+            end
+            C1 -->|"ссылка по id = 1"| O1
+            C1 -->|"ссылка по id = 1"| O2
+            C2 -->|"ссылка по id = 2"| O3
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Адрес Артёма хранится в одном месте — в таблице customers. Заказы просто ссылаются на его номер id = 1.</figcaption>
+      </figure>
+
+      <h3>Мини-словарь терминов (запоминаем раз и навсегда)</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Термин</th>
+              <th>Простыми словами</th>
+              <th>Пример из пиццерии</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Таблица</strong> (<code>table</code>)</td>
+              <td>Отдельная тетрадь для одного типа объектов.</td>
+              <td><code>customers</code> (клиенты) и <code>orders</code> (заказы).</td>
+            </tr>
+            <tr>
+              <td><strong>Столбец / колонка</strong> (<code>column</code>)</td>
+              <td>Свойство объекта со строгим типом данных (число, текст, дата).</td>
+              <td><code>name</code> (текст), <code>price</code> (число).</td>
+            </tr>
+            <tr>
+              <td><strong>Строка / запись</strong> (<code>row</code>)</td>
+              <td>Один конкретный объект в таблице.</td>
+              <td>Запись про Алину или заказ №103.</td>
+            </tr>
+            <tr>
+              <td><strong>Первичный ключ</strong> (<code>PRIMARY KEY</code>)</td>
+              <td>Уникальный «паспорт» строки. Двух одинаковых номеров быть не может.</td>
+              <td>Колонка <code>id</code> в таблице <code>customers</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Внешний ключ</strong> (<code>FOREIGN KEY</code>)</td>
+              <td>«Стрелочка», указывающая на первичный ключ в другой таблице. Не позволит создать заказ для несуществующего клиента №999.</td>
+              <td>Колонка <code>customer_id</code> в таблице <code>orders</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Важное отличие от Excel:</strong> В базе данных строки хранятся как шарики в коробке, а не по порядку «строка 1, строка 2, строка 3». Сегодня PostgreSQL может вернуть Артёма первым, а завтра — Алину. Если нужен конкретный порядок, его всегда задают командой <code>ORDER BY</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. РАЗДЕЛ 03 ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Как устроен PostgreSQL: ресторан и матрёшка</h2>
+      <p>
+        PostgreSQL работает как <strong>ресторан</strong> (инженеры называют это <em>клиент-серверной архитектурой</em>):
+      </p>
+      <ul>
+        <li><strong>Сервер PostgreSQL</strong> — это «кухня». Она постоянно работает в фоне и ждёт заказов на специальном «окошке выдачи» — сетевом порту <code>5432</code>.</li>
+        <li><strong>Клиент</strong> — это «гость» (терминальная программа <code>psql</code>, графический редактор DBeaver или твой сайт на Python/JS).</li>
+        <li><strong>SQL</strong> — это язык, на котором гость делает заказ кухне (например: <em>«Принеси мне все заказы дороже 3000»</em>).</li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            subgraph CL["Клиенты (гости)"]
+              K1["psql (терминал)"]
+              K2["DBeaver / DataGrip"]
+              K3["Сайт / Приложение"]
+            end
+            subgraph SRV["Кластер PostgreSQL (порт 5432)"]
+              subgraph DB["База данных: learning_db"]
+                subgraph SCH["Схема: public"]
+                  T1[("Таблица customers")]
+                  T2[("Таблица orders")]
+                end
+              end
+            end
+            K1 -->|"SQL-запрос"| SRV
+            K2 -->|"SQL-запрос"| SRV
+            K3 -->|"SQL-запрос"| SRV
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Клиенты подключаются к серверу по порту 5432, а внутри сервера данные лежат по принципу матрёшки.</figcaption>
+      </figure>
+
+      <h3>Четыре уровня «матрёшки» PostgreSQL</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Уровень</th>
+              <th>Аналогия со школой</th>
+              <th>Как это работает в PostgreSQL</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Кластер</strong> (<code>Cluster</code>)</td>
+              <td>Всё здание школы</td>
+              <td>Один запущенный сервер PostgreSQL. Общий список пользователей и общая папка файлов на диске.</td>
+            </tr>
+            <tr>
+              <td><strong>2. База данных</strong> (<code>Database</code>)</td>
+              <td>Отдельный кабинет (физика, информатика)</td>
+              <td>Изолированный проект внутри сервера (например, <code>learning_db</code>). Подключаясь, ты всегда заходишь в <em>одну конкретную</em> базу.</td>
+            </tr>
+            <tr>
+              <td><strong>3. Схема</strong> (<code>Schema</code>)</td>
+              <td>Полки в шкафу внутри кабинета</td>
+              <td>Папки для порядка внутри одной базы. По умолчанию всё складывается в схему <code>public</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>4. Таблица</strong> (<code>Table</code>)</td>
+              <td>Конкретный журнал на полке</td>
+              <td>Сами таблицы с данными (например, <code>public.customers</code>).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Полезно знать на будущее:</strong> В другой популярной СУБД — <strong>MySQL</strong> — понятия «база данных» и «схема» означают одно и то же. В <strong>PostgreSQL</strong> это два разных уровня: внутри одной базы может жить хоть 20 схем, и ты легко объединяешь таблицы из разных схем в одном запросе.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 5. РАЗДЕЛ 04 ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> Запускаем свой PostgreSQL 16 в Docker</h2>
+      <p>
+        Обычные программы ставят прямо на Windows или macOS. С базами данных инженеры поступают хитрее — запускают их в <strong>Docker</strong>. Представь, что <strong>Docker-контейнер</strong> — это отдельная игровая приставка в коробке: включил в розетку, и внутри уже идеально настроенный PostgreSQL 16. А чтобы таблицы не пропали при выключении приставки, мы подключаем к ней «флешку с сохранениями» — <strong>volume</strong> (том).
+      </p>
+
+      <h3>Шаг 1. Знакомимся с файлом docker-compose.yaml</h3>
+      <p>
+        В корневой папке нашего курса уже лежит готовый файл <code>docker-compose.yaml</code>. Вот как в нём устроен наш базовый сервис <code>pg_primary</code> (основной PostgreSQL 16):
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">YAML · Фрагмент docker-compose.yaml (сервис pg_primary)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-yaml">services:
+  pg_primary:
+    # Официальный образ PostgreSQL 16-й версии
+    image: postgres:16
+    container_name: course_pg_primary
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: learning_db            # База, которая создастся сама
+      POSTGRES_USER: student              # Логин администратора
+      POSTGRES_PASSWORD: student_pass     # Пароль для локальной учёбы
+    # Пробрасываем «окошко» (порт 5432 на твоём ПК -&gt; порт 5432 в контейнере)
+    ports:
+      - "5432:5432"
+    # Подключаем «флешку с сохранениями» к папке с данными PostgreSQL
+    volumes:
+      - pg_primary_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    # Автопроверка каждые 5 секунд: готов ли сервер принимать подключения
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U student -d learning_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pg_primary_data:</code></pre>
+      </div>
+
+      <h3>Шаг 2. Запускаем контейнер и проверяем здоровье</h3>
+      <p>
+        Убедись, что запущен <strong>Docker Desktop</strong>, открой терминал в папке курса (где лежит <code>docker-compose.yaml</code>) и выполни:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># 1. Скачать образ (только в первый раз) и запустить сервер в фоне (-d)
+docker compose up -d
+
+# 2. Проверить статус контейнера
+docker compose ps</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ терминала</div>
+        <pre>NAME                IMAGE         STATUS                    PORTS
+course_pg_primary   postgres:16   Up 12 seconds (healthy)   0.0.0.0:5432-&gt;5432/tcp</pre>
+      </div>
+
+      <p>
+        Слово <code>(healthy)</code> означает, что сервер проснулся и готов к работе! Когда закончишь заниматься, можешь поставить его на паузу командой <code>docker compose stop</code>, а на следующий день снова включить через <code>docker compose start</code>.
+      </p>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Не нажимай «красную кнопку» случайно!</strong> Команда <code>docker compose down</code> удаляет контейнер, но оставляет твою «флешку» (<code>volume</code>) с таблицами. А вот команда с флагом <code>-v</code> (<code>docker compose down -v</code>) <strong>стирает и саму флешку</strong>!
+        </div>
+      </aside>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Если порт 5432 уже занят:</strong> Если Docker пишет <code>port is already allocated</code>, просто поменяй в <code>docker-compose.yaml</code> строчку на <code>- "55432:5432"</code> и снова выполни <code>docker compose up -d</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 6. РАЗДЕЛ 05 ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Первые шаги в psql: много практических примеров</h2>
+      <p>
+        Зайдём внутрь нашего сервера через главный консольный пульт управления — программу <code>psql</code> (она уже есть внутри контейнера):
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+      </div>
+
+      <p>
+        Ты увидишь приглашение <code>learning_db=#</code>. Оно говорит, что ты подключён к базе <code>learning_db</code> с правами суперпользователя (значок <code>#</code>).
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Забыл точку с запятой в SQL</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">learning_db=# SELECT 2 + 2
+learning_db-#</code></pre>
+            </div>
+            <p>Знак <code>=</code> сменился на <code>-</code>: <code>psql</code> думает, что ты ещё не дописал команду, и ждёт продолжения. Просто допиши <code>;</code> и нажми Enter!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Запомни простое правило</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">learning_db=# SELECT 2 + 2;
+learning_db=# \l</code></pre>
+            </div>
+            <p><strong>SQL-запросы</strong> всегда заканчиваются <code>;</code>. <strong>Мета-команды</strong> со слэшем <code>\</code> выполняются сразу без <code>;</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Пример 1. Осматриваемся вокруг (главные мета-команды psql)</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Команда</th>
+              <th>Как запомнить</th>
+              <th>Что покажет</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>\l</code> (или <code>\l+</code>)</td>
+              <td><strong>l</strong>ist</td>
+              <td>Список всех баз данных на сервере (<code>+</code> добавляет размер на диске).</td>
+            </tr>
+            <tr>
+              <td><code>\c имя_бд</code></td>
+              <td><strong>c</strong>onnect</td>
+              <td>Перейти в другую базу данных (например, <code>\c postgres</code>).</td>
+            </tr>
+            <tr>
+              <td><code>\dn</code></td>
+              <td><strong>d</strong>isplay <strong>n</strong>amespaces</td>
+              <td>Список схем («полок») в текущей базе. Сейчас там <code>public</code>.</td>
+            </tr>
+            <tr>
+              <td><code>\dt</code></td>
+              <td><strong>d</strong>isplay <strong>t</strong>ables</td>
+              <td>Список всех таблиц в текущей базе.</td>
+            </tr>
+            <tr>
+              <td><code>\d имя_табл</code></td>
+              <td><strong>d</strong>escribe</td>
+              <td>«Рентген-карта» таблицы: колонки, типы данных и ключи.</td>
+            </tr>
+            <tr>
+              <td><code>\timing</code></td>
+              <td>таймер</td>
+              <td>Включает секундомер: после каждого запроса увидишь время в миллисекундах.</td>
+            </tr>
+            <tr>
+              <td><code>\q</code></td>
+              <td><strong>q</strong>uit</td>
+              <td>Выход из <code>psql</code> обратно в обычный терминал.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Пример 2. PostgreSQL как калькулятор (хитрость с делением!)</h3>
+      <p>
+        Команда <code>SELECT</code> («покажи») умеет считать даже без таблиц. Попробуй выполнить этот запрос и обрати внимание на разницу между <code>10 / 3</code> и <code>10.0 / 3</code>:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Математика и псевдонимы AS</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Слово AS даёт колонке красивое понятное имя в ответе
+SELECT
+    2 + 2 * 2 AS school_math,
+    2 ^ 10    AS power_of_two,
+    10 / 3    AS int_division,   -- оба числа целые -&gt; остаток просто отбросится!
+    10.0 / 3  AS exact_division; -- есть дробная точка -&gt; точное деление</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> school_math | power_of_two | int_division |   exact_division
+-------------+--------------+--------------+--------------------
+           6 |         1024 |            3 | 3.3333333333333333
+(1 row)</pre>
+      </div>
+
+      <h3>Пример 3. Работа со строками и датами</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Текст и календарь</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Оператор || склеивает кусочки текста в одну строку
+SELECT
+    'Привет, ' || 'PostgreSQL!' AS greeting,
+    upper('база данных')        AS loud_text,
+    length('PostgreSQL')        AS letters_count,
+    current_date                AS today,
+    current_date + 7            AS next_week;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>       greeting       |  loud_text  | letters_count |   today    | next_week
+----------------------+-------------+---------------+------------+------------
+ Привет, PostgreSQL!  | БАЗА ДАННЫХ |            10 | 2026-11-25 | 2026-12-02
+(1 row)</pre>
+      </div>
+
+      <h3>Пример 4. Проверяем «паспорт» нашего сервера</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Диагностика сессии</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">SELECT
+    current_user       AS who_am_i,
+    current_database() AS where_am_i,
+    current_schema()   AS active_folder;
+
+-- Посмотреть встроенные настройки сервера
+SHOW server_version;
+SHOW max_connections;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> who_am_i | where_am_i  | active_folder
+----------+-------------+---------------
+ student  | learning_db | public
+(1 row)
+
+ server_version
+----------------
+ 16.x
+(1 row)
+
+ max_connections
+-----------------
+ 100
+(1 row)</pre>
+      </div>
+
+      <h3>Пример 5. Тест-драйв настоящей таблицы (мини-база игр)</h3>
+      <p>
+        Профессионально проектировать таблицы мы начнём на следующем уроке (1.2), но прямо сейчас устроим быстрый тест-драйв: создадим таблицу <code>games</code>, положим 4 игры и зададим базе пару вопросов!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Создаём таблицу games и кладём 4 игры</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">CREATE TABLE games (
+    id           INT,
+    title        TEXT,
+    release_year INT,
+    rating       NUMERIC
+);
+
+INSERT INTO games (id, title, release_year, rating) VALUES
+    (1, 'Minecraft', 2011, 9.5),
+    (2, 'Terraria',  2011, 9.3),
+    (3, 'Portal 2',  2011, 9.8),
+    (4, 'Hades',     2020, 9.4);
+
+-- Ищем хиты с рейтингом 9.5 и выше, сортируя от лучшего к худшему
+SELECT title, release_year, rating
+FROM games
+WHERE rating &gt;= 9.5
+ORDER BY rating DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>   title   | release_year | rating
+-----------+--------------+--------
+ Portal 2  |         2011 |    9.8
+ Minecraft |         2011 |    9.5
+(2 rows)</pre>
+      </div>
+
+      <p>
+        Посмотри таблицу мета-командами <code>\dt</code> и <code>\d games</code>, а когда наиграешься — убери её за собой командой <code>DROP TABLE games;</code>.
+      </p>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочется красивый интерфейс с кнопками?</strong> В дополнение к <code>psql</code> удобно использовать встроенный веб-клиент <strong>Adminer</strong> (<code>docker compose --profile ui up -d</code> → <code>http://localhost:8080</code>) или поставить бесплатный <strong>DBeaver Community</strong> / <strong>DataGrip</strong>. Параметры подключения к контейнеру с компьютера: Host <code>localhost</code>, Port <code>5432</code>, Database <code>learning_db</code>, User <code>student</code>, Password <code>student_pass</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 7. БЛОК САМОПРОВЕРКИ ==================== -->
+    <section>
+      <h2><span class="sec-num">06</span> Мини-практикум для закрепления</h2>
+      <p>
+        Выполни эти 4 задания самостоятельно в своей базе <code>learning_db</code> (внутри <code>psql</code>), прежде чем открывать эталонное решение.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1. Калькулятор времени</div>
+        <p style="margin-bottom: 0;">
+          Напиши один <code>SELECT</code>-запрос, который посчитает: 1) сколько секунд в одних сутках (<code>24 * 60 * 60</code>), 2) какая дата наступит ровно через <strong>100 дней</strong> от сегодня. Дай колонкам понятные английские имена через <code>AS</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+    24 * 60 * 60       AS seconds_in_day,
+    current_date + 100 AS date_in_100_days;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2. Экскурсия по кластеру</div>
+        <p style="margin-bottom: 0;">
+          Внутри <code>psql</code> включи секундомер выполнения запросов, выведи список всех баз данных вместе с их размерами на диске, перейди в системную базу <code>postgres</code>, а затем вернись обратно в <code>learning_db</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">\timing
+\l+
+\c postgres
+\c learning_db</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3. Свой мини-каталог фильмов</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>movies</code> с колонками <code>id</code> (<code>INT</code>), <code>title</code> (<code>TEXT</code>) и <code>score</code> (<code>NUMERIC</code>). Добавь туда 3 своих любимых фильма и выведи их, отсортировав от самой высокой оценки к самой низкой.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">CREATE TABLE movies (
+    id    INT,
+    title TEXT,
+    score NUMERIC
+);
+
+INSERT INTO movies (id, title, score) VALUES
+    (1, 'Интерстеллар', 8.7),
+    (2, 'Человек-паук', 8.4),
+    (3, 'Начало',       8.8);
+
+SELECT *
+FROM movies
+ORDER BY score DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4. Краш-тест «флешки с сохранениями»</div>
+        <p style="margin-bottom: 0;">
+          Не удаляя таблицу <code>movies</code>, выйди из <code>psql</code> (<code>\q</code>). Полностью пересоздай контейнер через <code>docker compose down</code> и <code>docker compose up -d</code>. Снова проверь <code>SELECT * FROM movies;</code> — убедись, что фильмы пережили пересоздание контейнера благодаря <code>volume</code>!
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">BASH</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-bash"># 1. Пересоздаём контейнер (БЕЗ флага -v!)
+docker compose down
+docker compose up -d
+
+# 2. Проверяем, что таблица movies на месте
+docker exec -it course_pg_primary psql -U student -d learning_db -c "SELECT * FROM movies;"</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_1/practice.html#sec-1-1"><strong>Практикум по Уроку 1.1 →</strong></a> — там ещё 9 пошаговых заданий с ответами от самых лёгких до работы со своей таблицей.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 8. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока</span>
+      Ты разобрался, почему серьёзные проекты хранят данные в реляционных базах, а не в Excel, увидел, как таблицы связываются через ключи, и поднял настоящий сервер <strong>PostgreSQL 16</strong> в Docker. В <strong>Уроке 1.2</strong> мы перестанем делать «игрушечные» таблицы и спроектируем по-взрослому базу для магазина школьного мерча: подберём точные типы данных и расставим «охранников» целостности (<code>PRIMARY KEY</code>, <code>FOREIGN KEY</code>, <code>UNIQUE</code>, <code>CHECK</code>).
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <span aria-hidden="true"></span>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_1_2.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">1.2 · Создание таблиц, типы данных, ограничения и INSERT</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          try {
+            await navigator.clipboard.writeText(codeEl.innerText);
+            const originalText = btn.textContent;
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

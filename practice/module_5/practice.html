@@ -1,0 +1,2689 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Практикум · Модуль 5: Репликация, резервное копирование и эксплуатация (HA &amp; Ops)</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --accent-border: #bfdbfe;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --purple-bg: #f5f3ff;
+      --purple-border: #ddd6fe;
+      --purple-text: #6d28d9;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --cyan-bg: #ecfeff;
+      --cyan-border: #a5f3fc;
+      --cyan-text: #155e75;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      padding: 2.25rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .lecture {
+      max-width: 920px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.75rem 3rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== НАВИГАЦИЯ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover { border-color: var(--accent); color: var(--accent); background: #ffffff; }
+    .course-nav-btn.primary { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent); }
+
+    /* ==================== ШАПКА ==================== */
+    .lecture-header {
+      padding-bottom: 1.85rem;
+      margin-bottom: 2.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.9rem; }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary { background: var(--accent-soft); color: var(--accent); }
+    .pill-tip { background: var(--tip-bg); color: var(--tip-text); }
+    .pill-warn { background: var(--warn-bg); color: var(--warn-text); }
+    .pill-neutral { background: #f1f5f9; color: var(--muted); }
+
+    h1 {
+      margin: 0 0 0.75rem;
+      font-size: 1.98rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    .hero-sub { margin: 0 0 1.4rem; color: var(--muted); font-size: 0.97rem; }
+
+    /* Прогресс-бар и фильтры */
+    .practice-toolbar {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem 1.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .progress-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.88rem;
+    }
+
+    .progress-label { font-weight: 600; color: var(--text-body); }
+    .progress-label strong { font-family: "JetBrains Mono", monospace; color: var(--tip-border); }
+
+    .progress-bar { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #16a34a);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .toolbar-actions { display: flex; flex-direction: column; gap: 0.55rem; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+    .filter-row-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-right: 0.2rem;
+    }
+
+    .filter-btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-body);
+      font-family: inherit;
+      font-size: 0.79rem;
+      font-weight: 600;
+      padding: 0.28rem 0.68rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+
+    .reset-btn {
+      appearance: none;
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.76rem;
+      font-weight: 500;
+      padding: 0.26rem 0.62rem;
+      border-radius: 7px;
+      cursor: pointer;
+      display: none;
+    }
+
+    .reset-btn.visible { display: inline-block; }
+    .reset-btn:hover { border-color: var(--err-border); color: var(--err-border); }
+
+    /* Легенда форматов */
+    .format-legend {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.55rem;
+      margin-top: 1.05rem;
+    }
+
+    .format-chip {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: var(--muted);
+    }
+
+    .format-chip strong {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--text);
+      margin-bottom: 0.15rem;
+    }
+
+    /* Оглавление */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list { display: flex; flex-direction: column; gap: 0.15rem; list-style: none; margin: 0; padding: 0; }
+    .toc-list li { border-bottom: 1px solid #f1f5f9; }
+    .toc-list li:last-child { border-bottom: none; }
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.36rem 0.5rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover { background: var(--surface-soft); color: var(--accent); }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.85rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section { margin-top: 2.75rem; scroll-margin-top: 1.5rem; }
+    section:first-of-type { margin-top: 0; }
+    section.hidden { display: none; }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2.1rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 { margin: 1.65rem 0 0.75rem; font-size: 1.04rem; font-weight: 700; color: var(--text); }
+    p { margin: 0 0 1rem; }
+    ul, ol { margin: 0 0 1.15rem; padding-left: 1.4rem; }
+    li { margin-bottom: 0.4rem; }
+
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.14em 0.4em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* ==================== БЛОКИ КОДА И БЕЙДЖИ УЗЛОВ ==================== */
+    .code-block {
+      margin: 0.85rem 0 1.05rem;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-block.bug-code {
+      border-color: #f87171;
+      box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.12);
+    }
+
+    .code-block.bug-code .code-header {
+      background: #2b1417;
+      border-bottom-color: #5c2128;
+      color: #fca5a5;
+    }
+
+    .code-block.cleanup-code {
+      border-color: #22c55e;
+    }
+
+    .code-block.cleanup-code .code-header {
+      background: #102619;
+      border-bottom-color: #1f4b31;
+      color: #86efac;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.42rem 0.85rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.73rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .node-pill {
+      display: inline-block;
+      padding: 0.09rem 0.46rem;
+      border-radius: 5px;
+      font-size: 0.69rem;
+      font-weight: 700;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .node-host     { background: #334155; color: #f1f5f9; }
+    .node-primary  { background: #1d4ed8; color: #ffffff; }
+    .node-standby  { background: #0e7490; color: #ffffff; }
+    .node-logical  { background: #7c3aed; color: #ffffff; }
+    .node-bouncer  { background: #b45309; color: #ffffff; }
+    .node-pitr     { background: #15803d; color: #ffffff; }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 0.18rem 0.55rem;
+      border-radius: 6px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover { background: #21262d; border-color: #8b949e; color: #ffffff; }
+    .copy-btn.copied { border-color: #238636; color: #3fb950; }
+
+    .code-block pre {
+      margin: 0;
+      padding: 0.88rem 1.05rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.83rem;
+      line-height: 1.54;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    /* ==================== ВЫНОСКИ И ТАБЛИЦЫ ==================== */
+    .callout {
+      display: flex;
+      gap: 0.85rem;
+      margin: 1.15rem 0;
+      padding: 0.95rem 1.15rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.93rem;
+      line-height: 1.6;
+    }
+
+    .callout-icon { flex-shrink: 0; width: 20px; height: 20px; margin-top: 0.18rem; color: var(--accent); }
+    .callout-body strong { color: #1e40af; }
+    .callout.warn { background: var(--warn-bg); border-left-color: var(--warn-border); }
+    .callout.warn .callout-icon { color: var(--warn-border); }
+    .callout.warn .callout-body strong { color: var(--warn-text); }
+    .callout.tip { background: var(--tip-bg); border-left-color: var(--tip-border); }
+    .callout.tip .callout-icon { color: var(--tip-border); }
+    .callout.tip .callout-body strong { color: var(--tip-text); }
+
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 0.85rem 0 1.15rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; line-height: 1.5; }
+    th, td { text-align: left; padding: 0.62rem 0.82rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { background: var(--surface-soft); font-weight: 600; color: var(--text); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    tbody tr:last-child td { border-bottom: none; }
+
+    /* ==================== АРХИТЕКТУРА И ПРЕДПРОСМОТР ==================== */
+    .schema-box {
+      margin: 1rem 0 1.25rem;
+      padding: 1.15rem 1.15rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .er-scroll { width: 100%; overflow-x: auto; }
+    .er-svg { display: block; width: 100%; min-width: 680px; height: auto; font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+    .er-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem 1rem;
+      margin-top: 0.9rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .er-legend-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .er-tag { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 0.7rem; font-weight: 700; padding: 0.08rem 0.38rem; border-radius: 5px; line-height: 1.3; }
+    .er-tag-pk   { background: #dbeafe; color: #1d4ed8; }
+    .er-tag-uk   { background: #f3e8ff; color: #7e22ce; }
+    .er-tag-null { background: #fee2e2; color: #b91c1c; }
+    .er-tag-rw   { background: #dcfce7; color: #15803d; }
+    .er-tag-ro   { background: #fef3c7; color: #b45309; }
+
+    .quirks-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; margin-top: 0.9rem; }
+    .quirk-chip { background: #ffffff; border: 1px solid var(--border); border-radius: 10px; padding: 0.62rem 0.82rem; font-size: 0.84rem; line-height: 1.48; color: var(--text-body); }
+    .quirk-chip strong { color: var(--text); }
+
+    details.data-preview {
+      margin: 0.9rem 0 0;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    details.data-preview summary {
+      cursor: pointer;
+      padding: 0.78rem 1.05rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: #ffffff;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    details.data-preview summary::-webkit-details-marker { display: none; }
+    details.data-preview summary::after { content: "Развернуть ▾"; font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+    details.data-preview[open] summary { border-bottom: 1px solid var(--border); background: var(--accent-soft); }
+    details.data-preview[open] summary::after { content: "Свернуть ▴"; color: var(--accent); }
+
+    .preview-body { padding: 1rem 1.1rem 1.15rem; display: flex; flex-direction: column; gap: 1rem; }
+    .preview-table-title { font-family: "JetBrains Mono", monospace; font-size: 0.82rem; font-weight: 700; color: var(--text); margin: 0 0 0.4rem; display: flex; align-items: center; gap: 0.45rem; }
+    .preview-table-title span { font-family: "Inter", sans-serif; font-size: 0.75rem; font-weight: 500; color: var(--muted); }
+    .preview-body .table-wrapper { margin: 0; border-radius: 9px; }
+    .preview-body table { font-size: 0.81rem; line-height: 1.4; }
+    .preview-body th, .preview-body td { padding: 0.44rem 0.65rem; white-space: nowrap; }
+
+    .null-pill { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 0.72rem; font-weight: 600; padding: 0.05rem 0.38rem; border-radius: 4px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .status-pill { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 0.73rem; font-weight: 600; padding: 0.05rem 0.4rem; border-radius: 5px; background: #f1f5f9; color: #334155; }
+
+    /* ==================== SRE-КАРТОЧКИ СЦЕНАРИЕВ ==================== */
+    .task-card {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.3rem 1.45rem;
+      margin: 1.15rem 0;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .task-card.incident-card {
+      border-left: 4px solid #ef4444;
+    }
+
+    .task-card.runbook-card {
+      border-left: 4px solid #2563eb;
+    }
+
+    .task-card.done {
+      background: #f8fdf9;
+      border-color: #bbf7d0;
+      border-left-color: #16a34a;
+    }
+
+    .task-card.hidden { display: none; }
+
+    .task-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .task-title-wrap { display: flex; align-items: flex-start; gap: 0.65rem; min-width: 0; }
+
+    .task-check {
+      appearance: none;
+      width: 19px;
+      height: 19px;
+      margin-top: 0.22rem;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-strong);
+      background: #ffffff;
+      cursor: pointer;
+      display: grid;
+      place-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .task-check:hover { border-color: var(--accent); }
+    .task-check:checked { background: var(--tip-border); border-color: var(--tip-border); }
+    .task-check:checked::after { content: "✓"; color: #ffffff; font-size: 0.76rem; font-weight: 800; line-height: 1; }
+
+    .task-title { font-weight: 700; color: var(--text); line-height: 1.4; font-size: 1.02rem; }
+    .task-card.done .task-title { color: var(--tip-text); }
+
+    .task-num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      padding: 0.08rem 0.45rem;
+      border-radius: 6px;
+      margin-right: 0.45rem;
+    }
+
+    .task-card.done .task-num { background: var(--tip-bg); border-color: #bbf7d0; color: var(--tip-text); }
+
+    .task-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.35rem; flex-shrink: 0; }
+
+    .lvl-badge {
+      font-size: 0.71rem;
+      font-weight: 700;
+      padding: 0.16rem 0.55rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .lvl-runbook  { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); }
+    .lvl-incident { background: var(--err-bg); color: var(--err-text); border: 1px solid #fecaca; }
+    .lvl-bug      { background: var(--warn-bg); color: var(--warn-text); border: 1px solid #fde68a; }
+    .lvl-monitor  { background: var(--purple-bg); color: var(--purple-text); border: 1px solid var(--purple-border); }
+    .lvl-boss     { background: #1e293b; color: #f8fafc; border: 1px solid #0f172a; }
+
+    /* Полоса участвующих узлов кластера */
+    .nodes-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem;
+      margin: 0.1rem 0 0.7rem;
+      font-size: 0.77rem;
+      color: var(--muted);
+    }
+
+    .nodes-bar-label { font-weight: 600; margin-right: 0.15rem; }
+
+    .node-chip {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.71rem;
+      font-weight: 600;
+      padding: 0.1rem 0.48rem;
+      border-radius: 6px;
+    }
+
+    .nc-host    { background: #e2e8f0; color: #1e293b; }
+    .nc-primary { background: #dbeafe; color: #1d4ed8; }
+    .nc-standby { background: #cffafe; color: #0e7490; }
+    .nc-logical { background: #ede9fe; color: #6d28d9; }
+    .nc-bouncer { background: #fef3c7; color: #92400e; }
+    .nc-pitr    { background: #dcfce7; color: #15803d; }
+
+    /* Блок «Симптом аварии» */
+    .alert-strip {
+      margin: 0.4rem 0 0.75rem;
+      padding: 0.65rem 0.9rem;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      font-size: 0.89rem;
+      color: #7f1d1d;
+      line-height: 1.55;
+    }
+
+    .alert-strip strong { color: #991b1b; }
+
+    .task-desc { margin: 0 0 0.55rem; font-size: 0.95rem; }
+
+    /* Блок «Проверь себя / Критерий приёмки» */
+    .observe-box {
+      margin: 0.7rem 0 0.2rem;
+      padding: 0.72rem 0.95rem;
+      background: #ffffff;
+      border: 1px solid var(--accent-border);
+      border-left: 3.5px solid var(--accent);
+      border-radius: 10px;
+      font-size: 0.87rem;
+      line-height: 1.55;
+    }
+
+    .observe-title {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+      margin-bottom: 0.3rem;
+    }
+
+    .observe-box ul { margin: 0; padding-left: 1.2rem; }
+    .observe-box li { margin-bottom: 0.22rem; }
+    .observe-box li:last-child { margin-bottom: 0; }
+
+    /* Раскрывающийся Runbook */
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border-strong);
+      padding-top: 0.7rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover { text-decoration: underline; }
+
+    .runbook-steps {
+      margin-top: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    .runbook-steps .code-block { margin: 0; }
+
+    .solution-note {
+      margin: 0.7rem 0 0;
+      padding: 0.65rem 0.85rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      font-size: 0.86rem;
+      color: var(--text-body);
+    }
+
+    .solution-note strong { color: var(--text); }
+
+    /* Две колонки для Bash + PowerShell */
+    .os-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.7rem;
+    }
+
+    .os-grid .code-block { margin: 0; }
+    .os-grid .code-block pre code { font-size: 0.78rem; }
+
+    .file-link-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.34rem 0.72rem;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .file-link-bar:hover { background: #dbeafe; border-color: var(--accent); }
+
+    .empty-filter {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+      border: 1px dashed var(--border-strong);
+      border-radius: 12px;
+      color: var(--muted);
+      margin-top: 1.5rem;
+    }
+
+    .empty-filter.visible { display: block; }
+
+    @media (max-width: 760px) {
+      .format-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .quirks-grid { grid-template-columns: 1fr; }
+      .os-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 1rem 0.7rem 3rem; font-size: 15px; }
+      .lecture { padding: 1.5rem 1.15rem; border-radius: 12px; }
+      h1 { font-size: 1.55rem; }
+      h2 { font-size: 1.2rem; }
+      .task-head { flex-direction: column; gap: 0.45rem; }
+      .task-badges { justify-content: flex-start; }
+      .format-legend { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../../docker_guide.html">Гид по Docker</a>
+      </div>
+    </nav>
+
+    <!-- ==================== ШАПКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Практикум · Модуль 5</span>
+        <span class="pill pill-tip">16 SRE-сценариев · Runbooks и инциденты</span>
+        <span class="pill pill-warn">Docker: --profile mod5</span>
+        <span class="pill pill-neutral">Primary + Standby + Logical + PgBouncer</span>
+      </div>
+
+      <h1>SRE-практикум: Репликация, бэкапы, живой PITR и эксплуатация (HA &amp; Ops)</h1>
+      <p class="hero-sub">
+        Вместо 44 разрозненных карточек — <strong>16 боевых сценариев дежурного DBA</strong> на кластере из 4 контейнеров: от физической и логической репликации до разблокировки зависшего синхронного Primary, реального <strong>Failover (<code>pg_promote</code>)</strong>, живого <strong>PITR</strong> во временном контейнере и стресс-теста <strong>PgBouncer</strong>.
+      </p>
+
+      <div class="practice-toolbar">
+        <div>
+          <div class="progress-head">
+            <span class="progress-label">Пройдено сценариев: <strong id="progress-text">0 / 16 (0%)</strong></span>
+            <button type="button" class="reset-btn" id="reset-progress">Сбросить прогресс</button>
+          </div>
+          <div class="progress-bar" style="margin-top: 0.45rem;">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="toolbar-actions">
+          <div class="filter-row" role="group" aria-label="Фильтр по урокам">
+            <span class="filter-row-label">Урок:</span>
+            <button type="button" class="filter-btn active" data-filter="all">Все (16)</button>
+            <button type="button" class="filter-btn" data-filter="todo">Невыполненные</button>
+            <button type="button" class="filter-btn" data-filter="5_1">5.1 Физ. репликация</button>
+            <button type="button" class="filter-btn" data-filter="5_2">5.2 Sync &amp; Lag</button>
+            <button type="button" class="filter-btn" data-filter="5_3">5.3 Logical &amp; Failover</button>
+            <button type="button" class="filter-btn" data-filter="5_4">5.4 PITR &amp; PgBouncer</button>
+          </div>
+          <div class="filter-row" role="group" aria-label="Фильтр по формату">
+            <span class="filter-row-label">Формат:</span>
+            <button type="button" class="filter-btn" data-filter="tag:incident">Инциденты</button>
+            <button type="button" class="filter-btn" data-filter="tag:runbook">Runbook-лабы</button>
+            <button type="button" class="filter-btn" data-filter="tag:bugfix">Баг-фикс</button>
+            <button type="button" class="filter-btn" data-filter="tag:monitor">Мониторинг SQL</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="format-legend">
+        <div class="format-chip">
+          <strong>Инцидент (Учения)</strong>
+          Авария → диагностика → спасение → очистка кластера.
+        </div>
+        <div class="format-chip">
+          <strong>Лаба · Runbook</strong>
+          Пошаговая настройка кластера с меткой узла на каждом шаге.
+        </div>
+        <div class="format-chip">
+          <strong>Баг-фикс · Код</strong>
+          Чиним скрипты, ломающиеся на Hot Standby и в PgBouncer.
+        </div>
+        <div class="format-chip">
+          <strong>Мониторинг · SQL</strong>
+          Пишем запросы алертинга и итоговый HA Healthcheck.
+        </div>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание практикума"></nav>
+    </header>
+
+    <!-- ==================== 00. ПОДГОТОВКА СТЕНДА ==================== -->
+    <section id="sec-init" data-section-lesson="init">
+      <h2><span class="sec-num">00</span> Подготовка кластера, схема таблиц и чек-лист готовности</h2>
+      <p>
+        Скрипт <a class="file-link-bar" href="init.sql">📄 practice/module_5/init.sql</a> создаёт 6 учебных таблиц на <code>course_pg_primary</code> (порт <code>5432</code>) — благодаря физической потоковой репликации они автоматически появляются на <code>course_pg_standby</code> (<code>5433</code>). Сервер <code>course_pg_logical</code> (<code>5434</code>) остаётся чистым для Урока 5.3.
+      </p>
+
+      <div class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Важно про состояние кластера:</strong> повторный запуск <code>init.sql</code> сбрасывает <em>таблицы и публикации</em>, но <strong>не сбрасывает</strong> системные настройки <code>ALTER SYSTEM</code> (они живут в <code>postgresql.auto.conf</code>). В каждом инциденте есть шаг <code>↺ Очистка</code>, а в чек-листе ниже — аварийная команда полного сброса конфига.
+        </div>
+      </div>
+
+      <h3>Шаг 1. Подними кластер и загрузи <code>init.sql</code></h3>
+      <div class="os-grid">
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang"><span class="node-pill node-host">Host Bash</span> Linux / macOS / Git Bash</span>
+            <button class="copy-btn" type="button">Копировать</button>
+          </div>
+          <pre><code class="language-bash">docker compose --profile mod5 up -d
+docker exec -i course_pg_primary \
+  psql -U student -d learning_db \
+  &lt; practice/module_5/init.sql</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang"><span class="node-pill node-host">PowerShell</span> Windows</span>
+            <button class="copy-btn" type="button">Копировать</button>
+          </div>
+          <pre><code class="language-powershell">docker compose --profile mod5 up -d
+Get-Content practice/module_5/init.sql -Raw |
+  docker exec -i course_pg_primary `
+  psql -U student -d learning_db</code></pre>
+        </div>
+      </div>
+
+      <h3>Шаг 2. Консоли всех 5 точек подключения (держи открытыми нужные окна)</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang"><span class="node-pill node-host">Host Bash</span> Подключение к узлам кластера (выход из psql: \q)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># 1. Primary (порт 5432, Read/Write, Publisher)
+docker exec -it course_pg_primary psql -U student -d learning_db
+
+# 2. Physical Hot Standby (порт 5433, Read-Only)
+docker exec -it course_pg_standby psql -U student -d learning_db
+
+# 3. Logical Subscriber (порт 5434, Read/Write)
+docker exec -it course_pg_logical psql -U student -d learning_db
+
+# 4. База learning_db ЧЕРЕЗ пулер PgBouncer (порт 6432 снаружи / pgbouncer:5432 внутри сети)
+docker exec -it -e PGPASSWORD=student_pass course_pg_primary psql -h pgbouncer -p 5432 -U student -d learning_db
+
+# 5. Админ-консоль PgBouncer (SHOW POOLS; SHOW DATABASES;)
+docker exec -it -e PGPASSWORD=student_pass course_pg_primary psql -h pgbouncer -p 5432 -U student -d pgbouncer</code></pre>
+      </div>
+
+      <details class="data-preview">
+        <summary>Чек-лист готовности кластера (1 минута перед стартом + сброс ALTER SYSTEM)</summary>
+        <div class="preview-body">
+          <div class="code-block" style="margin: 0;">
+            <div class="code-header">
+              <span class="code-lang"><span class="node-pill node-host">Host Bash</span> Проверка всех 4 контейнеров, ролей и PgBouncer одной командой</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-bash"># 1. Все 4 контейнера в статусе Up + стрим WAL в логах Standby
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+docker logs course_pg_standby --tail 10
+
+# 2. Роли и ключевые параметры Primary (f, logical, 10, 10, 128MB)
+docker exec course_pg_primary psql -U student -d learning_db -c "
+  SELECT pg_is_in_recovery() AS is_standby,
+         current_setting('wal_level') AS wal_level,
+         current_setting('max_wal_senders') AS senders,
+         current_setting('wal_keep_size') AS wal_keep,
+         (SELECT timeline_id FROM pg_control_checkpoint()) AS timeline;"
+
+# 3. Роль Standby (t, hot_standby=on) и Logical (f, Read/Write)
+docker exec course_pg_standby psql -U student -d learning_db -c "SELECT pg_is_in_recovery() AS standby_is_ro, current_setting('hot_standby') AS hot_standby;"
+docker exec course_pg_logical psql -U student -d learning_db -c "SELECT pg_is_in_recovery() AS logical_is_ro, current_database();"
+
+# 4. Проверка PgBouncer (pool_size=10, cl_waiting=0)
+docker exec -e PGPASSWORD=student_pass course_pg_primary psql -h pgbouncer -p 5432 -U student -d pgbouncer -c "SHOW POOLS;"</code></pre>
+          </div>
+
+          <div class="code-block cleanup-code" style="margin: 0;">
+            <div class="code-header">
+              <span class="code-lang"><span class="node-pill node-primary">Primary :5432</span> Аварийный сброс всех ALTER SYSTEM настроек</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">ALTER SYSTEM RESET ALL;
+SELECT pg_reload_conf();</code></pre>
+          </div>
+        </div>
+      </details>
+
+      <h3>Архитектура кластера и схема таблиц из <code>init.sql</code></h3>
+      <div class="schema-box">
+        <div class="er-scroll">
+          <svg class="er-svg" viewBox="0 0 860 708" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Архитектура кластера Модуля 5 (Primary, Standby, Logical, PgBouncer, Backups) и 6 таблиц из init.sql">
+            <defs>
+              <filter id="cardShadow" x="-4%" y="-4%" width="108%" height="112%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.06" />
+              </filter>
+              <marker id="arrowBlue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                <path d="M 1 1 L 9 5 L 1 9 Z" fill="#2563eb" />
+              </marker>
+              <marker id="arrowPurple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                <path d="M 1 1 L 9 5 L 1 9 Z" fill="#7c3aed" />
+              </marker>
+              <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                <path d="M 1 1 L 9 5 L 1 9 Z" fill="#d97706" />
+              </marker>
+              <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+                <path d="M 1 1 L 9 5 L 1 9 Z" fill="#16a34a" />
+              </marker>
+            </defs>
+
+            <text x="18" y="18" font-size="10.5" font-weight="700" fill="#64748b" letter-spacing="0.06em">АРХИТЕКТУРА КЛАСТЕРА (docker compose --profile mod5 up -d)</text>
+
+            <path d="M 224 84 L 260 84 L 260 102 L 292 102" fill="none" stroke="#d97706" stroke-width="2" marker-end="url(#arrowAmber)" />
+            <rect x="234" y="61" width="54" height="17" rx="4" fill="#fffbeb" stroke="#fde68a" stroke-width="1" />
+            <text x="261" y="73" text-anchor="middle" font-size="9.5" font-weight="700" fill="#92400e">pool: 10</text>
+
+            <path d="M 296 178 L 260 178 L 260 200 L 228 200" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arrowGreen)" />
+            <rect x="228" y="154" width="64" height="17" rx="4" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1" />
+            <text x="260" y="166" text-anchor="middle" font-size="9.5" font-weight="700" fill="#166534">dump / WAL</text>
+
+            <path d="M 540 102 L 580 102 L 580 80 L 618 80" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrowBlue)" />
+            <rect x="546" y="57" width="68" height="17" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1" />
+            <text x="580" y="69" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8">WAL (физ.)</text>
+
+            <path d="M 540 168 L 580 168 L 580 196 L 618 196" fill="none" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowPurple)" />
+            <rect x="549" y="204" width="62" height="17" rx="4" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1" />
+            <text x="580" y="216" text-anchor="middle" font-size="9.5" font-weight="700" fill="#6d28d9">Pub / Sub</text>
+
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="32" width="206" height="104" rx="10" fill="#ffffff" stroke="#fcd34d" stroke-width="1.5" />
+              <path d="M 18 42 Q 18 32 28 32 L 214 32 Q 224 32 224 42 L 224 60 L 18 60 Z" fill="#fffbeb" />
+              <line x1="18" y1="60" x2="224" y2="60" stroke="#fde68a" stroke-width="1" />
+              <text x="30" y="50" font-size="11.5" font-weight="700" fill="#78350f" font-family="JetBrains Mono, monospace">course_pgbouncer</text>
+              <rect x="176" y="37" width="40" height="17" rx="8" fill="#fef3c7" />
+              <text x="196" y="49" text-anchor="middle" font-size="9.5" font-weight="700" fill="#92400e">:6432</text>
+              <text x="30" y="79" font-size="11" fill="#1e293b" font-family="JetBrains Mono, monospace">POOL_MODE = transaction</text>
+              <text x="30" y="99" font-size="11" fill="#475569" font-family="JetBrains Mono, monospace">MAX_CLIENT_CONN = 200</text>
+              <text x="30" y="119" font-size="11" fill="#475569" font-family="JetBrains Mono, monospace">DEFAULT_POOL_SIZE = 10</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="156" width="206" height="88" rx="10" fill="#ffffff" stroke="#86efac" stroke-width="1.5" />
+              <path d="M 18 166 Q 18 156 28 156 L 214 156 Q 224 156 224 166 L 224 184 L 18 184 Z" fill="#f0fdf4" />
+              <line x1="18" y1="184" x2="224" y2="184" stroke="#bbf7d0" stroke-width="1" />
+              <text x="30" y="174" font-size="11.5" font-weight="700" fill="#14532d" font-family="JetBrains Mono, monospace">./backups → /backups</text>
+              <text x="30" y="204" font-size="11" fill="#1e293b" font-family="JetBrains Mono, monospace">pg_dump -Fc / pg_restore</text>
+              <text x="30" y="224" font-size="11" fill="#475569" font-family="JetBrains Mono, monospace">pg_basebackup + /wal (PITR)</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="296" y="54" width="244" height="156" rx="10" fill="#ffffff" stroke="#60a5fa" stroke-width="1.8" />
+              <path d="M 296 64 Q 296 54 306 54 L 530 54 Q 540 54 540 64 L 540 84 L 296 84 Z" fill="#eff6ff" />
+              <line x1="296" y1="84" x2="540" y2="84" stroke="#bfdbfe" stroke-width="1" />
+              <text x="308" y="73" font-size="12" font-weight="700" fill="#1e3a8a" font-family="JetBrains Mono, monospace">course_pg_primary</text>
+              <rect x="461" y="60" width="26" height="17" rx="5" fill="#dcfce7" />
+              <text x="474" y="72" text-anchor="middle" font-size="9.5" font-weight="700" fill="#15803d" font-family="JetBrains Mono, monospace">RW</text>
+              <rect x="492" y="60" width="40" height="17" rx="8" fill="#dbeafe" />
+              <text x="512" y="72" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8">:5432</text>
+              <text x="308" y="104" font-size="11.5" font-weight="600" fill="#0f172a">Primary / Publisher (PostgreSQL 16)</text>
+              <text x="308" y="124" font-size="11" fill="#475569" font-family="JetBrains Mono, monospace">wal_level = logical</text>
+              <text x="308" y="143" font-size="11" fill="#475569" font-family="JetBrains Mono, monospace">max_wal_senders = 10</text>
+              <text x="308" y="162" font-size="11" fill="#475569" font-family="JetBrains Mono, monospace">wal_keep_size = 128MB</text>
+              <text x="308" y="181" font-size="11" fill="#475569" font-family="JetBrains Mono, monospace">archive_mode = on (в 5.4)</text>
+              <text x="308" y="199" font-size="10.5" fill="#1d4ed8" font-weight="600">База: learning_db (init.sql здесь)</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="622" y="32" width="220" height="98" rx="10" fill="#ffffff" stroke="#67e8f9" stroke-width="1.5" />
+              <path d="M 622 42 Q 622 32 632 32 L 832 32 Q 842 32 842 42 L 842 60 L 622 60 Z" fill="#ecfeff" />
+              <line x1="622" y1="60" x2="842" y2="60" stroke="#a5f3fc" stroke-width="1" />
+              <text x="633" y="50" font-size="11.5" font-weight="700" fill="#155e75" font-family="JetBrains Mono, monospace">course_pg_standby</text>
+              <rect x="766" y="37" width="24" height="17" rx="5" fill="#fef3c7" />
+              <text x="778" y="49" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">RO</text>
+              <rect x="794" y="37" width="40" height="17" rx="8" fill="#cffafe" />
+              <text x="814" y="49" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0e7490">:5433</text>
+              <text x="633" y="79" font-size="11" font-weight="600" fill="#0f172a">Physical Hot Standby (5.1–5.3)</text>
+              <text x="633" y="98" font-size="11" fill="#475569" font-family="JetBrains Mono, monospace">pg_basebackup -R (авто)</text>
+              <text x="633" y="116" font-size="11" fill="#475569">Точная копия байт-в-байт</text>
+            </g>
+
+            <g filter="url(#cardShadow)">
+              <rect x="622" y="146" width="220" height="98" rx="10" fill="#ffffff" stroke="#c4b5fd" stroke-width="1.5" />
+              <path d="M 622 156 Q 622 146 632 146 L 832 146 Q 842 146 842 156 L 842 174 L 622 174 Z" fill="#f5f3ff" />
+              <line x1="622" y1="174" x2="842" y2="174" stroke="#ddd6fe" stroke-width="1" />
+              <text x="633" y="164" font-size="11.5" font-weight="700" fill="#4c1d95" font-family="JetBrains Mono, monospace">course_pg_logical</text>
+              <rect x="766" y="151" width="24" height="17" rx="5" fill="#dcfce7" />
+              <text x="778" y="163" text-anchor="middle" font-size="9.5" font-weight="700" fill="#15803d" font-family="JetBrains Mono, monospace">RW</text>
+              <rect x="794" y="151" width="40" height="17" rx="8" fill="#ede9fe" />
+              <text x="814" y="163" text-anchor="middle" font-size="9.5" font-weight="700" fill="#6d28d9">:5434</text>
+              <text x="633" y="193" font-size="11" font-weight="600" fill="#0f172a">Logical Subscriber (5.3)</text>
+              <text x="633" y="212" font-size="11" fill="#475569">Свои таблицы и индексы</text>
+              <text x="633" y="230" font-size="11" fill="#475569">Фильтр строк и колонок</text>
+            </g>
+
+            <line x1="18" y1="264" x2="842" y2="264" stroke="#e2e8f0" stroke-width="1.2" />
+            <text x="18" y="284" font-size="10.5" font-weight="700" fill="#64748b" letter-spacing="0.06em">УЧЕБНЫЕ ТАБЛИЦЫ ИЗ INIT.SQL (PRIMARY :5432 → АВТОМАТИЧЕСКИ НА STANDBY :5433)</text>
+
+            <!-- Таблица 1: replication_heartbeat -->
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="298" width="266" height="190" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" />
+              <path d="M 18 308 Q 18 298 28 298 L 274 298 Q 284 298 284 308 L 284 326 L 18 326 Z" fill="#eff6ff" />
+              <line x1="18" y1="326" x2="284" y2="326" stroke="#bfdbfe" stroke-width="1" />
+              <text x="29" y="316" font-size="11.5" font-weight="700" fill="#1e3a8a" font-family="JetBrains Mono, monospace">replication_heartbeat</text>
+              <rect x="223" y="303" width="52" height="17" rx="8" fill="#dbeafe" />
+              <text x="249" y="314.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="#1d4ed8">2 строки</text>
+              <rect x="28" y="333" width="22" height="14" rx="4" fill="#dbeafe" />
+              <text x="39" y="343.5" text-anchor="middle" font-size="9" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="56" y="344" font-size="11.5" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="274" y="344" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+              <line x1="26" y1="353" x2="276" y2="353" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="28" y="357" width="22" height="14" rx="4" fill="#f3e8ff" />
+              <text x="39" y="367.5" text-anchor="middle" font-size="9" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="56" y="368" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">node_role</text>
+              <text x="274" y="368" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <line x1="26" y1="377" x2="276" y2="377" stroke="#f1f5f9" stroke-width="1" />
+              <text x="56" y="392" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">beat_count</text>
+              <text x="274" y="392" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">INT &gt;= 0</text>
+              <line x1="26" y1="401" x2="276" y2="401" stroke="#f1f5f9" stroke-width="1" />
+              <text x="56" y="416" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">note</text>
+              <rect x="196" y="405" width="34" height="14" rx="4" fill="#fee2e2" />
+              <text x="213" y="415.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono, monospace">NULL</text>
+              <text x="274" y="416" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <line x1="26" y1="425" x2="276" y2="425" stroke="#f1f5f9" stroke-width="1" />
+              <text x="56" y="440" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">updated_at</text>
+              <text x="274" y="440" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TIMESTAMPTZ</text>
+              <rect x="28" y="454" width="246" height="24" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+              <text x="151" y="469.5" text-anchor="middle" font-size="10" fill="#475569">Пульс кластера · Уроки 5.1 и 5.2</text>
+            </g>
+
+            <!-- Таблица 2: ops_orders -->
+            <g filter="url(#cardShadow)">
+              <rect x="297" y="298" width="266" height="190" rx="10" fill="#ffffff" stroke="#86efac" stroke-width="1.5" />
+              <path d="M 297 308 Q 297 298 307 298 L 553 298 Q 563 298 563 308 L 563 326 L 297 326 Z" fill="#f0fdf4" />
+              <line x1="297" y1="326" x2="563" y2="326" stroke="#bbf7d0" stroke-width="1" />
+              <text x="308" y="316" font-size="11.5" font-weight="700" fill="#14532d" font-family="JetBrains Mono, monospace">ops_orders</text>
+              <rect x="496" y="303" width="58" height="17" rx="8" fill="#dcfce7" />
+              <text x="525" y="314.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="#166534">10 строк</text>
+              <rect x="307" y="331" width="22" height="14" rx="4" fill="#dbeafe" />
+              <text x="318" y="341.5" text-anchor="middle" font-size="9" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="335" y="342" font-size="11.5" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="553" y="342" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">INT IDENTITY</text>
+              <line x1="305" y1="350" x2="555" y2="350" stroke="#f1f5f9" stroke-width="1" />
+              <text x="335" y="364" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">customer</text>
+              <text x="553" y="364" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <line x1="305" y1="372" x2="555" y2="372" stroke="#f1f5f9" stroke-width="1" />
+              <text x="335" y="386" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">category</text>
+              <text x="553" y="386" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <line x1="305" y1="394" x2="555" y2="394" stroke="#f1f5f9" stroke-width="1" />
+              <text x="335" y="408" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">amount</text>
+              <text x="553" y="408" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">NUMERIC(10,2)</text>
+              <line x1="305" y1="416" x2="555" y2="416" stroke="#f1f5f9" stroke-width="1" />
+              <text x="335" y="430" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">status</text>
+              <text x="553" y="430" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT (4 статуса)</text>
+              <line x1="305" y1="438" x2="555" y2="438" stroke="#f1f5f9" stroke-width="1" />
+              <text x="335" y="452" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">comment</text>
+              <rect x="476" y="441" width="34" height="14" rx="4" fill="#fee2e2" />
+              <text x="493" y="451.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono, monospace">NULL</text>
+              <text x="553" y="452" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <line x1="305" y1="460" x2="555" y2="460" stroke="#f1f5f9" stroke-width="1" />
+              <text x="335" y="474" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">created_at</text>
+              <text x="553" y="474" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TIMESTAMPTZ</text>
+            </g>
+
+            <!-- Таблица 3: billing_accounts -->
+            <g filter="url(#cardShadow)">
+              <rect x="576" y="298" width="266" height="190" rx="10" fill="#ffffff" stroke="#fcd34d" stroke-width="1.5" />
+              <path d="M 576 308 Q 576 298 586 298 L 832 298 Q 842 298 842 308 L 842 326 L 576 326 Z" fill="#fffbeb" />
+              <line x1="576" y1="326" x2="842" y2="326" stroke="#fde68a" stroke-width="1" />
+              <text x="587" y="316" font-size="11.5" font-weight="700" fill="#78350f" font-family="JetBrains Mono, monospace">billing_accounts</text>
+              <rect x="780" y="303" width="53" height="17" rx="8" fill="#fef3c7" />
+              <text x="806.5" y="314.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="#92400e">5 строк</text>
+              <rect x="586" y="333" width="22" height="14" rx="4" fill="#dbeafe" />
+              <text x="597" y="343.5" text-anchor="middle" font-size="9" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="614" y="344" font-size="11.5" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="832" y="344" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+              <line x1="584" y1="353" x2="834" y2="353" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="586" y="357" width="22" height="14" rx="4" fill="#f3e8ff" />
+              <text x="597" y="367.5" text-anchor="middle" font-size="9" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="614" y="368" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">owner</text>
+              <text x="832" y="368" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <line x1="584" y1="377" x2="834" y2="377" stroke="#f1f5f9" stroke-width="1" />
+              <text x="614" y="392" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">balance</text>
+              <text x="832" y="392" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">NUMERIC(12,2)&gt;=0</text>
+              <line x1="584" y1="401" x2="834" y2="401" stroke="#f1f5f9" stroke-width="1" />
+              <text x="614" y="416" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">tier</text>
+              <text x="832" y="416" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">'standard'/'vip'</text>
+              <line x1="584" y1="425" x2="834" y2="425" stroke="#f1f5f9" stroke-width="1" />
+              <text x="614" y="440" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">updated_at</text>
+              <text x="832" y="440" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TIMESTAMPTZ</text>
+              <rect x="586" y="454" width="246" height="24" rx="6" fill="#fffbeb" stroke="#fde68a" stroke-width="1" />
+              <text x="709" y="469.5" text-anchor="middle" font-size="10" fill="#92400e">Синхронные платежи (5.2) и PITR (5.4)</text>
+            </g>
+
+            <!-- Таблица 4: catalog_sync -->
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="502" width="266" height="190" rx="10" fill="#ffffff" stroke="#c4b5fd" stroke-width="1.5" />
+              <path d="M 18 512 Q 18 502 28 502 L 274 502 Q 284 502 284 512 L 284 530 L 18 530 Z" fill="#f5f3ff" />
+              <line x1="18" y1="530" x2="284" y2="530" stroke="#ddd6fe" stroke-width="1" />
+              <text x="29" y="520" font-size="11.5" font-weight="700" fill="#4c1d95" font-family="JetBrains Mono, monospace">catalog_sync</text>
+              <rect x="223" y="507" width="52" height="17" rx="8" fill="#ede9fe" />
+              <text x="249" y="518.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="#6d28d9">6 строк</text>
+              <rect x="28" y="535" width="22" height="14" rx="4" fill="#dbeafe" />
+              <text x="39" y="545.5" text-anchor="middle" font-size="9" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="56" y="546" font-size="11.5" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="274" y="546" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+              <line x1="26" y1="554" x2="276" y2="554" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="28" y="557" width="22" height="14" rx="4" fill="#f3e8ff" />
+              <text x="39" y="567.5" text-anchor="middle" font-size="9" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="56" y="568" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">sku</text>
+              <text x="274" y="568" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <line x1="26" y1="576" x2="276" y2="576" stroke="#f1f5f9" stroke-width="1" />
+              <text x="56" y="590" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">title</text>
+              <text x="274" y="590" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <line x1="26" y1="598" x2="276" y2="598" stroke="#f1f5f9" stroke-width="1" />
+              <text x="56" y="612" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">category</text>
+              <text x="274" y="612" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <line x1="26" y1="620" x2="276" y2="620" stroke="#f1f5f9" stroke-width="1" />
+              <text x="56" y="634" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">price</text>
+              <text x="274" y="634" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">NUMERIC(10,2)</text>
+              <line x1="26" y1="642" x2="276" y2="642" stroke="#f1f5f9" stroke-width="1" />
+              <text x="56" y="656" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">is_public</text>
+              <text x="274" y="656" text-anchor="end" font-size="10.5" fill="#6d28d9" font-family="JetBrains Mono, monospace">BOOL (фильтр)</text>
+              <line x1="26" y1="664" x2="276" y2="664" stroke="#f1f5f9" stroke-width="1" />
+              <text x="56" y="678" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">secret_cost</text>
+              <text x="274" y="678" text-anchor="end" font-size="10.5" fill="#b91c1c" font-family="JetBrains Mono, monospace">скрытая кол.</text>
+            </g>
+
+            <!-- Таблица 5: raw_audit_events -->
+            <g filter="url(#cardShadow)">
+              <rect x="297" y="502" width="266" height="190" rx="10" fill="#ffffff" stroke="#fca5a5" stroke-width="1.5" />
+              <path d="M 297 512 Q 297 502 307 502 L 553 502 Q 563 502 563 512 L 563 530 L 297 530 Z" fill="#fef2f2" />
+              <line x1="297" y1="530" x2="563" y2="530" stroke="#fecaca" stroke-width="1" />
+              <text x="308" y="520" font-size="11.5" font-weight="700" fill="#991b1b" font-family="JetBrains Mono, monospace">raw_audit_events</text>
+              <rect x="498" y="507" width="56" height="17" rx="8" fill="#fee2e2" />
+              <text x="526" y="518.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b91c1c">NO PK · 3</text>
+              <text x="315" y="548" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">event_ts</text>
+              <text x="553" y="548" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TIMESTAMPTZ</text>
+              <line x1="305" y1="558" x2="555" y2="558" stroke="#f1f5f9" stroke-width="1" />
+              <text x="315" y="574" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">actor</text>
+              <text x="553" y="574" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <line x1="305" y1="584" x2="555" y2="584" stroke="#f1f5f9" stroke-width="1" />
+              <text x="315" y="600" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">message</text>
+              <text x="553" y="600" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <rect x="307" y="622" width="246" height="56" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1" />
+              <text x="430" y="643" text-anchor="middle" font-size="10.5" font-weight="700" fill="#991b1b">Специально БЕЗ Primary Key!</text>
+              <text x="430" y="661" text-anchor="middle" font-size="10" fill="#7f1d1d">Для инцидента REPLICA IDENTITY в 5.3</text>
+            </g>
+
+            <!-- Таблица 6: telemetry_stream -->
+            <g filter="url(#cardShadow)">
+              <rect x="576" y="502" width="266" height="190" rx="10" fill="#ffffff" stroke="#67e8f9" stroke-width="1.5" />
+              <path d="M 576 512 Q 576 502 586 502 L 832 502 Q 842 502 842 512 L 842 530 L 576 530 Z" fill="#ecfeff" />
+              <line x1="576" y1="530" x2="842" y2="530" stroke="#a5f3fc" stroke-width="1" />
+              <text x="587" y="520" font-size="11.5" font-weight="700" fill="#155e75" font-family="JetBrains Mono, monospace">telemetry_stream</text>
+              <rect x="756" y="507" width="77" height="17" rx="8" fill="#cffafe" />
+              <text x="794.5" y="518.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e7490">5 000 строк</text>
+              <rect x="586" y="537" width="22" height="14" rx="4" fill="#dbeafe" />
+              <text x="597" y="547.5" text-anchor="middle" font-size="9" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="614" y="548" font-size="11.5" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="832" y="548" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">BIGSERIAL</text>
+              <line x1="584" y1="558" x2="834" y2="558" stroke="#f1f5f9" stroke-width="1" />
+              <text x="614" y="574" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">service_name</text>
+              <text x="832" y="574" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+              <line x1="584" y1="584" x2="834" y2="584" stroke="#f1f5f9" stroke-width="1" />
+              <text x="614" y="600" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">payload</text>
+              <text x="832" y="600" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT (~108 байт)</text>
+              <line x1="584" y1="610" x2="834" y2="610" stroke="#f1f5f9" stroke-width="1" />
+              <text x="614" y="626" font-size="11.5" fill="#1e293b" font-family="JetBrains Mono, monospace">created_at</text>
+              <text x="832" y="626" text-anchor="end" font-size="10.5" fill="#64748b" font-family="JetBrains Mono, monospace">TIMESTAMPTZ</text>
+              <rect x="586" y="642" width="246" height="36" rx="8" fill="#ecfeff" stroke="#a5f3fc" stroke-width="1" />
+              <text x="709" y="664" text-anchor="middle" font-size="10" fill="#155e75">Нагрузка WAL, лаг (5.2) и сжатие pg_dump (5.4)</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="er-legend">
+          <span class="er-legend-item"><span class="er-tag er-tag-rw">RW</span> Чтение и запись</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-ro">RO</span> Только чтение (Hot Standby)</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-pk">PK</span> Первичный ключ</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-uk">UK</span> UNIQUE</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-null">NULL</span> Может быть пустым</span>
+        </div>
+
+        <details class="data-preview">
+          <summary>Заглянуть в стартовые данные таблиц (init.sql)</summary>
+          <div class="preview-body">
+            <div>
+              <div class="preview-table-title">billing_accounts <span>· 5 строк (сумма балансов = 180 500.00)</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>id</th><th>owner</th><th>balance</th><th>tier</th></tr></thead>
+                  <tbody>
+                    <tr><td>1</td><td>Алина</td><td>50000.00</td><td><span class="status-pill">vip</span></td></tr>
+                    <tr><td>2</td><td>Тимур</td><td>32000.00</td><td><span class="status-pill">standard</span></td></tr>
+                    <tr><td>3</td><td>Дина</td><td>15000.00</td><td><span class="status-pill">standard</span></td></tr>
+                    <tr><td>4</td><td>Максим</td><td>8500.00</td><td><span class="status-pill">standard</span></td></tr>
+                    <tr><td>5</td><td>София</td><td>75000.00</td><td><span class="status-pill">vip</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div class="preview-table-title">catalog_sync <span>· 6 строк (4 публичных, 2 скрытых: STK-05 и DRF-06)</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>id</th><th>sku</th><th>title</th><th>category</th><th>price</th><th>is_public</th><th>secret_cost</th></tr></thead>
+                  <tbody>
+                    <tr><td>1</td><td>HUD-01</td><td>Худи SQL Master</td><td>Одежда</td><td>14500.00</td><td>true</td><td>6200.00</td></tr>
+                    <tr><td>2</td><td>MUG-02</td><td>Термокружка DBA</td><td>Аксессуары</td><td>6900.00</td><td>true</td><td>2400.00</td></tr>
+                    <tr><td>3</td><td>BOK-03</td><td>Книга PostgreSQL Pro</td><td>Книги</td><td>8500.00</td><td>true</td><td>3100.00</td></tr>
+                    <tr><td>4</td><td>KBD-04</td><td>Клавиатура MechPro</td><td>Гаджеты</td><td>18900.00</td><td>true</td><td>9500.00</td></tr>
+                    <tr><td>5</td><td>STK-05</td><td>Архивный стикерпак</td><td>Аксессуары</td><td>900.00</td><td>false</td><td>150.00</td></tr>
+                    <tr><td>6</td><td>DRF-06</td><td>Секретный релиз 2027</td><td>Гаджеты</td><td>29900.00</td><td>false</td><td>12000.00</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div class="preview-table-title">ops_orders (10 строк) · replication_heartbeat (2) · raw_audit_events (3, без PK) · telemetry_stream (5 000)</div>
+              <p style="margin: 0; font-size: 0.82rem; color: var(--muted);">
+                В <code>ops_orders</code> 6 оплаченных заказов (Одежда: <code>30200.00</code>, Гаджеты: <code>18900.00</code>, Книги: <code>12700.00</code>), 2 <code>new</code>, 1 <code>cancelled</code> (<code>id=6</code>) и 1 <code>refunded</code>.
+              </p>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== УРОК 5.1 ==================== -->
+    <section id="sec-5-1" data-section-lesson="5_1">
+      <h2><span class="sec-num">5.1</span> Физическая потоковая репликация: Primary, Standby и слоты (3 сценария)</h2>
+      <p>
+        Проверяем внутреннее устройство связки <code>Primary → Hot Standby</code>, чиним несовместимый аналитический отчёт и обезвреживаем «бомбу» утечки диска через заброшенный слот репликации.
+      </p>
+
+      <!-- 5.1.1 -->
+      <div class="task-card runbook-card" data-task-id="5_1_1" data-lesson="5_1" data-tags="runbook">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.1.1" />
+            <div class="task-title"><span class="task-num">5.1.1</span> Рентген физической репликации: конфиг Standby, heartbeat и сверка LSN с обеих сторон</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-runbook">Лаба · Runbook</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-host">Host Bash</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+          <span class="node-chip nc-standby">Standby :5433</span>
+        </div>
+        <p class="task-desc">
+          Пройди полный чек-лист приёмки физической реплики:
+          1) найди внутри <code>course_pg_standby</code> файл-маркер <code>standby.signal</code> и строку <code>primary_conninfo</code> в <code>postgresql.auto.conf</code>;
+          2) запиши пульс в <code>replication_heartbeat</code> на Primary и убедись, что он доехал на Standby;
+          3) попробуй выполнить <code>INSERT</code> на Standby и зафиксируй ошибку Read-Only;
+          4) проверь статус стриминга с обеих сторон — <code>pg_stat_replication</code> (Primary) и <code>pg_stat_wal_receiver</code> + <code>pg_last_wal_receive/replay_lsn()</code> (Standby).
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Критерии приёмки</div>
+          <ul>
+            <li>На Primary: <code>state = 'streaming'</code>, <code>sync_state = 'async'</code>, <code>lag_bytes = 0</code>.</li>
+            <li>На Standby: <code>status = 'streaming'</code>, <code>pending_replay_bytes = 0</code>, запись падает с <code>cannot execute INSERT in a read-only transaction</code>.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый Runbook (4 шага)</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-host">Шаг 1 · Host Bash</span> Маркер standby.signal и primary_conninfo</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash">docker exec course_pg_standby ls -l /var/lib/postgresql/data/standby.signal
+docker exec course_pg_standby cat /var/lib/postgresql/data/postgresql.auto.conf</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 2 · Primary :5432</span> Пишем пульс и смотрим pg_stat_replication</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">UPDATE replication_heartbeat
+SET beat_count = beat_count + 1, note = 'Живой тест 5.1', updated_at = now()
+WHERE id = 1;
+
+SELECT pid, application_name, state, sync_state,
+       sent_lsn, write_lsn, flush_lsn, replay_lsn,
+       pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS lag_bytes
+FROM pg_stat_replication;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-standby">Шаг 3 · Standby :5433</span> Читаем пульс и ловим ошибку Read-Only</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT id, node_role, beat_count, note, updated_at
+FROM replication_heartbeat ORDER BY id;
+
+-- Должно упасть с ERROR: cannot execute INSERT in a read-only transaction
+INSERT INTO ops_orders (customer, category, amount, status)
+VALUES ('Тест', 'Книги', 1000.00, 'new');</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-standby">Шаг 4 · Standby :5433</span> Взгляд приёмника WAL (walreceiver + LSN)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT pid, status, sender_host, sender_port, written_lsn, flushed_lsn, slot_name
+FROM pg_stat_wal_receiver;
+
+SELECT pg_last_wal_receive_lsn() AS received_lsn,
+       pg_last_wal_replay_lsn()  AS replayed_lsn,
+       pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn()) AS pending_replay_bytes;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Разбор:</strong> колонка <code>slot_name</code> сейчас пустая — реплика подключена напрямую и опирается на <code>wal_keep_size = 128MB</code>. Физическая реплика применяет сырые страницы 8 КБ байт-в-байт, поэтому локальная запись на ней запрещена.</p>
+        </details>
+      </div>
+
+      <!-- 5.1.2 -->
+      <div class="task-card" data-task-id="5_1_2" data-lesson="5_1" data-tags="bugfix">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.1.2" />
+            <div class="task-title"><span class="task-num">5.1.2</span> Read/Write Splitting: чиним отчёт аналитика, падающий на Hot Standby</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-bug">Баг-фикс</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-standby">Standby :5433</span>
+        </div>
+        <p class="task-desc">
+          Чтобы разгрузить Primary, отчётность перевели на <strong>Standby (:5433)</strong>, но утренний скрипт аналитика сразу упал с <code>ERROR: cannot execute CREATE TABLE in a read-only transaction</code>:
+        </p>
+        <div class="code-block bug-code">
+          <div class="code-header"><span class="code-lang">❌ ПРОБЛЕМНЫЙ СКРИПТ АНАЛИТИКА НА STANDBY</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-sql">CREATE TEMP TABLE tmp_paid AS
+SELECT category, COUNT(*) AS orders_cnt, SUM(amount) AS total_revenue
+FROM ops_orders WHERE status = 'paid' GROUP BY category;
+
+SELECT * FROM tmp_paid WHERE total_revenue &gt; 15000 ORDER BY total_revenue DESC;</code></pre>
+        </div>
+        <p class="task-desc">
+          <strong>Задача:</strong> перепиши отчёт так, чтобы он работал на Read-Only Standby (через <code>WITH / CTE</code>), и проверь результат — должны вернуться «Одежда» (<code>30200.00</code>, 3 заказа) и «Гаджеты» (<code>18900.00</code>, 1 заказ).
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Почему даже <em>временная</em> таблица (<code>CREATE TEMP TABLE</code>) не работает на Hot Standby?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать исправление и разбор</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-standby">Standby :5433</span> Безопасный Read-Only отчёт через CTE</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">WITH paid_by_category AS (
+    SELECT
+        category,
+        COUNT(*)    AS orders_cnt,
+        SUM(amount) AS total_revenue
+    FROM ops_orders
+    WHERE status = 'paid'
+    GROUP BY category
+)
+SELECT category, orders_cnt, total_revenue
+FROM paid_by_category
+WHERE total_revenue &gt; 15000
+ORDER BY total_revenue DESC;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Причина:</strong> создание <code>TEMP TABLE</code> требует записи метаданных в системные каталоги (<code>pg_class</code>, <code>pg_attribute</code>), что невозможно в read-only режиме. <code>CTE</code> выполняется целиком в памяти/временных файлах сортировки без модификации каталогов.</p>
+        </details>
+      </div>
+
+      <!-- 5.1.3 -->
+      <div class="task-card incident-card" data-task-id="5_1_3" data-lesson="5_1" data-tags="incident">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.1.3" />
+            <div class="task-title"><span class="task-num">5.1.3</span> Инцидент: заброшенный Replication Slot съедает диск Primary</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-incident">Инцидент</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+        </div>
+        <div class="alert-strip">
+          <strong>🚨 СИМПТОМ:</strong> Тестовую реплику погасили неделю назад, а её слот репликации забыли удалить — каталог <code>pg_wal</code> на Primary безостановочно растёт и угрожает остановить базу ошибкой <code>No space left on device</code>.
+        </div>
+        <p class="task-desc">
+          Смоделируй и обезвредь утечку WAL на <strong>Primary (:5432)</strong>:
+          1) создай неактивный физический слот <code>practice_slot_5_1</code> с немедленным резервированием WAL (<code>true</code>);
+          2) сгенерируй WAL, обновив <code>payload</code> у всех 5 000 строк <code>telemetry_stream</code>;
+          3) найди объём удержанного WAL (<code>retained_wal</code>) через <code>pg_replication_slots</code>;
+          4) поставь серверный предохранитель <code>max_slot_wal_keep_size = '1GB'</code> без перезапуска (<code>ALTER SYSTEM</code> + <code>pg_reload_conf()</code>) и удали забытый слот.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Чему по умолчанию равен <code>max_slot_wal_keep_size</code> в PostgreSQL?</li>
+            <li>В какой статус (<code>wal_status</code>) перейдёт слот, если его отставание превысит лимит <code>max_slot_wal_keep_size</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый Runbook спасения</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 1 · Primary :5432</span> Воспроизводим утечку WAL</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT pg_drop_replication_slot(slot_name)
+FROM pg_replication_slots WHERE slot_name = 'practice_slot_5_1';
+
+SELECT * FROM pg_create_physical_replication_slot('practice_slot_5_1', true);
+
+UPDATE telemetry_stream SET payload = repeat('slot_wal_', 12);</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 2 · Primary :5432</span> Диагностика удержанного WAL</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT
+    slot_name, slot_type, active, restart_lsn, wal_status,
+    pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained_wal
+FROM pg_replication_slots
+WHERE slot_name = 'practice_slot_5_1';</code></pre>
+            </div>
+
+            <div class="code-block cleanup-code">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 3 · Primary :5432</span> Ставим предохранитель 1 ГБ и удаляем слот (↺ Cleanup)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SHOW max_slot_wal_keep_size; -- по умолчанию -1 (без лимита!)
+
+ALTER SYSTEM SET max_slot_wal_keep_size = '1GB';
+SELECT pg_reload_conf();
+SELECT current_setting('max_slot_wal_keep_size') AS slot_wal_limit;
+
+-- Обязательно удаляем неактивный слот!
+SELECT pg_drop_replication_slot('practice_slot_5_1');</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Постмортем:</strong> при превышении лимита слот переходит в статус <code>lost</code> и PostgreSQL удаляет старые WAL. Лучше потерять одну отставшую реплику (её можно переналить), чем уронить боевой Primary из-за переполнения диска.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== УРОК 5.2 ==================== -->
+    <section id="sec-5-2" data-section-lesson="5_2">
+      <h2><span class="sec-num">5.2</span> Синхронная vs асинхронная репликация и Replication Lag (4 сценария)</h2>
+      <p>
+        Учимся управлять <code>RPO = 0</code> на уровне отдельных транзакций, честно измерять лаг и конфликты, отличать сетевое отставание от тормозов <code>startup process</code> и спасать Primary, зависший при падении синхронного Standby.
+      </p>
+
+      <!-- 5.2.1 -->
+      <div class="task-card runbook-card" data-task-id="5_2_1" data-lesson="5_2" data-tags="runbook">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.2.1" />
+            <div class="task-title"><span class="task-num">5.2.1</span> Гибридный кластер на лету: async → sync, remote_apply для биллинга и off для телеметрии</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-runbook">Лаба · Runbook</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+          <span class="node-chip nc-standby">Standby :5433</span>
+        </div>
+        <p class="task-desc">
+          Покажи, как один кластер одновременно даёт <code>RPO = 0</code> для денег и максимальную скорость для логов:
+          1) на Primary включи синхронный режим для нашей реплики (<code>synchronous_standby_names = 'walreceiver'</code> + <code>pg_reload_conf()</code>) и убедись, что в <code>pg_stat_replication</code> появилось <code>sync_state = 'sync'</code>;
+          2) переведи <code>1000.00</code> в <code>billing_accounts</code> от Алины (<code>id=1</code>) к Тимуру (<code>id=2</code>) с <code>SET LOCAL synchronous_commit = remote_apply</code> и сразу проверь балансы на Standby;
+          3) в следующей транзакции с <code>SET LOCAL synchronous_commit = off</code> залей <code>1 000</code> строк в <code>telemetry_stream</code>;
+          4) <strong>верни кластер в <code>async</code></strong> (<code>ALTER SYSTEM RESET synchronous_standby_names</code>).
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Чем <code>synchronous_commit = remote_apply</code> отличается от значения по умолчанию <code>on</code>?</li>
+            <li>Почему при <code>synchronous_commit = on</code> и пустом <code>synchronous_standby_names</code> реплика всё равно работает в <code>async</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый Runbook (4 шага)</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 1 · Primary :5432</span> Включаем синхронный Standby без рестарта</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">ALTER SYSTEM SET synchronous_standby_names = 'walreceiver';
+SELECT pg_reload_conf();
+
+SELECT application_name, state, sync_priority, sync_state
+FROM pg_stat_replication; -- sync_priority=1, sync_state='sync'</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 2 · Primary :5432</span> Критичный перевод с remote_apply</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">BEGIN;
+SET LOCAL synchronous_commit = remote_apply;
+UPDATE billing_accounts SET balance = balance - 1000.00, updated_at = now() WHERE id = 1;
+UPDATE billing_accounts SET balance = balance + 1000.00, updated_at = now() WHERE id = 2;
+COMMIT;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-standby">Шаг 3 · Standby :5433</span> Балансы (49000 и 33000) видны сразу после COMMIT</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT id, owner, balance FROM billing_accounts WHERE id IN (1, 2) ORDER BY id;</code></pre>
+            </div>
+
+            <div class="code-block cleanup-code">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 4 · Primary :5432</span> Быстрая телеметрия (off) + возврат в async (↺ Cleanup)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">BEGIN;
+SET LOCAL synchronous_commit = off;
+INSERT INTO telemetry_stream (service_name, payload)
+SELECT 'metrics', 'fast_click_' || g FROM generate_series(1, 1000) AS g;
+COMMIT;
+
+-- Возвращаем асинхронный режим для следующих сценариев
+ALTER SYSTEM RESET synchronous_standby_names;
+SELECT pg_reload_conf();</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Разбор:</strong> при <code>on</code> Primary ждёт лишь <code>flush_lsn</code> (запись WAL на диск Standby, но данные ещё не обязательно применены к страницам). При <code>remote_apply</code> Primary ждёт <code>replay_lsn</code>, гарантируя read-your-writes при чтении со Standby сразу после <code>COMMIT</code>.</p>
+        </details>
+      </div>
+
+      <!-- 5.2.2 -->
+      <div class="task-card" data-task-id="5_2_2" data-lesson="5_2" data-tags="monitor">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.2.2" />
+            <div class="task-title"><span class="task-num">5.2.2</span> Алертинг лага и конфликтов: «тихая база», heartbeat и светофор здоровья</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-monitor">Мониторинг · SQL</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+          <span class="node-chip nc-standby">Standby :5433</span>
+        </div>
+        <p class="task-desc">
+          Собери три продакшен-метрики мониторинга репликации:
+          1) <strong>На Standby (:5433):</strong> напиши запрос, защищённый от ловушки «тихой базы» — возвращай <code>real_lag_seconds = 0</code>, если <code>pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn()</code>, иначе секунды от <code>pg_last_xact_replay_timestamp()</code>. Заодно проверь счётчики конфликтов <code>pg_stat_database_conflicts</code> и настройки <code>max_standby_streaming_delay</code> / <code>hot_standby_feedback</code>.
+          2) <strong>Heartbeat (Primary → Standby):</strong> обнови строку <code>node_role = 'lag_monitor'</code> в <code>replication_heartbeat</code> на Primary и замерь сквозной лаг <code>now() - updated_at</code> на Standby.
+          3) <strong>На Primary (:5432):</strong> напиши светофор здоровья с CTE по <code>pg_stat_replication</code>: <code>'CRITICAL'</code> (если <code>state &lt;&gt; 'streaming'</code> или лаг &gt; 16 МБ), <code>'WARNING'</code> (от 1 до 16 МБ), иначе <code>'OK'</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Какой счётчик в <code>pg_stat_database_conflicts</code> растёт, когда <code>VACUUM</code> на Primary отменяет долгий аналитический отчёт на Standby?</li>
+            <li>Какая побочная цена у включения <code>hot_standby_feedback = on</code> на Primary?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать 3 готовых запроса мониторинга</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-standby">Standby :5433</span> Честный лаг + конфликты Hot Standby</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT
+    pg_last_wal_receive_lsn() AS received_lsn,
+    pg_last_wal_replay_lsn()  AS replayed_lsn,
+    CASE
+        WHEN pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() THEN 0
+        ELSE EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))::INT
+    END AS real_lag_seconds;
+
+SELECT datname, confl_lock, confl_snapshot, confl_bufferpin, confl_deadlock,
+       current_setting('max_standby_streaming_delay') AS streaming_delay,
+       current_setting('hot_standby_feedback') AS feedback_on
+FROM pg_stat_database_conflicts
+WHERE datname = 'learning_db';</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Primary :5432</span> Пульс heartbeat + светофор здоровья для алертов</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- Обновляем heartbeat (затем проверь ROUND(EXTRACT(EPOCH FROM (now() - updated_at))::NUMERIC, 3) на Standby)
+UPDATE replication_heartbeat
+SET beat_count = beat_count + 1, updated_at = now()
+WHERE node_role = 'lag_monitor';
+
+-- Светофор здоровья реплики
+WITH lag_metrics AS (
+    SELECT application_name, state, sync_state,
+           pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS lag_bytes
+    FROM pg_stat_replication
+)
+SELECT
+    application_name, sync_state,
+    pg_size_pretty(lag_bytes) AS lag_pretty,
+    CASE
+        WHEN state &lt;&gt; 'streaming' OR lag_bytes &gt; 16777216 THEN 'CRITICAL'
+        WHEN lag_bytes &gt;= 1048576 THEN 'WARNING'
+        ELSE 'OK'
+    END AS health_status
+FROM lag_metrics;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Разбор:</strong> рост <code>confl_snapshot</code> означает конфликты с <code>VACUUM</code>. Включение <code>hot_standby_feedback = on</code> спасает отчёты на Standby от отмены, но удерживает <code>oldest_xmin</code> на Primary — при долгих отчётах на реплике начнёт раздуваться (Bloat) сам Primary!</p>
+        </details>
+      </div>
+
+      <!-- 5.2.3 -->
+      <div class="task-card incident-card" data-task-id="5_2_3" data-lesson="5_2" data-tags="incident">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.2.3" />
+            <div class="task-title"><span class="task-num">5.2.3</span> Инцидент: диагностируем тип Replication Lag (сеть/диск vs replay)</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-incident">Инцидент</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-standby">Standby :5433</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+        </div>
+        <div class="alert-strip">
+          <strong>🚨 СИМПТОМ:</strong> Пришёл алерт «Реплика отстала на несколько мегабайт». Нужно за 30 секунд определить виновника: не тянет сеть/диск реплики или не успевает однопоточный <code>startup process</code> (применение WAL).
+        </div>
+        <p class="task-desc">
+          1) На <strong>Standby (:5433)</strong> поставь применение WAL на паузу (<code>pg_wal_replay_pause()</code>).
+          2) На <strong>Primary (:5432)</strong> сгенерируй <code>15 000</code> строк в <code>telemetry_stream</code> и раздели лаг в <code>pg_stat_replication</code> на два слагаемых: <code>network_lag_bytes</code> (<code>sent_lsn → flush_lsn</code>) и <code>replay_lag_bytes</code> (<code>flush_lsn → replay_lsn</code>).
+          3) Обязательно сними паузу (<code>pg_wal_replay_resume()</code>) и сверь <code>COUNT(*)</code>!
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Что наблюдать</div>
+          <ul>
+            <li>Какая из двух метрик (<code>network_lag_bytes</code> или <code>replay_lag_bytes</code>) выросла на мегабайты, а какая осталась ~0?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый Runbook диагностики</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-standby">Шаг 1 · Standby :5433</span> Имитируем тормоз применения WAL</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT pg_wal_replay_pause();
+SELECT pg_is_wal_replay_paused() AS is_paused;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 2 · Primary :5432</span> Нагоняем WAL и локализуем узкое место</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">INSERT INTO telemetry_stream (service_name, payload)
+SELECT 'lag_bench', repeat('lag_payload_', 12)
+FROM generate_series(1, 15000) AS g;
+
+SELECT
+    application_name, state,
+    pg_wal_lsn_diff(sent_lsn, flush_lsn)   AS network_lag_bytes,
+    pg_wal_lsn_diff(flush_lsn, replay_lsn) AS replay_lag_bytes,
+    pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)) AS total_lag
+FROM pg_stat_replication;</code></pre>
+            </div>
+
+            <div class="code-block cleanup-code">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-standby">Шаг 3 · Standby :5433</span> Снимаем паузу и проверяем догонку (↺ Cleanup)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT pg_wal_replay_resume();
+SELECT COUNT(*) AS total_rows_on_standby FROM telemetry_stream;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Диагностическая матрица:</strong> <code>network_lag &gt;&gt; 0</code> — тормозит сеть или диск Standby; <code>network_lag ≈ 0</code>, но <code>replay_lag &gt;&gt; 0</code> — WAL уже на диске реплики, но не успевает применение (конфликт с долгим SELECT или слабый CPU/IOPS).</p>
+        </details>
+      </div>
+
+      <!-- 5.2.4 -->
+      <div class="task-card incident-card" data-task-id="5_2_4" data-lesson="5_2" data-tags="incident">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.2.4" />
+            <div class="task-title"><span class="task-num">5.2.4</span> Ночной инцидент: падение единственного синхронного Standby вешает Primary</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-incident">Инцидент</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+          <span class="node-chip nc-host">Host Bash</span>
+        </div>
+        <div class="alert-strip">
+          <strong>🚨 СИМПТОМ:</strong> В 3 часа ночи упала единственная синхронная реплика. Чтение ещё отвечает, но все <code>INSERT / UPDATE / DELETE</code> на Primary встали колом в ожидании <code>SyncRep</code>.
+        </div>
+        <p class="task-desc">
+          Воспроизведи аварию и разблокируй Primary <strong>без перезапуска</strong>:
+          1) на Primary включи <code>synchronous_standby_names = 'walreceiver'</code> + <code>pg_reload_conf()</code>;
+          2) с хоста «урони» реплику: <code>docker compose --profile mod5 stop pg_standby</code>;
+          3) в окне Primary запусти <code>UPDATE replication_heartbeat SET beat_count = beat_count + 1 WHERE id = 1;</code> — убедись, что терминал <strong>намертво завис</strong>;
+          4) со второго терминала (Host Bash) проверь <code>wait_event = 'SyncRep'</code> в <code>pg_stat_activity</code>, экстренно сбрось <code>synchronous_standby_names</code> + <code>pg_reload_conf()</code> (окно Primary мгновенно отвиснет!) и верни <code>pg_standby</code> в строй.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Постмортем-вопрос</div>
+          <ul>
+            <li>Как настроить <code>synchronous_standby_names</code> в продакшене, чтобы потеря одной реплики НЕ останавливала запись?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый Runbook спасения</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 1 · Primary :5432</span> Включаем уязвимую схему (1 sync Standby)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">ALTER SYSTEM SET synchronous_standby_names = 'walreceiver';
+SELECT pg_reload_conf();</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-host">Шаг 2 · Host Bash</span> Роняем единственный Standby</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash">docker compose --profile mod5 stop pg_standby</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 3 · Primary :5432</span> Этот UPDATE ЗАВИСНЕТ в ожидании SyncRep!</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">UPDATE replication_heartbeat SET beat_count = beat_count + 1 WHERE id = 1;</code></pre>
+            </div>
+
+            <div class="code-block cleanup-code">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-host">Шаг 4 · Host Bash</span> Диагностика SyncRep → разблокировка → возврат Standby (↺ Cleanup)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash"># Увидим wait_event_type = IPC, wait_event = SyncRep:
+docker exec course_pg_primary psql -U student -d learning_db -c "
+  SELECT pid, wait_event_type, wait_event, left(query, 50)
+  FROM pg_stat_activity WHERE wait_event = 'SyncRep';"
+
+# Экстренно разблокируем Primary без рестарта (Шаг 3 сразу вернёт UPDATE 1!):
+docker exec course_pg_primary psql -U student -d learning_db -c "
+  ALTER SYSTEM RESET synchronous_standby_names;
+  SELECT pg_reload_conf();"
+
+# Возвращаем Standby в строй:
+docker compose --profile mod5 start pg_standby</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Архитектурное правило:</strong> для синхронной репликации в проде держат минимум <strong>2 реплики</strong> и кворумное правило <code>ANY 1 (standby_a, standby_b)</code> — тогда падение одной реплики не останавливает бизнес.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== УРОК 5.3 ==================== -->
+    <section id="sec-5-3" data-section-lesson="5_3">
+      <h2><span class="sec-num">5.3</span> Логическая репликация и аварийный Failover (4 сценария)</h2>
+      <p>
+        Подключаем третий узел — <code>course_pg_logical</code> (порт <code>5434</code>), собираем выборочную репликацию с фильтрацией строк и скрытием секретных колонок, проходим через две главные грабли (<code>REPLICA IDENTITY</code> и <code>DDL</code>) и проводим реальный <strong>Failover</strong> с восстановлением после Split-Brain.
+      </p>
+
+      <!-- 5.3.1 -->
+      <div class="task-card runbook-card" data-task-id="5_3_1" data-lesson="5_3" data-tags="runbook">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.3.1" />
+            <div class="task-title"><span class="task-num">5.3.1</span> Витрина через логическую репликацию: фильтр строк, скрытие secret_cost и свой индекс</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-runbook">Лаба · Runbook</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+          <span class="node-chip nc-logical">Logical :5434</span>
+        </div>
+        <p class="task-desc">
+          Маркетингу нужна отдельная Read/Write база с витриной <code>catalog_sync</code>, но <strong>без секретной себестоимости</strong> (<code>secret_cost</code>) и <strong>только для публичных товаров</strong> (<code>is_public = true</code>):
+          1) на Publisher (:5432) создай публикацию <code>catalog_pub</code> по 5 колонкам <code>(id, sku, title, category, price) WHERE (is_public = true)</code>;
+          2) на Subscriber (:5434) создай таблицу <code>catalog_sync</code> из этих 5 колонок, свой аналитический индекс <code>(category, price)</code> и подписку <code>catalog_sub</code> (приедут ровно 4 товара);
+          3) на Publisher обнови цену <code>MUG-02</code> до <code>7200.00</code>, опубликуй <code>STK-05</code> (<code>is_public = true</code>) и сними с публикации <code>HUD-01</code> (<code>is_public = false</code>) — проверь, как Row Filter превратил <code>UPDATE</code> в <code>INSERT</code> и <code>DELETE</code>;
+          4) проверь логический слот на Publisher и воркер в <code>pg_stat_subscription</code> на Subscriber.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Критерии приёмки</div>
+          <ul>
+            <li>На Subscriber изначально ровно 4 строки (<code>STK-05</code> и <code>DRF-06</code> не приехали, колонки <code>secret_cost</code> нет).</li>
+            <li>После Шага 3 на Subscriber исчез <code>HUD-01</code>, появился <code>STK-05</code>, цена <code>MUG-02</code> стала <code>7200.00</code>.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый Runbook (4 шага)</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 1 · Primary :5432</span> Создаём публикацию с фильтром колонок и строк</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">DROP PUBLICATION IF EXISTS catalog_pub;
+
+CREATE PUBLICATION catalog_pub
+    FOR TABLE catalog_sync (id, sku, title, category, price)
+    WHERE (is_public = true);
+
+SELECT pubname, tablename, attnames, rowfilter
+FROM pg_publication_tables WHERE pubname = 'catalog_pub';</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-logical">Шаг 2 · Logical :5434</span> Таблица-приёмник, свой индекс и подписка</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">DROP SUBSCRIPTION IF EXISTS catalog_sub;
+DROP TABLE IF EXISTS catalog_sync;
+
+CREATE TABLE catalog_sync (
+    id INT PRIMARY KEY, sku TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL, category TEXT NOT NULL, price NUMERIC(10, 2) NOT NULL
+);
+CREATE INDEX idx_catalog_sync_cat_price ON catalog_sync (category, price);
+
+CREATE SUBSCRIPTION catalog_sub
+    CONNECTION 'host=pg_primary port=5432 dbname=learning_db user=student password=student_pass'
+    PUBLICATION catalog_pub;
+
+-- Подожди 1–2 секунды: приедут ровно 4 публичных товара!
+SELECT id, sku, title, price FROM catalog_sync ORDER BY id;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 3 · Primary :5432</span> Тест Row Filter + мониторинг логического слота</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">UPDATE catalog_sync SET price = 7200.00 WHERE sku = 'MUG-02';
+UPDATE catalog_sync SET is_public = true  WHERE sku = 'STK-05';
+UPDATE catalog_sync SET is_public = false WHERE sku = 'HUD-01';
+
+SELECT slot_name, active, wal_status, confirmed_flush_lsn,
+       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained_wal
+FROM pg_replication_slots WHERE slot_type = 'logical';</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-logical">Шаг 4 · Logical :5434</span> Проверяем магию Row Filter и статус подписки</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT id, sku, title, price FROM catalog_sync ORDER BY id;
+SELECT subname, pid, received_lsn, latest_end_lsn FROM pg_stat_subscription;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Важно про порядок очистки:</strong> в конце Урока 5.3 удаляй подписку на <code>Logical :5434</code> (<code>DROP SUBSCRIPTION catalog_sub;</code>) — она сама аккуратно удалит свой логический слот на Primary.</p>
+        </details>
+      </div>
+
+      <!-- 5.3.2 -->
+      <div class="task-card incident-card" data-task-id="5_3_2" data-lesson="5_3" data-tags="incident">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.3.2" />
+            <div class="task-title"><span class="task-num">5.3.2</span> Ловушка №1: таблица без Primary Key ломает UPDATE при публикации (REPLICA IDENTITY)</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-incident">Инцидент</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+        </div>
+        <div class="alert-strip">
+          <strong>🚨 СИМПТОМ:</strong> Добавили старую таблицу аудита <code>raw_audit_events</code> в логическую публикацию — сразу после этого на самом <strong>Primary</strong> перестали работать <code>UPDATE</code> и <code>DELETE</code> с ошибкой <code>does not have a replica identity</code>!
+        </div>
+        <p class="task-desc">
+          Воспроизведи ошибку на <code>raw_audit_events</code> (специально создана без PK), почини таблицу правильным способом (добавь <code>id BIGSERIAL PRIMARY KEY</code>), убедись, что <code>UPDATE</code> заработал, и удали тестовую публикацию <code>audit_pub</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Почему добавлять Primary Key намного лучше, чем ставить <code>ALTER TABLE ... REPLICA IDENTITY FULL</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый Runbook лечения</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Primary :5432</span> Воспроизводим → Чиним через PK → Убираем публикацию</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- 1. Публикуем таблицу без PK и ловим ошибку на UPDATE!
+DROP PUBLICATION IF EXISTS audit_pub;
+CREATE PUBLICATION audit_pub FOR TABLE raw_audit_events;
+
+UPDATE raw_audit_events SET message = 'Проверено дважды' WHERE actor = 'Алина';
+-- ERROR: cannot update table "raw_audit_events" because it does not have a replica identity
+
+-- 2. Правильное лечение: добавляем суррогатный Primary Key
+ALTER TABLE raw_audit_events ADD COLUMN id BIGSERIAL PRIMARY KEY;
+
+-- 3. Теперь UPDATE проходит без ошибок!
+UPDATE raw_audit_events SET message = 'Проверено дважды' WHERE actor = 'Алина';
+SELECT id, actor, message FROM raw_audit_events ORDER BY id;
+
+-- 4. Очистка
+DROP PUBLICATION audit_pub;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Почему не <code>REPLICA IDENTITY FULL</code>:</strong> при <code>FULL</code> в WAL записывается вся старая строка целиком (раздувает WAL и сеть), а подписчику приходится делать полный <code>Seq Scan</code> таблицы при каждом <code>UPDATE/DELETE</code>.</p>
+        </details>
+      </div>
+
+      <!-- 5.3.3 -->
+      <div class="task-card incident-card" data-task-id="5_3_3" data-lesson="5_3" data-tags="incident">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.3.3" />
+            <div class="task-title"><span class="task-num">5.3.3</span> Ловушка №2: ALTER TABLE на Publisher остановил логическую подписку</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-incident">Инцидент</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+          <span class="node-chip nc-logical">Logical :5434</span>
+        </div>
+        <div class="alert-strip">
+          <strong>🚨 СИМПТОМ:</strong> Разработчик выкатил миграцию <code>ADD COLUMN</code> на Publisher, не обновив Subscriber — новые строки перестали доезжать, а в <code>pg_stat_subscription_stats</code> стремительно растёт <code>apply_error_count</code>.
+        </div>
+        <p class="task-desc">
+          1) Подними тестовую пару <code>ddl_lab (id INT PRIMARY KEY, title TEXT)</code> + <code>ddl_pub</code> / <code>ddl_sub</code>;
+          2) добавь колонку <code>delivery_city TEXT DEFAULT 'Алматы'</code> <em>только на Publisher</em> и вставь строку <code>(1, 'Экспресс-заказ', 'Астана')</code>;
+          3) поймай рост <code>apply_error_count</code> на Subscriber;
+          4) почини подписку <strong>без её пересоздания</strong> (добавь колонку на Subscriber и дождись авто-повтора воркера), затем убери тестовые <code>ddl_sub</code> / <code>ddl_pub</code> / <code>ddl_lab</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать пошаговый Runbook (4 шага)</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 1 · Primary :5432</span> Создаём таблицу и публикацию</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">DROP PUBLICATION IF EXISTS ddl_pub;
+DROP TABLE IF EXISTS ddl_lab;
+CREATE TABLE ddl_lab (id INT PRIMARY KEY, title TEXT);
+CREATE PUBLICATION ddl_pub FOR TABLE ddl_lab;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-logical">Шаг 2 · Logical :5434</span> Создаём приёмник и подписку</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">DROP SUBSCRIPTION IF EXISTS ddl_sub;
+DROP TABLE IF EXISTS ddl_lab;
+CREATE TABLE ddl_lab (id INT PRIMARY KEY, title TEXT);
+CREATE SUBSCRIPTION ddl_sub
+    CONNECTION 'host=pg_primary port=5432 dbname=learning_db user=student password=student_pass'
+    PUBLICATION ddl_pub;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 3 · Primary :5432</span> Нарушаем порядок DDL-миграции!</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">ALTER TABLE ddl_lab ADD COLUMN delivery_city TEXT DEFAULT 'Алматы';
+INSERT INTO ddl_lab (id, title, delivery_city) VALUES (1, 'Экспресс-заказ', 'Астана');</code></pre>
+            </div>
+
+            <div class="code-block cleanup-code">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-logical">Шаг 4 · Logical :5434</span> Диагностируем ошибку → Чиним схему → Очищаем (↺ Cleanup)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- Видим apply_error_count &gt;= 1:
+SELECT subname, apply_error_count, sync_error_count
+FROM pg_stat_subscription_stats WHERE subname = 'ddl_sub';
+
+-- Добавляем недостающую колонку: через 3–5 сек строка сама доедет!
+ALTER TABLE ddl_lab ADD COLUMN delivery_city TEXT DEFAULT 'Алматы';
+SELECT * FROM ddl_lab;
+
+-- Очистка на Logical (5434), а затем выполни DROP PUBLICATION ddl_pub; DROP TABLE ddl_lab; на Primary (5432):
+DROP SUBSCRIPTION ddl_sub;
+DROP TABLE ddl_lab;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Золотое правило миграций при логической репликации:</strong> сначала применяем <code>ADD COLUMN</code> на <strong>Subscriber</strong>, и только потом — на <strong>Publisher</strong>.</p>
+        </details>
+      </div>
+
+      <!-- 5.3.4 -->
+      <div class="task-card incident-card" data-task-id="5_3_4" data-lesson="5_3" data-tags="incident">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.3.4" />
+            <div class="task-title"><span class="task-num">5.3.4</span> Боевой Failover (pg_promote), Timeline 2 и лечение Split-Brain</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-incident">Инцидент</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-standby">Standby :5433</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+          <span class="node-chip nc-host">Host Bash</span>
+        </div>
+        <div class="alert-strip">
+          <strong>🚨 СИМПТОМ:</strong> Нужно срочно перевести трафик на Standby (<code>pg_promote</code>). После повышения оба узла оказываются открытыми на запись на разных <code>Timeline</code> — учебный <strong>Split-Brain</strong>!
+        </div>
+        <p class="task-desc">
+          1) На <strong>Standby (:5433)</strong> выполни <code>SELECT pg_promote(wait =&gt; true, wait_seconds =&gt; 30);</code>, убедись, что <code>pg_is_in_recovery() = f</code>, а <code>timeline_id</code> вырос до <code>2</code>, и вставь новую строку в <code>replication_heartbeat</code>;
+          2) на старом <strong>Primary (:5432)</strong> убедись, что <code>pg_stat_replication</code> опустело;
+          3) <strong>вылечи кластер:</strong> останови и удали <code>pg_standby</code> вместе с его Docker-томом <code>db-course_pg_standby_data</code>, подними сервис заново (он переклонируется через <code>pg_basebackup -R</code>) и проверь, что <code>is_standby = t</code> и <code>timeline_id = 1</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать пошаговый Runbook Failover + возврат Standby</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-standby">Шаг 1 · Standby :5433</span> Повышаем роль до Primary (Timeline 2)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT pg_promote(wait =&gt; true, wait_seconds =&gt; 30);
+
+SELECT pg_is_in_recovery() AS is_standby,
+       (SELECT timeline_id FROM pg_control_checkpoint()) AS current_timeline;
+
+INSERT INTO replication_heartbeat (id, node_role, beat_count, note)
+VALUES (3, 'promoted_primary', 1, 'Я новый Primary на Timeline 2!')
+ON CONFLICT (id) DO UPDATE SET note = EXCLUDED.note, updated_at = now();</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 2 · Primary :5432</span> Старый Primary потерял реплику (0 строк)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT * FROM pg_stat_replication;</code></pre>
+            </div>
+
+            <div class="code-block cleanup-code">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-host">Шаг 3 · Host Bash</span> Чисто пересоздаём Standby через pg_basebackup (↺ Cleanup)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash">docker compose --profile mod5 stop pg_standby
+docker compose --profile mod5 rm -f pg_standby
+docker volume rm db-course_pg_standby_data
+docker compose --profile mod5 up -d pg_standby
+
+sleep 4
+docker exec course_pg_standby psql -U student -d learning_db -c "
+  SELECT pg_is_in_recovery() AS is_standby,
+         (SELECT timeline_id FROM pg_control_checkpoint()) AS current_timeline;"</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Полезная уборка перед Уроком 5.4:</strong> выполни <code>DROP SUBSCRIPTION IF EXISTS catalog_sub;</code> на <code>Logical :5434</code>, чтобы не держать лишний логический слот на Primary.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== УРОК 5.4 ==================== -->
+    <section id="sec-5-4" data-section-lesson="5_4">
+      <h2><span class="sec-num">5.4</span> Резервное копирование, живой PITR и PgBouncer (5 сценариев)</h2>
+      <p>
+        Доказываем, почему репликация не спасает от случайного <code>DELETE</code>, отрабатываем <code>pg_dump</code>/<code>pg_restore</code>, чиним код и нагружаем <strong>PgBouncer</strong>, проводим <strong>реальное восстановление PITR</strong> в одноразовом контейнере и собираем итоговый HA Healthcheck.
+      </p>
+
+      <!-- 5.4.1 -->
+      <div class="task-card incident-card" data-task-id="5_4_1" data-lesson="5_4" data-tags="incident">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.4.1" />
+            <div class="task-title"><span class="task-num">5.4.1</span> «Репликация — не бэкап» + цикл спасения через pg_dump -Fc и pg_restore</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-incident">Инцидент</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-host">Host Bash</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+          <span class="node-chip nc-standby">Standby :5433</span>
+        </div>
+        <div class="alert-strip">
+          <strong>🚨 СИМПТОМ:</strong> Ошибочный <code>DELETE</code> или <code>DROP TABLE</code> на Primary за миллисекунды реплицируется на Standby. Единственное спасение — проверенный бэкап.
+        </div>
+        <p class="task-desc">
+          1) Удали заказ <code>id = 6</code> в <code>ops_orders</code> на Primary и убедись, что он мгновенно исчез и на Standby.
+          2) Сними два дампа <code>telemetry_stream</code> (текстовый <code>-Fp</code> и бинарный сжатый <code>-Fc</code>), сравни их размер через <code>ls -lh</code> и посмотри оглавление архива через <code>pg_restore -l</code>.
+          3) Проведи полное учение спасения: <code>pg_dump -Fc -t ops_orders</code> → <code>DROP TABLE ops_orders;</code> → <code>pg_restore --no-owner</code> → проверка строк.
+        </p>
+        <details class="solution">
+          <summary>Показать пошаговый Runbook бэкапа и спасения</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-host">Шаг 1 · Host Bash</span> Репликация мгновенно копирует ошибку DELETE</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash">docker exec course_pg_primary psql -U student -d learning_db -c "DELETE FROM ops_orders WHERE id = 6;"
+docker exec course_pg_standby psql -U student -d learning_db -c "SELECT id, customer FROM ops_orders WHERE id = 6;"</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-host">Шаг 2 · Host Bash</span> Сравниваем текстовый (-Fp) и сжатый бинарный (-Fc) дамп</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash">docker exec course_pg_primary pg_dump -U student -d learning_db -Fp -t telemetry_stream -f /backups/telemetry.sql
+docker exec course_pg_primary pg_dump -U student -d learning_db -Fc -t telemetry_stream -f /backups/telemetry.dump
+docker exec course_pg_primary ls -lh /backups/telemetry.sql /backups/telemetry.dump
+docker exec course_pg_primary pg_restore -l /backups/telemetry.dump</code></pre>
+            </div>
+
+            <div class="code-block cleanup-code">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-host">Шаг 3 · Host Bash</span> Спасение: pg_dump → DROP TABLE → pg_restore</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash">docker exec course_pg_primary pg_dump -U student -d learning_db -Fc -t ops_orders -f /backups/ops_orders.dump
+docker exec course_pg_primary psql -U student -d learning_db -c "DROP TABLE ops_orders;"
+docker exec course_pg_primary pg_restore -U student -d learning_db --no-owner /backups/ops_orders.dump
+docker exec course_pg_primary psql -U student -d learning_db -c "SELECT COUNT(*) AS restored_rows FROM ops_orders;"</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Почему <code>-Fc</code> стандарт:</strong> бинарный формат сжимает данные в разы, поддерживает выборочное восстановление отдельных таблиц и многопоточную загрузку флагом <code>-j 4</code>.</p>
+        </details>
+      </div>
+
+      <!-- 5.4.2 -->
+      <div class="task-card" data-task-id="5_4_2" data-lesson="5_4" data-tags="bugfix">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.4.2" />
+            <div class="task-title"><span class="task-num">5.4.2</span> Аудит соединений и починка «протекающего» скрипта под PgBouncer (transaction mode)</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-bug">Баг-фикс</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+          <span class="node-chip nc-bouncer">PgBouncer :6432</span>
+        </div>
+        <p class="task-desc">
+          После включения <strong>PgBouncer</strong> в режиме <code>transaction</code> pooling разработчики заметили странные OOM-скачки памяти и ошибки <code>relation "tmp_vip" does not exist</code> на следующем запросе. Вот их код:
+        </p>
+        <div class="code-block bug-code">
+          <div class="code-header"><span class="code-lang">❌ ПРОБЛЕМНЫЙ СКРИПТ ЧЕРЕЗ PGBOUNCER (transaction mode)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-sql">-- Сессионный SET утечёт на ЧУЖИЕ запросы, а TEMP TABLE пропадёт на другом бэкенде!
+SET work_mem = '32MB';
+CREATE TEMP TABLE tmp_vip AS SELECT owner, balance FROM billing_accounts WHERE tier = 'vip';
+SELECT SUM(balance) FROM tmp_vip;</code></pre>
+        </div>
+        <p class="task-desc">
+          <strong>Задача:</strong>
+          1) на Primary напиши аудит-запрос к <code>pg_stat_activity</code> (только <code>client backend</code>), показывающий число сессий по <code>state</code> и процент от <code>max_connections</code>;
+          2) перепиши скрипт разработчика так, чтобы он безопасно выполнялся <strong>через PgBouncer</strong> (одна транзакция с <code>SET LOCAL</code> и <code>ON COMMIT DROP</code>), и убедись через <code>SHOW work_mem;</code> после <code>COMMIT</code>, что настройка вернулась к <code>4MB</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать аудит соединений и исправленный скрипт</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 1 · Primary :5432</span> Аудит клиентских соединений vs max_connections</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">WITH limits AS (
+    SELECT current_setting('max_connections')::INT AS max_conn
+)
+SELECT
+    COALESCE(a.state, 'unknown') AS conn_state,
+    COUNT(*)                     AS connections_cnt,
+    l.max_conn,
+    ROUND(100.0 * COUNT(*) / l.max_conn, 1) AS pct_of_limit
+FROM pg_stat_activity AS a
+CROSS JOIN limits AS l
+WHERE a.backend_type = 'client backend'
+GROUP BY a.state, l.max_conn
+ORDER BY connections_cnt DESC;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-bouncer">Шаг 2 · PgBouncer :6432</span> Исправленный скрипт (SET LOCAL + ON COMMIT DROP)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash">docker exec -e PGPASSWORD=student_pass course_pg_primary \
+  psql -h pgbouncer -p 5432 -U student -d learning_db -c "
+  BEGIN;
+    SET LOCAL work_mem = '32MB';
+    CREATE TEMP TABLE tmp_vip ON COMMIT DROP AS
+    SELECT owner, balance FROM billing_accounts WHERE tier = 'vip';
+
+    SELECT SUM(balance) AS vip_total, current_setting('work_mem') AS tx_work_mem
+    FROM tmp_vip;
+  COMMIT;
+
+  SHOW work_mem; -- снова 4MB: чужим клиентам ничего не утекло!
+"</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Правило transaction pooling:</strong> всё, что привязано к сессии (<code>SET</code> без <code>LOCAL</code>, <code>PREPARE</code>, <code>LISTEN/NOTIFY</code>, <code>pg_advisory_lock</code>, обычные <code>TEMP TABLE</code>), опасно в режиме <code>transaction</code> — либо ограничивай их транзакцией, либо выноси в отдельный пул <code>session</code> mode.</p>
+        </details>
+      </div>
+
+      <!-- 5.4.3 -->
+      <div class="task-card runbook-card" data-task-id="5_4_3" data-lesson="5_4" data-tags="runbook">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.4.3" />
+            <div class="task-title"><span class="task-num">5.4.3</span> Стресс-тест PgBouncer: 25 параллельных клиентов в пуле из 10 процессов</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-runbook">Лаба · Runbook</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-host">Host Bash / PowerShell</span>
+          <span class="node-chip nc-bouncer">PgBouncer :6432</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+        </div>
+        <p class="task-desc">
+          Запусти одновременно <strong>25 клиентов</strong> через <code>course_pgbouncer</code> (каждый делает <code>SELECT pg_sleep(2);</code>) и через ~0.6 сек сними два среза: <code>SHOW POOLS;</code> на PgBouncer и число активных бэкендов <code>pg_stat_activity</code> на Primary.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Критерии приёмки</div>
+          <ul>
+            <li>В <code>SHOW POOLS</code>: <code>cl_active = 10</code>, <code>cl_waiting = 15</code>, <code>sv_active = 10</code>.</li>
+            <li>На самом PostgreSQL Primary открыто <strong>не больше 10</strong> реальных активных процессов — пулер защитил базу от шторма подключений!</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать команды стресс-теста (Bash и Windows PowerShell)</summary>
+          <div class="runbook-steps">
+            <div class="os-grid">
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang"><span class="node-pill node-host">Bash</span> Linux / macOS / Git Bash</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-bash">for i in $(seq 1 25); do
+  docker exec -e PGPASSWORD=student_pass course_pg_primary \
+    psql -h pgbouncer -p 5432 -U student -d learning_db \
+    -q -c "SELECT pg_sleep(2);" &amp;
+done
+sleep 0.6
+
+docker exec -e PGPASSWORD=student_pass course_pg_primary \
+  psql -h pgbouncer -p 5432 -U student -d pgbouncer -c "SHOW POOLS;"
+
+docker exec course_pg_primary psql -U student -d learning_db -c "
+  SELECT state, COUNT(*) AS real_pg_backends
+  FROM pg_stat_activity
+  WHERE datname = 'learning_db' AND pid &lt;&gt; pg_backend_pid()
+  GROUP BY state;"
+wait</code></pre>
+              </div>
+
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang"><span class="node-pill node-host">PowerShell</span> Windows</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-powershell">$jobs = 1..25 | ForEach-Object {
+  Start-Job {
+    docker exec -e PGPASSWORD=student_pass course_pg_primary `
+      psql -h pgbouncer -p 5432 -U student -d learning_db `
+      -q -c "SELECT pg_sleep(2);"
+  }
+}
+Start-Sleep -Milliseconds 1200
+
+docker exec -e PGPASSWORD=student_pass course_pg_primary `
+  psql -h pgbouncer -p 5432 -U student -d pgbouncer -c "SHOW POOLS;"
+
+docker exec course_pg_primary psql -U student -d learning_db -c "
+  SELECT state, COUNT(*) AS real_pg_backends
+  FROM pg_stat_activity
+  WHERE datname = 'learning_db' AND pid &lt;&gt; pg_backend_pid()
+  GROUP BY state;"
+$jobs | Wait-Job | Remove-Job</code></pre>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- 5.4.4 -->
+      <div class="task-card incident-card" data-task-id="5_4_4" data-lesson="5_4" data-tags="incident boss">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.4.4" />
+            <div class="task-title"><span class="task-num">5.4.4</span> Живой PITR («машина времени»): архивируем WAL, обнуляем счета и реально спасаем базу в новом контейнере</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-incident">Инцидент</span>
+            <span class="lvl-badge lvl-boss">Финал модуля</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-host">Host Bash</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+          <span class="node-chip nc-pitr">Recovery Box (course_pg_pitr)</span>
+        </div>
+        <div class="alert-strip">
+          <strong>🚨 СИМПТОМ:</strong> Инженер выполнил <code>UPDATE billing_accounts SET balance = 0;</code> без <code>WHERE</code> — на Primary и Standby все 5 счетов обнулены! Нужен откат точно в точку <code>before_billing_wipe</code> с проверкой на паузе.
+        </div>
+        <p class="task-desc">
+          Пройди <strong>полный реальный цикл PITR</strong> от включения архивации до проверки спасённых данных глазами:
+          1) в <code>docker-compose.yaml</code> в сервисе <code>pg_primary</code> раскомментируй 4 строки <code>archive_mode=on</code> / <code>archive_command</code> и перезапусти <code>pg_primary</code>;
+          2) сними физический бэкап в <code>/backups/base_pitr</code> через <code>pg_basebackup -Ft -z</code>;
+          3) поставь закладку <code>pg_create_restore_point('before_billing_wipe')</code>, «ошибочно» обнули <code>billing_accounts</code> и закрой сегмент WAL (<code>pg_switch_wal()</code>); убедись, что <code>pg_stat_archiver.archived_count &gt; 0</code> и <code>failed_count = 0</code>;
+          4) <strong>подними одноразовый контейнер <code>course_pg_pitr</code></strong> (<code>postgres:16</code>), который распакует <code>base.tar.gz</code>, создаст <code>recovery.signal</code> и пропишет <code>recovery_target_name = 'before_billing_wipe'</code> + <code>recovery_target_action = 'pause'</code>;
+          5) подключись к <code>course_pg_pitr</code>, проверь глазами спасённые балансы (<code>50000, 32000, 15000, 8500, 75000</code>), открой его на запись через <code>pg_wal_replay_resume()</code> и удали временный контейнер.
+        </p>
+        <details class="solution">
+          <summary>Показать полный живой Runbook PITR (5 шагов)</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-host">Шаг 1 · Host Bash</span> Перезапуск Primary с archive_mode=on + права на /backups/wal</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash"># Предварительно раскомментируй 4 строки archive_mode / archive_command в docker-compose.yaml!
+docker compose up -d pg_primary
+docker exec course_pg_primary bash -c "mkdir -p /backups/wal &amp;&amp; chown -R postgres:postgres /backups"</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-host">Шаг 2 · Host Bash</span> Физический базовый бэкап (pg_basebackup -Ft -z)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash">docker exec course_pg_primary bash -c "
+  rm -rf /backups/base_pitr &amp;&amp;
+  pg_basebackup -U student -D /backups/base_pitr -Ft -z -P
+"</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Шаг 3 · Primary :5432</span> Закладка → Авария (balance=0) → Архивация WAL</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash">docker exec course_pg_primary psql -U student -d learning_db -c "
+  SELECT pg_create_restore_point('before_billing_wipe');
+  UPDATE billing_accounts SET balance = 0;
+  SELECT pg_switch_wal();
+"
+sleep 2
+docker exec course_pg_primary psql -U student -d learning_db -c "
+  SELECT archived_count, last_archived_wal, failed_count FROM pg_stat_archiver;"
+docker exec course_pg_primary ls -lh /backups/wal | tail -n 5</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-pitr">Шаг 4 · Recovery Box</span> Реальный запуск PITR во временном контейнере (в PowerShell: ${PWD}/backups)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash">docker rm -f course_pg_pitr 2&gt;/dev/null || true
+
+docker run -d --name course_pg_pitr \
+  -v "$(pwd)/backups:/backups" \
+  postgres:16 bash -c '
+    set -e
+    mkdir -p /tmp/pgdata &amp;&amp; chmod 0700 /tmp/pgdata
+    tar -xzf /backups/base_pitr/base.tar.gz -C /tmp/pgdata
+    [ -f /backups/base_pitr/pg_wal.tar.gz ] &amp;&amp; tar -xzf /backups/base_pitr/pg_wal.tar.gz -C /tmp/pgdata/pg_wal
+    touch /tmp/pgdata/recovery.signal
+    {
+      echo "restore_command = '\''cp /backups/wal/%f %p'\''"
+      echo "recovery_target_name = '\''before_billing_wipe'\''"
+      echo "recovery_target_action = '\''pause'\''"
+    } &gt;&gt; /tmp/pgdata/postgresql.auto.conf
+    chown -R postgres:postgres /tmp/pgdata
+    exec gosu postgres postgres -D /tmp/pgdata -c hot_standby=on -c archive_mode=off
+  '
+sleep 4</code></pre>
+            </div>
+
+            <div class="code-block cleanup-code">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-pitr">Шаг 5 · Recovery Box</span> Проверяем спасённые балансы на паузе → Промоут → Очистка (↺ Cleanup)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash"># 1. Убеждаемся, что контейнер встал на паузу, а все 5 счетов ЦЕЛЫ (до UPDATE balance=0)!
+docker exec course_pg_pitr psql -U student -d learning_db -c "
+  SELECT pg_is_in_recovery() AS paused_in_recovery, pg_is_wal_replay_paused() AS is_paused;
+  SELECT id, owner, balance FROM billing_accounts ORDER BY id;"
+
+# 2. Открываем восстановленный экземпляр на запись:
+docker exec course_pg_pitr psql -U student -d learning_db -c "SELECT pg_wal_replay_resume();"
+
+# 3. Удаляем временный контейнер и возвращаем исходные балансы на основном Primary:
+docker rm -f course_pg_pitr
+docker exec -i course_pg_primary psql -U student -d learning_db &lt; practice/module_5/init.sql</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Почему <code>recovery_target_action = 'pause'</code> — стандарт SRE:</strong> ты сначала глазами проверяешь, что «промахнулся мимо аварии» на нужную секунду, и только после подтверждения открываешь базу на запись через <code>pg_wal_replay_resume()</code>.</p>
+        </details>
+      </div>
+
+      <!-- 5.4.5 -->
+      <div class="task-card" data-task-id="5_4_5" data-lesson="5_4" data-tags="monitor boss">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить сценарий 5.4.5" />
+            <div class="task-title"><span class="task-num">5.4.5</span> Дашборд дежурного DBA: единый HA &amp; Ops Healthcheck в одном SQL-запросе</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-monitor">Мониторинг · SQL</span>
+            <span class="lvl-badge lvl-boss">Финал модуля</span>
+          </div>
+        </div>
+        <div class="nodes-bar">
+          <span class="nodes-bar-label">Узлы:</span>
+          <span class="node-chip nc-primary">Primary :5432</span>
+        </div>
+        <p class="task-desc">
+          Собери итоговый диагностический отчёт на <strong>Primary (:5432)</strong> через <code>UNION ALL</code> с тремя колонками (<code>check_name</code>, <code>metric_value</code>, <code>status</code>), который одним запросом проверяет 6 критичных узлов эксплуатации:
+          1) роль узла (<code>pg_is_in_recovery()</code> — должно быть <code>false</code>);
+          2) число активных реплик (<code>state = 'streaming'</code> &gt;= 1 → <code>OK</code>, иначе <code>CRITICAL</code>);
+          3) максимальный лаг репликации (<code>&gt; 16 МБ</code> → <code>WARNING</code>);
+          4) заброшенные слоты (<code>WHERE NOT active</code> = 0 → <code>OK</code>, иначе <code>CRITICAL</code>);
+          5) ошибки архивации WAL (<code>pg_stat_archiver.failed_count = 0</code> → <code>OK</code>);
+          6) заполненность <code>max_connections</code> клиентскими сессиями (<code>&gt; 80%</code> → <code>WARNING</code>).
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Критерий приёмки</div>
+          <ul>
+            <li>На здоровом кластере после всех <code>Cleanup</code>-шагов все 6 строк возвращают статус <code>OK</code>.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать итоговый HA &amp; Ops Healthcheck</summary>
+          <div class="runbook-steps">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="node-pill node-primary">Primary :5432</span> Единый HA &amp; Ops Healthcheck (6 проверок)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT
+    '1. Роль узла (is_standby)' AS check_name,
+    pg_is_in_recovery()::TEXT   AS metric_value,
+    CASE WHEN NOT pg_is_in_recovery() THEN 'OK' ELSE 'WARNING' END AS status
+UNION ALL
+SELECT
+    '2. Активные реплики (streaming)',
+    COUNT(*)::TEXT,
+    CASE WHEN COUNT(*) &gt;= 1 THEN 'OK' ELSE 'CRITICAL' END
+FROM pg_stat_replication
+WHERE state = 'streaming'
+UNION ALL
+SELECT
+    '3. Максимальный lag (replay)',
+    pg_size_pretty(COALESCE(MAX(pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)), 0)),
+    CASE
+        WHEN COALESCE(MAX(pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)), 0) &gt; 16777216 THEN 'WARNING'
+        ELSE 'OK'
+    END
+FROM pg_stat_replication
+UNION ALL
+SELECT
+    '4. Неактивные слоты (active=false)',
+    COUNT(*)::TEXT,
+    CASE WHEN COUNT(*) = 0 THEN 'OK' ELSE 'CRITICAL' END
+FROM pg_replication_slots
+WHERE NOT active
+UNION ALL
+SELECT
+    '5. Ошибки архивации WAL (failed_count)',
+    failed_count::TEXT,
+    CASE WHEN failed_count = 0 THEN 'OK' ELSE 'CRITICAL' END
+FROM pg_stat_archiver
+UNION ALL
+SELECT
+    '6. Занято соединений от max_connections',
+    ROUND(100.0 * COUNT(*) / current_setting('max_connections')::INT, 1)::TEXT || '%',
+    CASE
+        WHEN 100.0 * COUNT(*) / current_setting('max_connections')::INT &gt; 80 THEN 'WARNING'
+        ELSE 'OK'
+    END
+FROM pg_stat_activity
+WHERE backend_type = 'client backend';</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Итог Модуля 5:</strong> этот запрос объединяет все 4 урока в единый мониторинг — именно такие проверки заводят в экспортеры Prometheus / Grafana и ночные алерты на продакшене.</p>
+        </details>
+      </div>
+    </section>
+
+    <div class="empty-filter" id="empty-filter">
+      Нет сценариев по выбранному фильтру — либо они все уже пройдены! Отличная работа 🎉
+    </div>
+
+  </article>
+
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Автоматическое оглавление из <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = Array.from(document.querySelectorAll('article.lecture > section'));
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${clone.textContent.trim()}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Разделы практикума</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 3. Копирование кода (с fallback для file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (_) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => { btn.textContent = originalText; }, 1800);
+          }
+        });
+      });
+
+      // 4. Прогресс и фильтрация (по урокам, статусу и форматам)
+      const STORAGE_KEY = 'db_course_practice_m5_v2';
+      const cards = Array.from(document.querySelectorAll('.task-card[data-task-id]'));
+      const progressText = document.getElementById('progress-text');
+      const progressFill = document.getElementById('progress-fill');
+      const resetBtn = document.getElementById('reset-progress');
+      const filterBtns = Array.from(document.querySelectorAll('.filter-btn'));
+      const emptyFilter = document.getElementById('empty-filter');
+      let currentFilter = 'all';
+
+      function loadDone() {
+        try {
+          return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+        } catch (_) {
+          return new Set();
+        }
+      }
+
+      function saveDone(set) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(set)));
+        } catch (_) {}
+      }
+
+      const doneSet = loadDone();
+
+      function applyFilter() {
+        let visibleCards = 0;
+
+        cards.forEach((card) => {
+          const id = card.dataset.taskId;
+          const lesson = card.dataset.lesson;
+          const tags = (card.dataset.tags || '').split(/\s+/).filter(Boolean);
+          const isDone = doneSet.has(id);
+          let show = true;
+
+          if (currentFilter === 'todo') {
+            show = !isDone;
+          } else if (currentFilter.startsWith('tag:')) {
+            const targetTag = currentFilter.slice(4);
+            show = tags.includes(targetTag);
+          } else if (currentFilter !== 'all') {
+            show = lesson === currentFilter;
+          }
+
+          card.classList.toggle('hidden', !show);
+          if (show) visibleCards++;
+        });
+
+        sections.forEach((sec) => {
+          const secLesson = sec.dataset.sectionLesson;
+          if (secLesson === 'init') {
+            sec.classList.toggle('hidden', currentFilter !== 'all' && currentFilter !== 'todo');
+            return;
+          }
+          const secCards = Array.from(sec.querySelectorAll('.task-card'));
+          const anyVisible = secCards.some((c) => !c.classList.contains('hidden'));
+          sec.classList.toggle('hidden', !anyVisible);
+        });
+
+        emptyFilter.classList.toggle('visible', visibleCards === 0);
+      }
+
+      function syncUI() {
+        let doneCount = 0;
+        cards.forEach((card) => {
+          const id = card.dataset.taskId;
+          const cb = card.querySelector('.task-check');
+          const isDone = doneSet.has(id);
+          cb.checked = isDone;
+          card.classList.toggle('done', isDone);
+          if (isDone) doneCount++;
+        });
+
+        const total = cards.length;
+        const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+        progressText.textContent = `${doneCount} / ${total} (${pct}%)`;
+        progressFill.style.width = `${pct}%`;
+        resetBtn.classList.toggle('visible', doneCount > 0);
+        applyFilter();
+      }
+
+      cards.forEach((card) => {
+        const cb = card.querySelector('.task-check');
+        cb.addEventListener('change', () => {
+          const id = card.dataset.taskId;
+          if (cb.checked) doneSet.add(id);
+          else doneSet.delete(id);
+          saveDone(doneSet);
+          syncUI();
+        });
+      });
+
+      filterBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          currentFilter = btn.dataset.filter;
+          filterBtns.forEach((b) => b.classList.toggle('active', b === btn));
+          applyFilter();
+        });
+      });
+
+      resetBtn.addEventListener('click', () => {
+        doneSet.clear();
+        saveDone(doneSet);
+        syncUI();
+      });
+
+      syncUI();
+    });
+  </script>
+</body>
+</html>

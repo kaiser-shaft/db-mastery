@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 3.2: Индексы: B-Tree, составные индексы, ловушки, GIN и BRIN</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_3/practice.html#sec-3-2">Практикум 3.2</a>
+        <a class="course-nav-btn" href="../slides/module-3.html#3.2">Слайды урока 3.2</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 3 · Внутреннее устройство PostgreSQL</span>
+        <span class="pill pill-neutral">Урок 3.2</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Индексы: устройство B-Tree, составные индексы, ловушки, GIN и BRIN</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Поймёшь, как устроен главный индекс PostgreSQL — сбалансированное дерево <code>B-Tree</code> — и как он связывается со страницами <code>Heap</code> из прошлого урока через адрес <code>ctid</code>.</li>
+          <li>Освоишь <strong>составные индексы</strong>, правило левого префикса и порядок колонок «равенство — сначала, диапазон — потом».</li>
+          <li>Научишься замечать 5 типичных ловушек, из-за которых PostgreSQL игнорирует индекс, и исправлять их с помощью <strong>функциональных</strong> и <strong>частичных</strong> индексов.</li>
+          <li>Разберёшься, когда обычный <code>B-Tree</code> не подходит и пора доставать спецтехнику: <code>GIN</code> (для массивов и <code>JSONB</code>) и сверхкомпактный <code>BRIN</code> (для гигантских таблиц логов).</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== РАЗДЕЛ 01 ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Зачем нужны индексы и как устроен B-Tree</h2>
+      <p>
+        В прошлом уроке (3.1) ты узнал, что таблица в PostgreSQL — это не аккуратный алфавитный список, а <strong>куча страниц по 8 КБ</strong> (<code>Heap</code>), куда строки складываются вперемешку. Представь себе огромную энциклопедию на 1000 страниц, в которой статьи про животных, космос и компьютеры напечатаны в случайном порядке — просто как их приносили авторы.
+      </p>
+      <p>
+        Если тебе нужно найти статью про <em>«Снежного барса»</em>, а оглавления и указателя нет, остаётся только одно: листать книгу с 1-й страницы до 1000-й. В мире баз данных такое чтение «от корки до корки» называется <strong>последовательным сканированием</strong> (<code>Sequential Scan</code> или <code>Seq Scan</code>). Для таблицы на 50 строк это мгновенно. А для таблицы на 10 миллионов заказов — катастрофа.
+      </p>
+      <p>
+        Теперь представь, что в конце энциклопедии есть <strong>алфавитный указатель</strong>, а ещё лучше — многоуровневый каталог в библиотеке: сначала выбираешь шкаф <em>«А–М»</em> или <em>«Н–Я»</em>, затем ящик <em>«С–Т»</em>, а в ящике находишь карточку: <code>Снежный барс → страница 412, абзац 3</code>. Тебе хватило <strong>трёх шагов</strong> вместо тысячи!
+      </p>
+      <p>
+        Именно так работает индекс по умолчанию в PostgreSQL — <strong>B-Tree</strong> (<em>Balanced Tree</em>, сбалансированное дерево). Это отдельный файл рядом с таблицей, который тоже состоит из страниц по 8 КБ, но внутри ключи строго отсортированы:
+      </p>
+      <ul>
+        <li><strong>Корневая страница (Root)</strong> — самый верхний «указатель на шкафы». С него всегда начинается поиск.</li>
+        <li><strong>Промежуточные страницы (Branch / Internal)</strong> — «ящики каталога», направляют поиск влево или вправо по диапазонам значений.</li>
+        <li><strong>Листовые страницы (Leaf)</strong> — самый нижний уровень, где лежат сами отсортированные значения и точный адрес строки в куче <code>Heap</code> — <code>ctid</code> (номер страницы и номер слота). Листья связаны между собой в обе стороны, поэтому диапазоны вроде <code>BETWEEN 100 AND 200</code> и сортировка <code>ORDER BY</code> читаются одним плавным проходом!</li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart TD
+            R["Корень B-Tree: [ 50 000 ]"]
+            B1["Ветка 1: [ 10 000 | 30 000 ]"]
+            B2["Ветка 2: [ 70 000 | 90 000 ]"]
+            L1["Лист: 1..10 000"]
+            L2["Лист: 10 001..30 000"]
+            L3["Лист: 70 001..90 000<br/>ключ 77 777 -> ctid (412, 3)"]
+            H[("Heap-таблица: страница 412, слот 3<br/>Заказ #77 777: полные данные")]
+
+            R -->|"ключ &lt;= 50 000"| B1
+            R -->|"ключ &gt; 50 000"| B2
+            B1 --> L1
+            B1 --> L2
+            B2 --> L3
+            L1 &lt;--&gt; L2
+            L2 &lt;--&gt; L3
+            L3 -.->|"Точечный переход по ctid"| H
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Как B-Tree находит заказ #77 777 среди 100 000 строк всего за 3 шага вместо чтения всей таблицы.</figcaption>
+      </figure>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Магия высоты дерева:</strong> В одну страницу B-Tree (8 КБ) помещаются сотни ключей. Поэтому даже для таблицы на <strong>10 миллионов строк</strong> высота дерева обычно равна всего <strong>3–4 уровням</strong>! Всего 4 чтения страниц вместо десятков тысяч.
+        </div>
+      </aside>
+
+      <h3>Практика 1: проверяем B-Tree вживую на 100 000 заказах</h3>
+      <p>
+        Хватит теории — давай почувствуем разницу руками в нашей базе <code>learning_db</code>. Создадим таблицу интернет-магазина <code>shop_orders</code> на 100 000 строк и найдём один конкретный заказ по его номеру <code>order_code</code>.
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Этап эксперимента</th>
+              <th>Что делает PostgreSQL</th>
+              <th>Ожидаемый эффект</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Было</strong> (без индекса)</td>
+              <td><code>Seq Scan</code> — читает все ~1 200 страниц таблицы подряд</td>
+              <td>Десятки миллисекунд, нагрузка на CPU и диск</td>
+            </tr>
+            <tr>
+              <td><strong>Стало</strong> (с B-Tree)</td>
+              <td><code>Index Scan</code> — спускается по 3 страницам дерева + 1 страница <code>Heap</code></td>
+              <td>Менее 0.1 мс — ускорение в сотни раз!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Подготовка данных (learning_db)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Безопасный перезапуск: удаляем старую таблицу, если она уже есть
+DROP TABLE IF EXISTS shop_orders;
+
+CREATE TABLE shop_orders (
+    id           BIGSERIAL PRIMARY KEY,
+    order_code   TEXT NOT NULL,
+    customer_id  INT NOT NULL,
+    email        TEXT NOT NULL,
+    status       TEXT NOT NULL,
+    total_price  NUMERIC(10, 2) NOT NULL,
+    created_at   TIMESTAMPTZ NOT NULL
+);
+
+-- Генерируем 100 000 реалистичных заказов за пару секунд
+INSERT INTO shop_orders (order_code, customer_id, email, status, total_price, created_at)
+SELECT
+    'ORD-' || LPAD(g::TEXT, 6, '0'),
+    (g % 5000) + 1,
+    'User' || ((g % 5000) + 1) || '@Example.com',
+    CASE
+        WHEN g % 20 = 0 THEN 'pending'    -- 5% ожидают оплаты
+        WHEN g % 10 = 1 THEN 'cancelled'  -- 10% отменены
+        ELSE 'paid'                       -- 85% оплачены
+    END,
+    ROUND((500 + (RANDOM() * 45000))::NUMERIC, 2),
+    TIMESTAMPTZ '2026-01-01 00:00:00+05' + (g * INTERVAL '2 minutes')
+FROM generate_series(1, 100000) AS g;
+
+-- Обязательно обновляем статистику таблицы для планировщика запросов
+ANALYZE shop_orders;</code></pre>
+      </div>
+
+      <p>
+        Теперь выполним поиск заказа <code>ORD-077777</code> сначала <strong>без индекса</strong>, а потом создадим B-Tree и повторим. Команду <code>EXPLAIN ANALYZE</code> мы подробно разберём в следующем уроке (3.3), а сейчас смотри только на две строки: название способа чтения и <code>Execution Time</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Поиск БЕЗ индекса vs С индексом B-Tree</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- 1. Ищем заказ без индекса на колонке order_code
+EXPLAIN ANALYZE
+SELECT id, customer_id, total_price
+FROM shop_orders
+WHERE order_code = 'ORD-077777';
+
+-- 2. Создаём B-Tree индекс (B-Tree используется по умолчанию)
+CREATE INDEX idx_orders_code ON shop_orders (order_code);
+
+-- 3. Повторяем точно такой же запрос
+EXPLAIN ANALYZE
+SELECT id, customer_id, total_price
+FROM shop_orders
+WHERE order_code = 'ORD-077777';</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL (сравнение до и после)</div>
+        <pre>-- ДО индекса:
+Seq Scan on shop_orders  (cost=0.00..2684.00 rows=1 width=20)
+                         (actual time=8.412..14.835 rows=1 loops=1)
+  Filter: (order_code = 'ORD-077777'::text)
+  Rows Removed by Filter: 99999
+Execution Time: 14.872 ms
+
+-- ПОСЛЕ создания idx_orders_code:
+Index Scan using idx_orders_code on shop_orders  (cost=0.42..8.44 rows=1 width=20)
+                                                 (actual time=0.041..0.043 rows=1 loops=1)
+  Index Cond: (order_code = 'ORD-077777'::text)
+Execution Time: 0.068 ms</pre>
+      </div>
+
+      <p>
+        Посмотри на результат: проблема из начала раздела решена радикально! Раньше PostgreSQL пришлось прочитать и выбросить в корзину <code>99 999</code> лишних строк за <strong>14.87 мс</strong>. После создания <code>B-Tree</code> он провалился по дереву за <strong>0.068 мс</strong> — больше чем <strong>в 200 раз быстрее</strong>.
+      </p>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Бесплатных индексов не бывает!</strong> Нельзя навешивать индекс «на всякий случай на каждую колонку». Каждый индекс занимает место на диске (и в <code>Shared Buffers</code>), а главное — <strong>замедляет запись</strong> (<code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>). Ведь каждый раз, добавляя новую статью в энциклопедию, редактор обязан вручную вписать её во все алфавитные указатели.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 02 ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Составные индексы и правило левого префикса</h2>
+      <p>
+        А что, если пользователь в магазине почти всегда фильтрует заказы сразу по двум полям — например, по <strong>клиенту</strong> и по <strong>цене</strong>? Можно создать один общий индекс сразу на две колонки — <strong>составной индекс</strong> (<code>Composite Index</code>). Но тут скрывается самая частая ошибка новичков: <strong>порядок колонок в скобках критически важен!</strong>
+      </p>
+      <p>
+        Представь школьный справочник, отсортированный строго по правилу: <strong>сначала Класс, потом Фамилия</strong> (<code>7А Иванов, 7А Смирнов, 7Б Алексеев, 7Б Иванов, 8А Иванов...</code>).
+      </p>
+      <ul>
+        <li>Ищешь <em>«7Б, Иванов»</em>? Мгновенно находишь раздел <code>7Б</code> и внутри него <code>Иванова</code>.</li>
+        <li>Ищешь <em>«всех учеников из 7Б»</em>? Легко! Они все стоят плотной группой рядом.</li>
+        <li>А если ты ищешь <em>«всех Ивановых во всей школе»</em>, не зная их класса? Ивановы разбросаны по <code>7А</code>, <code>7Б</code>, <code>8А</code>, <code>11В</code> — справочник не поможет, придётся листать его целиком!</li>
+      </ul>
+      <p>
+        В базах данных это называется <strong>правилом левого префикса</strong> (<em>Leftmost Prefix Rule</em>): составной индекс <code>(col_a, col_b, col_c)</code> отлично работает для поиска по <code>col_a</code>, по <code>(col_a, col_b)</code> и по всем трём <code>(col_a, col_b, col_c)</code>. Но если в условии <code>WHERE</code> нет самой левой колонки <code>col_a</code>, обычный поиск по дереву не сработает.
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Условие в запросе <code>WHERE</code></th>
+              <th>Индекс <code>(customer_id, total_price)</code></th>
+              <th>Почему так происходит</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>customer_id = 42 AND total_price &gt; 30000</code></td>
+              <td><strong>Отлично работает</strong></td>
+              <td>Сначала точно заходим в «класс 42», затем берём диапазон цен</td>
+            </tr>
+            <tr>
+              <td><code>customer_id = 42</code></td>
+              <td><strong>Отлично работает</strong></td>
+              <td>Используется левая часть (префикс) индекса</td>
+            </tr>
+            <tr>
+              <td><code>total_price &gt; 30000</code></td>
+              <td><strong>Не сработает</strong> (<code>Seq Scan</code>)</td>
+              <td>Нет левой колонки <code>customer_id</code> — дорогие заказы разбросаны по всем клиентам</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Практика 2: проверяем порядок колонок в деле</h3>
+      <p>
+        Давай создадим составной индекс <code>(customer_id, total_price)</code> на нашей таблице <code>shop_orders</code> и проверим все три сценария из таблицы выше.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Проверка правила левого префикса</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Создаём составной индекс: сначала клиент (равенство), потом цена (диапазон)
+DROP INDEX IF EXISTS idx_orders_cust_price;
+CREATE INDEX idx_orders_cust_price
+    ON shop_orders (customer_id, total_price);
+
+-- Сценарий А: ищем по обеим колонкам — индекс сработает идеально
+EXPLAIN ANALYZE
+SELECT id, total_price
+FROM shop_orders
+WHERE customer_id = 42
+  AND total_price &gt; 30000;
+
+-- Сценарий Б: ищем ТОЛЬКО по второй колонке — левый префикс нарушен!
+EXPLAIN ANALYZE
+SELECT id, total_price
+FROM shop_orders
+WHERE total_price &gt; 44500;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>-- Сценарий А (обе колонки):
+Index Scan using idx_orders_cust_price on shop_orders
+  Index Cond: ((customer_id = 42) AND (total_price &gt; 30000))
+Execution Time: 0.052 ms
+
+-- Сценарий Б (только вторая колонка total_price):
+Seq Scan on shop_orders
+  Filter: (total_price &gt; 44500)
+  Rows Removed by Filter: 98891
+Execution Time: 13.410 ms</pre>
+      </div>
+
+      <p>
+        Ещё одно золотое правило при проектировании составного индекса: <strong>равенство ставь слева, диапазон — справа</strong> (<em>Equality first, Range second</em>). Если поставить диапазон <code>total_price &gt; 30000</code> на первое место, внутри этого огромного отрезка все <code>customer_id</code> снова окажутся вперемешку!
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Сначала диапазон, потом =
+CREATE INDEX idx_bad
+ON shop_orders (
+  total_price,
+  customer_id
+);</code></pre>
+            </div>
+            <p>Для <code>customer_id = 42 AND total_price &gt; 30000</code> базе придётся перебрать в индексе <strong>все</strong> дорогие заказы всех клиентов и отсеивать лишних.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Сначала =, потом диапазон
+CREATE INDEX idx_good
+ON shop_orders (
+  customer_id,
+  total_price
+);</code></pre>
+            </div>
+            <p>PostgreSQL мгновенно прыгает к <code>customer_id = 42</code> и читает ровно те 5–7 строк, где цена выше 30 000.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Суперспособность <code>INCLUDE</code> (Покрывающий индекс):</strong> Представь, что на карточке в библиотечном каталоге сразу написано имя автора и год издания — тебе даже не нужно идти в зал за самой книгой! Если написать <code>CREATE INDEX idx_cover ON shop_orders (customer_id) INCLUDE (total_price);</code>, то запрос <code>SELECT total_price FROM shop_orders WHERE customer_id = 42;</code> выполнится через <code>Index Only Scan</code> — вообще без чтения страниц <code>Heap</code>!
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 03 ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Когда индексы НЕ работают: 5 главных ловушек</h2>
+      <p>
+        Бывает обидная ситуация: ты честно создал индекс, запускаешь запрос, а он всё равно ползёт как черепаха через <code>Seq Scan</code>. Почему PostgreSQL «не видит» твой индекс? Давай разберём 5 главных причин.
+      </p>
+      <ol>
+        <li><strong>Функция или вычисление вокруг колонки.</strong> В индексе хранятся значения в исходном виде, например <code>'User42@Example.com'</code>. Если ты пишешь <code>WHERE LOWER(email) = 'user42@example.com'</code> или <code>WHERE total_price * 2 &gt; 80000</code>, то просишь библиотекаря найти книги «по названию, прочитанному задом наперёд». Обычный алфавитный каталог здесь бесполезен!</li>
+        <li><strong>Поиск по шаблону с <code>%</code> в начале.</strong> Для <code>LIKE 'ORD-077%'</code> дерево B-Tree сработает (при нужной локали или <code>text_pattern_ops</code>), потому что известно начало слова. А для <code>LIKE '%777%'</code> слово может начинаться с любой буквы — индекс бессилен.</li>
+        <li><strong>Низкая селективность (подходит слишком много строк).</strong> Представь, что тебе нужно выписать цитаты из <strong>85% страниц</strong> толстой книги. Будешь ли ты 850 раз открывать предметный указатель и скакать туда-сюда? Нет! Проще один раз прочитать книгу подряд. Если условию <code>WHERE status = 'paid'</code> соответствует 85% таблицы, планировщик PostgreSQL <strong>намеренно</strong> выберет <code>Seq Scan</code> — так быстрее!</li>
+        <li><strong>Несовпадение типов данных.</strong> Например, колонка <code>order_code</code> имеет тип <code>TEXT</code>, а ты передаёшь число без кавычек или приводишь саму колонку <code>order_code::INT</code>. Приведение типа на колонке ломает индекс точно так же, как функция.</li>
+        <li><strong>Таблица слишком маленькая.</strong> Если вся таблица помещается в 1–2 страницы (меньше 16 КБ), читать индекс и потом прыгать в таблицу — лишняя трата времени.</li>
+      </ol>
+
+      <div class="compare-grid stacked">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо: прячем колонку внутри функции или формулы</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Колонка изменена функцией/формулой — обычный B-Tree по ней НЕ сработает
+SELECT * FROM shop_orders WHERE LOWER(email) = 'user42@example.com';
+SELECT * FROM shop_orders WHERE total_price * 1.2 &gt; 48000;
+SELECT * FROM shop_orders WHERE EXTRACT(YEAR FROM created_at) = 2026;</code></pre>
+            </div>
+            <p>PostgreSQL вынужден вычислять выражение для каждой из 100 000 строк в таблице.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно: оставляем колонку «чистой» или индексируем выражение</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- 1) Для LOWER(email) — создаём функциональный индекс (Expression Index)
+CREATE INDEX idx_orders_lower_email ON shop_orders (LOWER(email));
+-- 2) Математику переносим в правую часть (48000 / 1.2 = 40000)
+SELECT * FROM shop_orders WHERE total_price &gt; 40000;
+-- 3) Вместо EXTRACT — задаём честный диапазон дат
+SELECT * FROM shop_orders
+WHERE created_at &gt;= '2026-01-01' AND created_at &lt; '2027-01-01';</code></pre>
+            </div>
+            <p>Теперь колонка (или точно совпадающее с индексом выражение) сравнивается напрямую по дереву B-Tree.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Практика 3: ломаем индекс через <code>LOWER()</code> и чиним функциональным индексом</h3>
+      <p>
+        Давай убедимся в ловушке №1 на реальной таблице <code>shop_orders</code>. У нас адреса записаны с заглавными буквами (<code>User42@Example.com</code>), а на сайте клиент вводит почту строчными.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Обычный индекс vs функциональный индекс</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Создаём обычный индекс на email
+DROP INDEX IF EXISTS idx_orders_email;
+DROP INDEX IF EXISTS idx_orders_lower_email;
+CREATE INDEX idx_orders_email ON shop_orders (email);
+
+-- Проверяем поиск без учёта регистра: обычный индекс ИГНОРИРУЕТСЯ!
+EXPLAIN ANALYZE
+SELECT id, email FROM shop_orders
+WHERE LOWER(email) = 'user42@example.com';
+
+-- Создаём функциональный индекс (Expression Index) точно под выражение LOWER(email)
+CREATE INDEX idx_orders_lower_email ON shop_orders (LOWER(email));
+
+-- Повторяем запрос: теперь индекс срабатывает!
+EXPLAIN ANALYZE
+SELECT id, email FROM shop_orders
+WHERE LOWER(email) = 'user42@example.com';</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>-- С обычным индексом idx_orders_email:
+Seq Scan on shop_orders
+  Filter: (lower(email) = 'user42@example.com'::text)
+  Rows Removed by Filter: 99980
+Execution Time: 24.615 ms
+
+-- С функциональным индексом idx_orders_lower_email:
+Bitmap Heap Scan on shop_orders
+  Recheck Cond: (lower(email) = 'user42@example.com'::text)
+  -&gt;  Bitmap Index Scan on idx_orders_lower_email
+        Index Cond: (lower(email) = 'user42@example.com'::text)
+Execution Time: 0.148 ms</pre>
+      </div>
+
+      <p>
+        Проблема исчезла: вместо <strong>24.6 мс</strong> запрос выполнился за <strong>0.148 мс</strong> — ускорение более чем в 160 раз! Старый ненужный <code>idx_orders_email</code> после этого лучше удалить командой <code>DROP INDEX</code>, чтобы не тратить память впустую.
+      </p>
+
+      <h3>Практика 4: частичный индекс (<code>Partial Index</code>) для редких статусов</h3>
+      <p>
+        Помнишь ловушку №3 про низкую селективность? В нашей таблице 85% заказов имеют статус <code>'paid'</code>, и только 5% — <code>'pending'</code> (ожидают оплаты). Операторам магазина нужно постоянно мониторить именно неоплаченные заказы. Зачем индексировать все 100 000 строк, если 95 000 нам вообще не интересны?
+      </p>
+      <p>
+        В PostgreSQL можно создать <strong>частичный индекс</strong> (<code>Partial Index</code>) с условием <code>WHERE</code> — он сохранит в дереве только нужные 5% строк и будет занимать в 20 раз меньше места!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Частичный индекс и сравнение его размера</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP INDEX IF EXISTS idx_orders_status_full;
+DROP INDEX IF EXISTS idx_orders_pending_only;
+
+-- Полный индекс на все 100 000 строк
+CREATE INDEX idx_orders_status_full ON shop_orders (status);
+
+-- Частичный индекс: хранит ТОЛЬКО заказы в статусе 'pending' (5 000 строк)
+CREATE INDEX idx_orders_pending_only
+    ON shop_orders (created_at)
+    WHERE status = 'pending';
+
+-- Сравниваем размер двух индексов на диске
+SELECT
+    pg_size_pretty(pg_relation_size('idx_orders_status_full'))  AS full_index_size,
+    pg_size_pretty(pg_relation_size('idx_orders_pending_only')) AS partial_index_size;
+
+-- Проверяем, что запрос по неоплаченным заказам подхватывает крошечный частичный индекс
+EXPLAIN ANALYZE
+SELECT id, order_code, created_at
+FROM shop_orders
+WHERE status = 'pending'
+  AND created_at &gt;= '2026-05-01 00:00:00+05'
+LIMIT 10;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> full_index_size | partial_index_size
+-----------------+--------------------
+ 688 kB          | 128 kB
+(1 row)
+
+Limit  (actual time=0.039..0.046 rows=10 loops=1)
+  -&gt;  Index Scan using idx_orders_pending_only on shop_orders
+        Index Cond: (created_at &gt;= '2026-05-01 00:00:00+05'::timestamptz)
+Execution Time: 0.064 ms</pre>
+      </div>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 04 ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> Не только B-Tree: обзор индексов GIN и BRIN</h2>
+      <p>
+        Дерево <code>B-Tree</code> — отличный универсальный инструмент, как швейцарский нож. Но оно работает только с «обычными» значениями, которые можно выстроить в шеренгу от меньшего к большему (числа, даты, строки). Что делать, если задачи нестандартные? В PostgreSQL есть специализированные типы индексов, и два самых полезных из них — <strong>GIN</strong> и <strong>BRIN</strong>.
+      </p>
+
+      <h3>GIN (Generalized Inverted Index): поиск внутри массивов, JSONB и текста</h3>
+      <p>
+        Представь, что ты ищешь в учебнике биологии все страницы, где упоминается слово <em>«хлорофилл»</em>. Обычное оглавление по главам тебе не поможет — слово может прятаться в любом абзаце. Зато в самом конце учебника есть <strong>предметный указатель</strong>: <code>хлорофилл → стр. 14, 52, 108</code>.
+      </p>
+      <p>
+        <strong>GIN (обобщённый обратный индекс)</strong> устроен точно так же! Вместо того чтобы запоминать «у строки №14 есть теги <em>postgresql, sql, docker</em>», он переворачивает связь наоборот: <strong>«тег <code>docker</code> встречается в строках 14, 52, 108»</strong>. Поэтому GIN незаменим для:
+      </p>
+      <ul>
+        <li>массивов (<code>TEXT[]</code>, <code>INT[]</code>) — оператор «содержит» <code>@&gt;</code>;</li>
+        <li>документов <code>JSONB</code> — поиск по вложенным ключам и значениям (<code>@&gt;</code>, <code>?</code>);</li>
+        <li>полнотекстового поиска (<code>tsvector</code>) — оператор <code>@@</code>.</li>
+      </ul>
+
+      <p>
+        Но будь осторожен: GIN нельзя просто так повесить на обычную текстовую или числовую колонку — PostgreSQL не знает, на какие «кусочки» её дробить. Если попытаться сделать это без специального расширения (например, <code>pg_trgm</code>), база сразу остановит тебя понятной ошибкой:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Попытка создать GIN на обычной колонке TEXT</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Пытаемся повесить GIN на обычный TEXT без специального класса операторов
+CREATE INDEX idx_wrong_gin ON shop_orders USING gin (order_code);</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  data type text has no default operator class for access method "gin"
+HINT:  You must specify an operator class for the index or define a default operator class for the data type.</pre>
+      </div>
+
+      <p>
+        <strong>Причина ошибки:</strong> тип <code>TEXT</code> не умеет по умолчанию раскладываться на составные элементы для <code>GIN</code>. А вот типы <code>TEXT[]</code> (массив) и <code>JSONB</code> умеют делать это «из коробки»!
+      </p>
+
+      <h3>Практика 5: ускоряем поиск по тегам и JSONB с помощью GIN</h3>
+      <p>
+        Создадим каталог курсов и статей <code>learning_articles</code> на 50 000 записей с массивом тегов <code>tags</code> и JSON-характеристиками <code>meta</code>. Попробуем найти все статьи уровня <code>advanced</code> с тегом <code>wal</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Подготовка таблицы и тест GIN-индекса</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP TABLE IF EXISTS learning_articles;
+
+CREATE TABLE learning_articles (
+    id    BIGSERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    tags  TEXT[] NOT NULL,
+    meta  JSONB NOT NULL
+);
+
+-- Заполняем 50 000 статей; редкий тег 'wal' попадёт только в каждую 500-ю статью
+INSERT INTO learning_articles (title, tags, meta)
+SELECT
+    'Статья #' || g,
+    CASE
+        WHEN g % 500 = 0 THEN ARRAY['postgresql', 'internals', 'wal']
+        WHEN g % 3 = 0   THEN ARRAY['sql', 'basics', 'queries']
+        ELSE ARRAY['backend', 'docker', 'linux']
+    END,
+    jsonb_build_object(
+        'level', CASE WHEN g % 500 = 0 THEN 'advanced' ELSE 'beginner' END,
+        'minutes', (g % 25) + 5
+    )
+FROM generate_series(1, 50000) AS g;
+
+ANALYZE learning_articles;
+
+-- 1. Ищем статьи с тегом 'wal' БЕЗ индекса
+EXPLAIN ANALYZE
+SELECT id, title FROM learning_articles
+WHERE tags @&gt; ARRAY['wal'];
+
+-- 2. Создаём GIN-индексы на массив и на JSONB
+CREATE INDEX idx_articles_tags_gin ON learning_articles USING gin (tags);
+CREATE INDEX idx_articles_meta_gin ON learning_articles USING gin (meta);
+
+-- 3. Повторяем поиск по тегу и добавляем фильтр по JSONB
+EXPLAIN ANALYZE
+SELECT id, title FROM learning_articles
+WHERE tags @&gt; ARRAY['wal']
+  AND meta @&gt; '{"level": "advanced"}'::JSONB;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>-- ДО создания GIN:
+Seq Scan on learning_articles  (actual time=0.221..11.940 rows=100 loops=1)
+  Filter: (tags @&gt; '{wal}'::text[])
+  Rows Removed by Filter: 49900
+Execution Time: 11.985 ms
+
+-- ПОСЛЕ создания GIN:
+Bitmap Heap Scan on learning_articles  (actual time=0.095..0.281 rows=100 loops=1)
+  Recheck Cond: ((tags @&gt; '{wal}'::text[]) AND (meta @&gt; '{"level": "advanced"}'::jsonb))
+  -&gt;  BitmapAnd
+        -&gt;  Bitmap Index Scan on idx_articles_tags_gin
+        -&gt;  Bitmap Index Scan on idx_articles_meta_gin
+Execution Time: 0.312 ms</pre>
+      </div>
+
+      <p>
+        Посмотри, как красиво сработал PostgreSQL: он взял результаты сразу из <strong>двух</strong> GIN-индексов, пересек их в памяти через <code>BitmapAnd</code> и нашёл ровно 100 нужных статей за <strong>0.31 мс</strong> вместо 12 мс!
+      </p>
+
+      <h3>BRIN (Block Range Index): микроскопический индекс для гигантских логов</h3>
+      <p>
+        А теперь представь архив школьного музея, где на стеллажах стоят 10 000 коробок с квитанциями, сложенными <strong>строго по дате</strong> — с 2000 по 2026 год. Если заводить карточку <code>B-Tree</code> на каждую бумажку, каталог займёт полкомнаты!
+      </p>
+      <p>
+        Инженеры придумали гениальный трюк — <strong>BRIN (индекс диапазонов блоков)</strong>. Вместо того чтобы записывать каждую строку, он вешает <strong>одну маленькую наклейку на каждые 128 страниц Heap</strong> (1 МБ данных): <em>«Блоки 0–127: даты от 1 января до 3 января»</em>, <em>«Блоки 128–255: даты от 4 января до 6 января»</em>.
+      </p>
+      <p>
+        Когда тебе нужны логи за 5 января, BRIN мгновенно отбрасывает 99% коробок и открывает только нужный диапазон страниц. При этом сам индекс весит <strong>в сотни раз меньше</strong>, чем B-Tree!
+      </p>
+
+      <h3>Практика 6: сравниваем размер и скорость B-Tree vs BRIN на 200 000 логов</h3>
+      <p>
+        Создадим таблицу показаний датчиков <code>sensor_logs</code> (200 000 строк, идущих строго по времени <code>logged_at</code>) и сравним на диске обычный <code>B-Tree</code> и <code>BRIN</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Эксперимент: B-Tree vs BRIN на таблице логов</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP TABLE IF EXISTS sensor_logs;
+
+CREATE TABLE sensor_logs (
+    id        BIGSERIAL PRIMARY KEY,
+    sensor_id INT NOT NULL,
+    temp_c    NUMERIC(5, 2) NOT NULL,
+    logged_at TIMESTAMPTZ NOT NULL
+);
+
+-- Вставляем 200 000 записей строго в хронологическом порядке (append-only)
+INSERT INTO sensor_logs (sensor_id, temp_c, logged_at)
+SELECT
+    (g % 50) + 1,
+    ROUND((18 + (RANDOM() * 12))::NUMERIC, 2),
+    TIMESTAMPTZ '2026-01-01 00:00:00+05' + (g * INTERVAL '10 seconds')
+FROM generate_series(1, 200000) AS g;
+
+ANALYZE sensor_logs;
+
+-- Создаём оба индекса, чтобы сравнить их вес
+CREATE INDEX idx_logs_time_btree ON sensor_logs USING btree (logged_at);
+CREATE INDEX idx_logs_time_brin  ON sensor_logs USING brin  (logged_at);
+
+-- Сравниваем размер таблицы и двух индексов
+SELECT
+    pg_size_pretty(pg_relation_size('sensor_logs'))         AS table_size,
+    pg_size_pretty(pg_relation_size('idx_logs_time_btree')) AS btree_size,
+    pg_size_pretty(pg_relation_size('idx_logs_time_brin'))  AS brin_size;
+
+-- Удаляем B-Tree, чтобы увидеть работу именно BRIN
+DROP INDEX idx_logs_time_btree;
+
+EXPLAIN ANALYZE
+SELECT COUNT(*), ROUND(AVG(temp_c), 2)
+FROM sensor_logs
+WHERE logged_at &gt;= '2026-01-15 12:00:00+05'
+  AND logged_at &lt;  '2026-01-15 13:00:00+05';</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> table_size | btree_size | brin_size
+------------+------------+-----------
+ 11 MB      | 4408 kB    | 24 kB
+(1 row)
+
+Aggregate  (actual time=1.184..1.185 rows=1 loops=1)
+  -&gt;  Bitmap Heap Scan on sensor_logs
+        Recheck Cond: ((logged_at &gt;= '2026-01-15 12:00:00+05') AND (logged_at &lt; '2026-01-15 13:00:00+05'))
+        Rows Removed by Index Recheck: 17140
+        Heap Blocks: lossy=128
+        -&gt;  Bitmap Index Scan on idx_logs_time_brin
+Execution Time: 1.218 ms</pre>
+      </div>
+
+      <p>
+        Посмотри на цифры в таблице: <code>B-Tree</code> занял <strong>4.4 МБ</strong> (почти половину самой таблицы!), а <code>BRIN</code> — всего <strong>24 КБ</strong>, то есть <strong>в 180 раз меньше</strong>! На реальных базах объёмом 500 ГБ эта разница экономит десятки гигабайт оперативной памяти и диска.
+      </p>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Главное ограничение BRIN:</strong> если данные в таблице лежат вперемешку (например, на коробке написано <em>«от 2001 до 2026 года»</em>, потому что в неё скидали случайные квитанции), BRIN не сможет отбросить ни одну коробку и станет бесполезным. Используй его только для данных с естественным физическим порядком — <code>created_at</code> в логах, событиях, телеметрии.
+        </div>
+      </aside>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart TD
+            Q["Какой индекс выбрать?"] --> T1{"Ищешь внутри массива,<br/>JSONB или текста?"}
+            T1 -->|"Да (@&gt;, ?, @@)"| GIN["Выбирай GIN<br/>Обратный индекс"]
+            T1 -->|"Нет (число, дата, строка)"| T2{"Огромная таблица логов,<br/>строки идут по порядку?"}
+            T2 -->|"Да (миллионы строк,<br/>append-only)"| BRIN["Выбирай BRIN<br/>Минимум памяти"]
+            T2 -->|"Нет (обычная таблица<br/>с частым поиском)"| BTREE["Выбирай B-Tree<br/>Универсальный стандарт"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Простой алгоритм выбора типа индекса в PostgreSQL.</figcaption>
+      </figure>
+
+      <div class="table-wrapper">
+        <table class="table-wide">
+          <thead>
+            <tr>
+              <th>Тип индекса</th>
+              <th>Главная задача</th>
+              <th>Операторы</th>
+              <th>Размер</th>
+              <th>Цена записи</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>B-Tree</strong></td>
+              <td>Точный поиск, диапазоны, <code>ORDER BY</code>, уникальность</td>
+              <td><code>=</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>BETWEEN</code>, <code>IN</code></td>
+              <td>Средний</td>
+              <td>Умеренная</td>
+            </tr>
+            <tr>
+              <td><strong>GIN</strong></td>
+              <td>Составные значения: массивы, <code>JSONB</code>, полнотекст</td>
+              <td><code>@&gt;</code>, <code>&lt;@</code>, <code>?</code>, <code>?&amp;</code>, <code>@@</code></td>
+              <td>Большой</td>
+              <td>Высокая (обновляется тяжелее)</td>
+            </tr>
+            <tr>
+              <td><strong>BRIN</strong></td>
+              <td>Сверхбольшие отсортированные таблицы (логи, события)</td>
+              <td><code>=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>BETWEEN</code></td>
+              <td>Крошечный</td>
+              <td>Минимальная</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 05: ШПАРГАЛКА ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Шпаргалка перед практикой</h2>
+      <p>
+        Пробегись глазами по этим 5 правилам и мини-словарику перед тем, как решать задачи практикума:
+      </p>
+      <ul>
+        <li><strong>Не оборачивай колонку в функцию:</strong> вместо <code>WHERE col + 10 &gt; 100</code> пиши <code>WHERE col &gt; 90</code>, а для <code>LOWER(email)</code> создавай функциональный индекс.</li>
+        <li><strong>Помни порядок в составном индексе:</strong> сначала колонка с точным равенством (<code>=</code>), затем колонка с диапазоном (<code>&gt;</code>, <code>BETWEEN</code>). Левая колонка обязательна в <code>WHERE</code>!</li>
+        <li><strong>Не индексируй «почти всю таблицу»:</strong> если нужна только редкая часть строк (например, <code>status = 'pending'</code>), используй <strong>частичный индекс</strong> с <code>WHERE</code>.</li>
+        <li><strong>Подбирай инструмент под тип данных:</strong> для обычных чисел/дат/строк — <code>B-Tree</code>; для массивов и <code>JSONB</code> — <code>GIN</code>; для гигантских хронологических логов — <code>BRIN</code>.</li>
+        <li><strong>Не забывай <code>ANALYZE</code>:</strong> после массовой загрузки данных обнови статистику, иначе планировщик может не знать реальный размер таблицы.</li>
+      </ul>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Термин урока</th>
+              <th>Короткий перевод на «человеческий»</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>B-Tree</code></td>
+              <td>Сбалансированное дерево-каталог; находит любую строку за 3–4 прыжка по страницам</td>
+            </tr>
+            <tr>
+              <td><code>ctid</code></td>
+              <td>Физический адрес строки в таблице <code>Heap</code>: пара <code>(номер страницы, номер слота)</code></td>
+            </tr>
+            <tr>
+              <td><strong>Leftmost Prefix</strong></td>
+              <td>Правило левого префикса: составной индекс <code>(a, b)</code> работает только если в запросе есть <code>a</code></td>
+            </tr>
+            <tr>
+              <td><strong>Partial Index</strong></td>
+              <td>Индекс с условием <code>WHERE</code>, который хранит только нужную часть таблицы</td>
+            </tr>
+            <tr>
+              <td><code>GIN</code> / <code>BRIN</code></td>
+              <td><code>GIN</code> — предметный указатель для массивов/JSONB; <code>BRIN</code> — мини-наклейки <code>min..max</code> на группы страниц</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 06: МИНИ-ПРАКТИКУМ ==================== -->
+    <section>
+      <h2><span class="sec-num">06</span> Мини-практикум для закрепления</h2>
+      <p>
+        Все 4 задания полностью автономны: в каждом ты сам создаёшь мини-таблицу в <code>learning_db</code>, поэтому их можно выполнять в любом порядке. Попробуй сначала написать решение самостоятельно и только потом открывай спойлер!
+      </p>
+
+      <!-- Задача 1 -->
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый уровень). Ускоряем поиск и сортировку игроков</div>
+        <p>
+          Создай автономную таблицу <code>practice_players</code> (50 000 строк) с колонками <code>id</code>, <code>nickname</code> и <code>rating</code>. Затем:
+        </p>
+        <ol style="margin-bottom: 0;">
+          <li>Замерь через <code>EXPLAIN ANALYZE</code> поиск игрока с <code>nickname = 'player_42000'</code>.</li>
+          <li>Создай подходящий <code>B-Tree</code> индекс, чтобы запрос перешёл с <code>Seq Scan</code> на <code>Index Scan</code>.</li>
+          <li>Проверь, что время выполнения упало ниже 1 мс.</li>
+        </ol>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение 1</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- 1. Автономная подготовка таблицы
+DROP TABLE IF EXISTS practice_players;
+CREATE TABLE practice_players (
+    id       BIGSERIAL PRIMARY KEY,
+    nickname TEXT NOT NULL,
+    rating   INT NOT NULL
+);
+
+INSERT INTO practice_players (nickname, rating)
+SELECT 'player_' || g, (g * 37) % 5000
+FROM generate_series(1, 50000) AS g;
+
+ANALYZE practice_players;
+
+-- 2. Замер ДО индекса (увидим Seq Scan)
+EXPLAIN ANALYZE
+SELECT id, nickname, rating
+FROM practice_players
+WHERE nickname = 'player_42000';
+
+-- 3. Создаём уникальный B-Tree индекс (или обычный CREATE INDEX)
+CREATE UNIQUE INDEX idx_players_nickname
+    ON practice_players (nickname);
+
+-- 4. Замер ПОСЛЕ индекса (увидим Index Scan и время &lt; 0.1 ms)
+EXPLAIN ANALYZE
+SELECT id, nickname, rating
+FROM practice_players
+WHERE nickname = 'player_42000';</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задача 2 -->
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Средний уровень). Почини «сломанный» составной индекс и запрос</div>
+        <p style="margin-bottom: 0;">
+          Разработчик создал таблицу тикетов поддержки <code>practice_tickets</code> (60 000 строк) и повесил индекс <code>(created_at, department)</code>, а ещё в запросе написал <code>UPPER(department) = 'BILLING'</code>. Запрос тормозит! Подготовь таблицу, исправь <strong>и порядок колонок в составном индексе</strong>, и сам запрос (убери лишнюю функцию), чтобы поиск тикетов отдела <code>'billing'</code> за последнюю неделю стал мгновенным.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение 2</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- 1. Подготовка автономной таблицы
+DROP TABLE IF EXISTS practice_tickets;
+CREATE TABLE practice_tickets (
+    id         BIGSERIAL PRIMARY KEY,
+    department TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+INSERT INTO practice_tickets (department, created_at)
+SELECT
+    CASE (g % 4)
+        WHEN 0 THEN 'billing'
+        WHEN 1 THEN 'tech'
+        WHEN 2 THEN 'sales'
+        ELSE 'delivery'
+    END,
+    TIMESTAMPTZ '2026-01-01 00:00:00+05' + (g * INTERVAL '5 minutes')
+FROM generate_series(1, 60000) AS g;
+
+ANALYZE practice_tickets;
+
+-- 2. Правильный составной индекс: сначала равенство (department), потом диапазон (created_at)
+CREATE INDEX idx_tickets_dept_created
+    ON practice_tickets (department, created_at);
+
+-- 3. Убираем UPPER() с колонки (данные уже в нижнем регистре) и проверяем план
+EXPLAIN ANALYZE
+SELECT id, department, created_at
+FROM practice_tickets
+WHERE department = 'billing'
+  AND created_at &gt;= '2026-07-20 00:00:00+05';</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задача 3 -->
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Продвинутый уровень). Умный фильтр по характеристикам гаджетов в JSONB</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>practice_gadgets</code> на 40 000 товаров с колонкой <code>specs JSONB</code> (ключи <code>brand</code>, <code>ram_gb</code>, <code>nfc</code>). Создай правильный индекс типа <code>GIN</code> и проверь через <code>EXPLAIN ANALYZE</code>, что поиск всех гаджетов бренда <code>"Pixel"</code> с поддержкой <code>nfc: true</code> (оператор <code>@&gt;</code>) использует индекс.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение 3</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- 1. Автономная таблица с JSONB
+DROP TABLE IF EXISTS practice_gadgets;
+CREATE TABLE practice_gadgets (
+    id    BIGSERIAL PRIMARY KEY,
+    model TEXT NOT NULL,
+    specs JSONB NOT NULL
+);
+
+INSERT INTO practice_gadgets (model, specs)
+SELECT
+    'Device-' || g,
+    jsonb_build_object(
+        'brand',  CASE WHEN g % 200 = 0 THEN 'Pixel' WHEN g % 2 = 0 THEN 'Samsung' ELSE 'Xiaomi' END,
+        'ram_gb', CASE WHEN g % 3 = 0 THEN 16 ELSE 8 END,
+        'nfc',    (g % 4 = 0)
+    )
+FROM generate_series(1, 40000) AS g;
+
+ANALYZE practice_gadgets;
+
+-- 2. Создаём GIN-индекс на колонку JSONB
+CREATE INDEX idx_gadgets_specs_gin
+    ON practice_gadgets USING gin (specs);
+
+-- 3. Проверяем быстрый поиск оператором @&gt;
+EXPLAIN ANALYZE
+SELECT id, model, specs
+FROM practice_gadgets
+WHERE specs @&gt; '{"brand": "Pixel", "nfc": true}'::JSONB;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задача 4 -->
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Инженерный челлендж). Экономим гигабайты с BRIN и Partial Index</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу событий сервера <code>practice_events</code> на 150 000 строк, идущих строго по времени <code>event_time</code>, где у 98% строк <code>severity = 'info'</code>, а у 2% — <code>severity = 'critical'</code>. Реши сразу две инженерные задачи:
+        </p>
+        <ol style="margin-bottom: 0;">
+          <li>Создай <code>BRIN</code>-индекс на <code>event_time</code> и сравни его размер с обычным <code>B-Tree</code> через <code>pg_size_pretty</code>.</li>
+          <li>Создай <strong>частичный индекс</strong> только для событий с <code>severity = 'critical'</code> и проверь его в <code>EXPLAIN ANALYZE</code>.</li>
+        </ol>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение 4</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- 1. Автономная таблица событий (строго по возрастанию времени)
+DROP TABLE IF EXISTS practice_events;
+CREATE TABLE practice_events (
+    id         BIGSERIAL PRIMARY KEY,
+    severity   TEXT NOT NULL,
+    event_time TIMESTAMPTZ NOT NULL
+);
+
+INSERT INTO practice_events (severity, event_time)
+SELECT
+    CASE WHEN g % 50 = 0 THEN 'critical' ELSE 'info' END,
+    TIMESTAMPTZ '2026-01-01 00:00:00+05' + (g * INTERVAL '15 seconds')
+FROM generate_series(1, 150000) AS g;
+
+ANALYZE practice_events;
+
+-- 2. Создаём B-Tree и BRIN на event_time + частичный индекс для critical
+CREATE INDEX idx_events_time_btree ON practice_events USING btree (event_time);
+CREATE INDEX idx_events_time_brin  ON practice_events USING brin  (event_time);
+CREATE INDEX idx_events_critical   ON practice_events (event_time)
+    WHERE severity = 'critical';
+
+-- 3. Сравниваем размеры всех трёх индексов
+SELECT
+    pg_size_pretty(pg_relation_size('idx_events_time_btree')) AS btree_size,
+    pg_size_pretty(pg_relation_size('idx_events_time_brin'))  AS brin_size,
+    pg_size_pretty(pg_relation_size('idx_events_critical'))   AS partial_size;
+
+-- 4. Проверяем, что поиск критических ошибок берёт крошечный частичный индекс
+EXPLAIN ANALYZE
+SELECT id, event_time
+FROM practice_events
+WHERE severity = 'critical'
+  AND event_time &gt;= '2026-01-20 00:00:00+05'
+LIMIT 15;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_3/practice.html#sec-3-2"><strong>Практикум по Уроку 3.2 →</strong></a> — там 12 пошаговых заданий с ответами на <code>B-Tree</code>, составные и покрывающие (<code>INCLUDE</code>) индексы, ловушку <code>LOWER()</code>, частичные индексы, <code>GIN</code> и <code>BRIN</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока</span>
+      Сегодня ты разобрался с главным ускорителем PostgreSQL: понял, как сбалансированное дерево <code>B-Tree</code> находит нужную строку в <code>Heap</code> за считаные миллисекунды, научился правильно расставлять колонки в составных индексах, обходить 5 главных ловушек (функции, <code>%</code> в начале, низкую селективность) и выбирать между <code>B-Tree</code>, <code>GIN</code> и <code>BRIN</code>. В примерах мы уже несколько раз заглядывали в загадочный вывод команды <code>EXPLAIN ANALYZE</code> — а в следующем уроке (<strong>Урок 3.3: Чтение планов выполнения запросов</strong>) ты научишься расшифровывать каждую цифру в этих планах: <code>cost</code>, <code>actual time</code>, <code>Bitmap Heap Scan</code> и <code>Buffers</code>, чтобы диагностировать любые тормоза базы как настоящий инженер!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_3_1.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">3.1 · Физическая архитектура PostgreSQL: страницы (8 КБ…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_3_3.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">3.3 · Чтение планов выполнения запросов: EXPLAIN и EXPL…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

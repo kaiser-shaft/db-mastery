@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 3.3: Чтение планов выполнения запросов: EXPLAIN и EXPLAIN ANALYZE</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_3/practice.html#sec-3-3">Практикум 3.3</a>
+        <a class="course-nav-btn" href="../slides/module-3.html#3.3">Слайды урока 3.3</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 3 · Внутреннее устройство PostgreSQL</span>
+        <span class="pill pill-neutral">Урок 3.3</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Урок 3.3: Чтение планов выполнения запросов: EXPLAIN и EXPLAIN ANALYZE</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Как PostgreSQL выбирает маршрут для твоего SQL-запроса и чем отличается прогноз <code>EXPLAIN</code> от реального замера <code>EXPLAIN (ANALYZE, BUFFERS)</code>.</li>
+          <li>Как расшифровывать главные цифры плана: <code>cost</code>, <code>rows</code>, <code>actual time</code>, <code>loops</code> и счётчики 8-килобайтных страниц <code>shared hit / read</code>.</li>
+          <li>Как отличать способы чтения и соединения таблиц (<code>Seq Scan</code>, <code>Index Scan</code>, <code>Index Only Scan</code>, <code>Bitmap Scan</code>, <code>Nested Loop</code>, <code>Hash Join</code>, <code>Merge Join</code>) и читать дерево плана снизу вверх.</li>
+          <li>Как ловить главные причины тормозов и не удалить базу по ошибке при запуске <code>EXPLAIN ANALYZE</code>.</li>
+        </ul>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== РАЗДЕЛ 01 ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Навигатор внутри PostgreSQL: EXPLAIN vs EXPLAIN ANALYZE</h2>
+      <p>
+        Представь, что тебе нужно добраться от дома до торгового центра. Ты открываешь навигатор в телефоне. Навигатор смотрит на карту, прикидывает пробки и предлагает два маршрута: через центр — примерно 25 минут, а по объездной — 14 минут. Он выбирает самый выгодный маршрут и показывает его тебе на экране.
+      </p>
+      <p>
+        В PostgreSQL работает точно такой же «навигатор». Когда ты отправляешь SQL-запрос, ты говоришь <strong>что</strong> хочешь получить (например, «дай заказы клиента №42»), но не говоришь <strong>как</strong> именно их доставать. В этот момент включается <strong>планировщик</strong> (<code>Planner / Optimizer</code>): он заглядывает в статистику таблиц, прикидывает разные способы поиска (перебрать всю таблицу или пойти по B-Tree индексу из Урока 3.2) и составляет пошаговую инструкцию — <strong>план выполнения</strong> (<code>Execution Plan</code>).
+      </p>
+      <p>
+        Чтобы заглянуть в голову планировщику, в PostgreSQL есть две волшебные приставки перед любым запросом:
+      </p>
+      <ul>
+        <li><strong><code>EXPLAIN</code></strong> — спрашивает навигатор: «Как ты <em>собираешься</em> ехать и сколько это примерно будет стоить?» Запрос <strong>не выполняется</strong>, данные не читаются и не меняются.</li>
+        <li><strong><code>EXPLAIN ANALYZE</code></strong> — реально садится за руль, проезжает весь маршрут с секундомером и в конце показывает два столбца: что навигатор <em>обещал</em> и сколько времени ушло <em>на самом деле</em>.</li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            SQL["Твой SQL-запрос"] --> P["Парсер: проверяет синтаксис"]
+            P --> O["Планировщик: строит план"]
+            S[("Статистика таблиц pg_stats")] -.->|Сколько строк и какие значения| O
+            O -->|"EXPLAIN (стоп!)"| R1["Только прогноз: cost и rows"]
+            O -->|"EXPLAIN ANALYZE"| E["Исполнитель: читает Heap и Shared Buffers"]
+            E --> R2["Прогноз + реальное время и Buffers"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Путь запроса: EXPLAIN останавливается на этапе прогноза, а EXPLAIN ANALYZE реально запускает Исполнитель.</figcaption>
+      </figure>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Простая аналогия:</strong> <code>EXPLAIN</code> — это прогноз погоды в телефоне («завтра обещают +20°C»). <code>EXPLAIN ANALYZE</code> — это выйти на улицу с градусником и проверить реальную температуру. Если прогноз и реальность сильно разошлись, значит, у планировщика «сломалась» статистика!
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 02 ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Готовим полигон и расшифровываем первый план</h2>
+      <p>
+        Если в таблице всего 10 строк, PostgreSQL даже не станет открывать индекс — ему проще прочитать одну 8-килобайтную страницу целиком (как пробежать глазами стикер, вместо того чтобы лезть в оглавление). Поэтому для честных экспериментов создадим в базе <code>learning_db</code> учебный магазин из 3 таблиц на <strong>100 000 заказов</strong>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Подготовка данных в learning_db (безопасный перезапуск)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Сносим старые учебные таблицы этого урока, если они уже есть
+DROP TABLE IF EXISTS plan_orders, plan_products, plan_customers CASCADE;
+
+-- 1. Клиенты (1 000 человек)
+CREATE TABLE plan_customers (
+    id         INT PRIMARY KEY,
+    full_name  TEXT NOT NULL,
+    city       TEXT NOT NULL,
+    email      TEXT NOT NULL
+);
+
+-- 2. Товары (200 позиций)
+CREATE TABLE plan_products (
+    id         INT PRIMARY KEY,
+    title      TEXT NOT NULL,
+    category   TEXT NOT NULL,
+    price      NUMERIC(10, 2) NOT NULL
+);
+
+-- 3. Заказы (100 000 строк, пока БЕЗ дополнительных индексов)
+CREATE TABLE plan_orders (
+    id          SERIAL PRIMARY KEY,
+    customer_id INT NOT NULL REFERENCES plan_customers(id),
+    product_id  INT NOT NULL REFERENCES plan_products(id),
+    status      TEXT NOT NULL,
+    amount      NUMERIC(10, 2) NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL
+);
+
+-- Наполняем таблицы генератором generate_series
+INSERT INTO plan_customers (id, full_name, city, email)
+SELECT
+    g,
+    'Клиент #' || g,
+    (ARRAY['Алматы', 'Астана', 'Костанай', 'Шымкент', 'Караганда'])[1 + (g % 5)],
+    'user' || g || '@shop.example'
+FROM generate_series(1, 1000) AS g;
+
+INSERT INTO plan_products (id, title, category, price)
+SELECT
+    g,
+    'Товар #' || g,
+    (ARRAY['electronics', 'books', 'clothes', 'games'])[1 + (g % 4)],
+    round((500 + (g * 37 % 15000))::numeric, 2)
+FROM generate_series(1, 200) AS g;
+
+INSERT INTO plan_orders (customer_id, product_id, status, amount, created_at)
+SELECT
+    1 + (g % 1000),
+    1 + (g % 200),
+    CASE
+        WHEN g % 20 = 0 THEN 'cancelled'
+        WHEN g % 5  = 0 THEN 'pending'
+        ELSE 'paid'
+    END,
+    round((1000 + (g * 19 % 45000))::numeric, 2),
+    TIMESTAMPTZ '2024-01-01 00:00:00+00' + (g || ' minutes')::interval
+FROM generate_series(1, 100000) AS g;
+
+-- Обновляем статистику для планировщика, чтобы его прогнозы были точными
+ANALYZE plan_customers, plan_products, plan_orders;</code></pre>
+      </div>
+
+      <p>
+        Отлично, полигон готов! Представь боевую проблему: менеджер жалуется, что страница «История заказов клиента №42» открывается медленно и нагружает диск. Давай сделаем первый рентген этого запроса с помощью <code>EXPLAIN (ANALYZE, BUFFERS)</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 1: первый EXPLAIN (ANALYZE, BUFFERS) без индекса</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Запускаем запрос с замером времени и подсчётом прочитанных страниц (8 КБ)
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, status, amount, created_at
+FROM plan_orders
+WHERE customer_id = 42;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>                                                 QUERY PLAN
+-------------------------------------------------------------------------------------------------------------
+ Seq Scan on plan_orders  (cost=0.00..2185.00 rows=100 width=25) (actual time=0.048..14.620 rows=100 loops=1)
+   Filter: (customer_id = 42)
+   Rows Removed by Filter: 99900
+   Buffers: shared hit=310 read=625
+ Planning Time: 0.145 ms
+ Execution Time: 14.682 ms
+(6 rows)</pre>
+      </div>
+
+      <p>
+        На первый взгляд вывод похож на шифровку с космической станции. На самом деле тут всего 6 понятных показателей — давай переведём их на человеческий язык:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Что написано в плане</th>
+              <th>Как перевести на простой язык</th>
+              <th>На что смотреть инженеру</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>cost=0.00..2185.00</code></td>
+              <td>Прогноз стоимости в условных «попугаях»: <strong>0.00</strong> — сколько работы нужно до выдачи <em>первой</em> строки, <strong>2185.00</strong> — до выдачи <em>всех</em> строк.</td>
+              <td>Это не миллисекунды! За единицу (<code>1.0</code>) принято чтение одной 8 КБ страницы с диска подряд. Чем меньше вторая цифра, тем дешевле маршрут.</td>
+            </tr>
+            <tr>
+              <td><code>rows=100</code> (слева) и <code>rows=100</code> (справа)</td>
+              <td>Слева — сколько строк планировщик <em>ожидал</em> найти. Справа — сколько нашлось <em>на самом деле</em>.</td>
+              <td>Если прогноз <code>rows=1</code>, а в реальности <code>rows=50000</code> — планировщик слепой и почти наверняка выбрал плохой план!</td>
+            </tr>
+            <tr>
+              <td><code>width=25</code></td>
+              <td>Средний «вес» одной возвращаемой строки в байтах.</td>
+              <td>Если делаешь <code>SELECT *</code> с огромными текстами, <code>width</code> растёт, и сортировки перестают влезать в память.</td>
+            </tr>
+            <tr>
+              <td><code>actual time=0.048..14.620</code></td>
+              <td>Реальное время в <strong>миллисекундах</strong>: первая строка нашлась через 0.048 мс, последняя — через 14.620 мс.</td>
+              <td>Указывается время <strong>одной</strong> итерации узла. Чтобы узнать полное время, умножай на <code>loops</code>!</td>
+            </tr>
+            <tr>
+              <td><code>Rows Removed by Filter: 99900</code></td>
+              <td>Сколько лишних строк PostgreSQL прочитал, проверил и выкинул в мусорку.</td>
+              <td>Огромное число здесь — главный крик базы: «Мне нужен индекс!» Мы прочитали 100 000 строк ради 100 нужных.</td>
+            </tr>
+            <tr>
+              <td><code>Buffers: shared hit=310 read=625</code></td>
+              <td>Прямой привет из Урока 3.1! <strong>hit</strong> — страниц по 8 КБ найдено мгновенно в оперативной памяти (<code>Shared Buffers</code>); <strong>read</strong> — пришлось сходить на медленный диск.</td>
+              <td>Всего прочитано <code>310 + 625 = 935</code> страниц (≈ 7.5 МБ данных) ради пары килобайт ответа. Это главная метрика реальной нагрузки!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет на будущее:</strong> Возьми в привычку всегда писать <code>EXPLAIN (ANALYZE, BUFFERS)</code> вместо голого <code>EXPLAIN ANALYZE</code>. Время в миллисекундах скачет (фоном обновился браузер — и запрос замедлился вдвое), а количество прочитанных страниц <code>Buffers</code> всегда честно показывает объём проделанной работы.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 03 ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Четыре способа чтения таблицы: Scan-узлы на практике</h2>
+      <p>
+        Представь, что тебе нужно найти в толстом учебнике истории все упоминания слова «Наполеон». У тебя есть четыре совершенно разные стратегии — и ровно те же четыре стратегии есть у PostgreSQL:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Узел в плане</th>
+              <th>Жизненная аналогия с учебником</th>
+              <th>Когда PostgreSQL его выбирает</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Seq Scan</code><br /><span style="color: var(--muted); font-size: 0.84rem;">Последовательное чтение</span></td>
+              <td>Листаешь книгу с 1-й страницы до последней подряд.</td>
+              <td>Нет подходящего индекса, таблица крошечная, или нужно забрать большую часть строк (обычно &gt;15–20% таблицы).</td>
+            </tr>
+            <tr>
+              <td><code>Index Scan</code><br /><span style="color: var(--muted); font-size: 0.84rem;">Чтение по индексу</span></td>
+              <td>Открываешь предметный указатель в конце, видишь номер страницы и прыгаешь туда (в Heap) за полным текстом.</td>
+              <td>Нужно найти мало строк (единицы или десятки), и на колонке есть подходящий B-Tree индекс.</td>
+            </tr>
+            <tr>
+              <td><code>Bitmap Index Scan</code> +<br /><code>Bitmap Heap Scan</code></td>
+              <td>Сначала выписываешь на черновик номера всех нужных страниц из указателя, сортируешь их по возрастанию и спокойно проходишь книгу один раз.</td>
+              <td>Найдено «среднее» количество строк (сотни или тысячи): прыгать по одной строке вразнобой дорого, а читать всю книгу — ещё дороже.</td>
+            </tr>
+            <tr>
+              <td><code>Index Only Scan</code><br /><span style="color: var(--muted); font-size: 0.84rem;">Чтение только из индекса</span></td>
+              <td>Ответ на вопрос уже написан прямо в оглавлении! На страницы самой книги (Heap) даже не ходим.</td>
+              <td>Все колонки из <code>SELECT</code> и <code>WHERE</code> уже лежат внутри индекса, и карта видимости (Visibility Map) актуальна.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Лечим медленный запрос из Раздела 02</h3>
+      <p>
+        В прошлом примере поиск заказов клиента №42 прочитал <strong>935 страниц</strong> (100 000 строк) и потратил <strong>14.68 мс</strong>. Давай создадим B-Tree индекс по <code>customer_id</code> и снова посмотрим план!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 2: создаём индекс и смотрим Bitmap Heap Scan</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Создаём B-Tree индекс на колонку customer_id
+CREATE INDEX idx_plan_orders_customer_id
+    ON plan_orders (customer_id);
+
+-- Повторяем тот же самый запрос
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, status, amount, created_at
+FROM plan_orders
+WHERE customer_id = 42;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>                                                                QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on plan_orders  (cost=5.06..312.40 rows=100 width=25) (actual time=0.061..0.245 rows=100 loops=1)
+   Recheck Cond: (customer_id = 42)
+   Heap Blocks: exact=100
+   Buffers: shared hit=103
+   -&gt;  Bitmap Index Scan on idx_plan_orders_customer_id  (cost=0.00..5.04 rows=100 width=0) (actual time=0.032..0.032 rows=100 loops=1)
+         Index Cond: (customer_id = 42)
+         Buffers: shared hit=3
+ Planning Time: 0.190 ms
+ Execution Time: 0.278 ms
+(9 rows)</pre>
+      </div>
+
+      <p>
+        Смотри, что случилось! Поскольку заказы клиента №42 разбросаны по 100 разным страницам (<code>Heap Blocks: exact=100</code>), PostgreSQL выбрал умную связку <code>Bitmap Index Scan</code> + <code>Bitmap Heap Scan</code>: за 3 страницы в индексе он собрал адреса нужных блоков, упорядочил их и забрал строки. Время упало в <strong>52 раза</strong> — с 14.68 мс до 0.278 мс, а чтение страниц сократилось с 935 до 103!
+      </p>
+
+      <h3>Уровень «магия»: выходим на Index Only Scan</h3>
+      <p>
+        А можно ещё быстрее? Допустим, на главной странице кабинета нам нужна только сумма всех заказов клиента №42. Если мы «подложим» колонку <code>amount</code> прямо в листья B-Tree индекса через <code>INCLUDE</code> (покрывающий индекс), PostgreSQL вообще не придётся заходить в таблицу (Heap)!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 3: покрывающий индекс и Index Only Scan</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Создаём покрывающий индекс: ищем по customer_id, а amount храним рядом
+CREATE INDEX idx_plan_orders_customer_inc_amount
+    ON plan_orders (customer_id) INCLUDE (amount);
+
+-- Обновляем карту видимости (Visibility Map), чтобы не проверять Heap
+VACUUM ANALYZE plan_orders;
+
+-- Считаем сумму заказов клиента №42
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT sum(amount)
+FROM plan_orders
+WHERE customer_id = 42;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>                                                                         QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=6.78..6.79 rows=1 width=32) (actual time=0.049..0.050 rows=1 loops=1)
+   Buffers: shared hit=4
+   -&gt;  Index Only Scan using idx_plan_orders_customer_inc_amount on plan_orders  (cost=0.29..6.53 rows=100 width=6) (actual time=0.018..0.036 rows=100 loops=1)
+         Index Cond: (customer_id = 42)
+         Heap Fetches: 0
+         Buffers: shared hit=4
+ Planning Time: 0.112 ms
+ Execution Time: 0.068 ms
+(8 rows)</pre>
+      </div>
+
+      <p>
+        Обрати внимание на две строчки: <strong><code>Heap Fetches: 0</code></strong> и <strong><code>Buffers: shared hit=4</code></strong>! Проблема из начала раздела решена подчистую: вместо чтения 935 страниц (7.5 МБ) и 14.68 мс база прочитала всего <strong>4 страницы</strong> из памяти за <strong>0.068 мс</strong> — ускорение более чем в <strong>215 раз</strong>!
+      </p>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 04 ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> Как читать дерево плана и разбираться в JOIN-ах</h2>
+      <p>
+        Когда в запросе соединяются 2–3 таблицы, добавляются фильтры, сортировка и <code>LIMIT</code>, план превращается в многоуровневое дерево со стрелками <code>-&gt;</code>. Новички часто пытаются читать его сверху вниз и сразу путаются.
+      </p>
+      <p>
+        Представь кухню бургерной: сначала на нижних станциях жарят котлету и режут салат, потом передают их сборщику бургера, а на самом верху кассир кладёт готовый заказ в пакет и отдаёт тебе. План PostgreSQL работает точно так же! <strong>Главное правило чтения: всегда начинай с самых глубоких узлов (с наибольшим отступом вправо) и поднимайся вверх к корню.</strong>
+      </p>
+
+      <h3>Три способа соединять таблицы (JOIN)</h3>
+      <ul>
+        <li><strong><code>Nested Loop</code> (Вложенный цикл)</strong> — как школьник, который для каждого из 5 друзей в тетради открывает телефонную книгу и ищет его номер. Работает молниеносно, когда с одной стороны мало строк, а на второй таблице есть индекс.</li>
+        <li><strong><code>Hash Join</code> (Хеш-соединение)</strong> — берёшь меньшую таблицу, раскладываешь её строки по пронумерованным «ящикам» в оперативной памяти (узел <code>Hash</code>), а потом за один быстрый проход по большой таблице заглядываешь в нужный ящик. Идеален для соединения больших объёмов данных без индексов.</li>
+        <li><strong><code>Merge Join</code> (Соединение слиянием)</strong> — когда оба списка уже отсортированы по алфавиту, ты ведёшь двумя пальцами сверху вниз и собираешь совпадения за один проход.</li>
+      </ul>
+
+      <p>
+        Перед тем как смотреть сложный запрос по всем трём таблицам (<code>plan_orders</code>, <code>plan_customers</code> и <code>plan_products</code>), взгляни на схему того, как данные потекут снизу вверх:
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart BT
+            C["1. Seq Scan: plan_customers (город = Костанай)"] --> H1["2. Hash: строим таблицу в памяти"]
+            O["1. Seq Scan: plan_orders (сумма &gt; 40000)"] --> J1["3. Hash Join: заказы клиентов из Костаная"]
+            H1 --> J1
+            P["1. Seq Scan: plan_products (категория = electronics)"] --> H2["2. Hash: товары в памяти"]
+            J1 --> J2["4. Hash Join: подклеиваем названия товаров"]
+            H2 --> J2
+            J2 --> S["5. Sort: топ по сумме DESC (top-N heapsort)"]
+            S --> L["6. Limit: отдаём 5 самых дорогих заказов"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Движение данных в дереве плана: снизу вверх, от чтения таблиц к финальному Limit.</figcaption>
+      </figure>
+
+      <p>
+        Теперь решим реальную аналитическую задачу: найти <strong>5 самых дорогих заказов</strong> электроники от клиентов из Костаная, где сумма заказа больше 40 000. Запустим запрос и посмотрим реальный план!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 4: план соединения трёх таблиц с сортировкой и LIMIT</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Соединяем 3 таблицы: заказы + клиенты + товары
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT
+    o.id AS order_id,
+    c.full_name,
+    p.title,
+    o.amount
+FROM plan_orders o
+JOIN plan_customers c ON c.id = o.customer_id
+JOIN plan_products  p ON p.id = o.product_id
+WHERE c.city = 'Костанай'
+  AND p.category = 'electronics'
+  AND o.amount &gt; 40000
+ORDER BY o.amount DESC
+LIMIT 5;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>                                                                   QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=2238.12..2238.13 rows=5 width=46) (actual time=15.420..15.423 rows=5 loops=1)
+   Buffers: shared hit=948
+   -&gt;  Sort  (cost=2238.12..2239.70 rows=630 width=46) (actual time=15.418..15.419 rows=5 loops=1)
+         Sort Key: o.amount DESC
+         Sort Method: top-N heapsort  Memory: 25kB
+         Buffers: shared hit=948
+         -&gt;  Hash Join  (cost=27.51..2227.67 rows=630 width=46) (actual time=0.295..15.180 rows=620 loops=1)
+               Hash Cond: (o.product_id = p.id)
+               Buffers: shared hit=948
+               -&gt;  Hash Join  (cost=22.50..2211.42 rows=2520 width=25) (actual time=0.190..14.610 rows=2480 loops=1)
+                     Hash Cond: (o.customer_id = c.id)
+                     Buffers: shared hit=946
+                     -&gt;  Seq Scan on plan_orders o  (cost=0.00..2185.00 rows=12600 width=21) (actual time=0.015..12.840 rows=12445 loops=1)
+                           Filter: (amount &gt; '40000'::numeric)
+                           Rows Removed by Filter: 87555
+                           Buffers: shared hit=935
+                     -&gt;  Hash  (cost=20.00..20.00 rows=200 width=18) (actual time=0.165..0.165 rows=200 loops=1)
+                           Buckets: 1024  Batches: 1  Memory Usage: 18kB
+                           Buffers: shared hit=11
+                           -&gt;  Seq Scan on plan_customers c  (cost=0.00..20.00 rows=200 width=18) (actual time=0.014..0.120 rows=200 loops=1)
+                                 Filter: (city = 'Костанай'::text)
+                                 Rows Removed by Filter: 800
+                                 Buffers: shared hit=11
+               -&gt;  Hash  (cost=4.38..4.38 rows=50 width=25) (actual time=0.088..0.088 rows=50 loops=1)
+                     Buckets: 1024  Batches: 1  Memory Usage: 11kB
+                     Buffers: shared hit=2
+                     -&gt;  Seq Scan on plan_products p  (cost=0.00..4.38 rows=50 width=25) (actual time=0.011..0.069 rows=50 loops=1)
+                           Filter: (category = 'electronics'::text)
+                           Rows Removed by Filter: 150
+                           Buffers: shared hit=2
+ Planning Time: 0.415 ms
+ Execution Time: 15.490 ms
+(32 rows)</pre>
+      </div>
+
+      <p>
+        Посмотри, как легко теперь читается этот «страшный» план из 32 строк, когда мы идём снизу вверх:
+      </p>
+      <ol>
+        <li>Из 15.49 мс общего времени почти всё (<strong>12.84 мс</strong> и <strong>935 из 948 страниц</strong>!) съел один узел — <code>Seq Scan on plan_orders</code>, который отбрасывал 87 555 заказов с суммой <code>&lt;= 40000</code>.</li>
+        <li>Маленькие таблицы клиентов (200 строк) и товаров (50 строк) PostgreSQL мгновенно сложил в память (<code>Hash</code>, всего 18 КБ и 11 КБ) и прогнал через два <code>Hash Join</code>.</li>
+        <li>Наверху сработала крутая оптимизация <code>Sort Method: top-N heapsort Memory: 25kB</code> — PostgreSQL не стал сортировать все 620 строк, а просто держал в памяти пятёрку лидеров!</li>
+      </ol>
+
+      <p>
+        Значит, узкое место найдено точно: нам не хватает индекса по <code>plan_orders(amount DESC)</code>, чтобы сразу брать дорогие заказы с конца и остановиться, как только наберётся 5 штук! Посмотрим, что будет в таблице «Было → Стало», если добавить этот индекс:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Метрика</th>
+              <th>Было (без индекса по amount)</th>
+              <th>Стало (с индексом по amount DESC)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Чтение <code>plan_orders</code></td>
+              <td><code>Seq Scan</code> (100 000 строк)</td>
+              <td><code>Index Scan Backward</code> (читает только ~100 самых дорогих заказов до заполнения <code>LIMIT 5</code>!)</td>
+            </tr>
+            <tr>
+              <td>Прочитано страниц (<code>Buffers</code>)</td>
+              <td>948 страниц (≈ 7.6 МБ)</td>
+              <td>~110 страниц (в 8.5 раз меньше!)</td>
+            </tr>
+            <tr>
+              <td>Время выполнения</td>
+              <td>15.49 мс</td>
+              <td>~0.65 мс (ускорение в 23 раза!)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Проверяем ускорение 3-табличного запроса на практике</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Добавляем индекс по сумме заказа, чтобы LIMIT 5 останавливал поиск почти сразу
+CREATE INDEX idx_plan_orders_amount ON plan_orders (amount);
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT o.id, c.full_name, p.title, o.amount
+FROM plan_orders o
+JOIN plan_customers c ON c.id = o.customer_id
+JOIN plan_products  p ON p.id = o.product_id
+WHERE c.city = 'Костанай'
+  AND p.category = 'electronics'
+  AND o.amount &gt; 40000
+ORDER BY o.amount DESC
+LIMIT 5;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>                                                                         QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.86..58.42 rows=5 width=46) (actual time=0.145..0.580 rows=5 loops=1)
+   Buffers: shared hit=112
+   -&gt;  Nested Loop  (cost=0.86..7260.40 rows=630 width=46) (actual time=0.144..0.576 rows=5 loops=1)
+         Buffers: shared hit=112
+         -&gt;  Nested Loop  (cost=0.58..6184.20 rows=2520 width=25) (actual time=0.112..0.460 rows=21 loops=1)
+               Buffers: shared hit=89
+               -&gt;  Index Scan Backward using idx_plan_orders_amount on plan_orders o  (cost=0.29..2980.10 rows=12600 width=21) (actual time=0.025..0.165 rows=98 loops=1)
+                     Index Cond: (amount &gt; '40000'::numeric)
+                     Buffers: shared hit=42
+               -&gt;  Index Scan using plan_customers_pkey on plan_customers c  (cost=0.28..0.29 rows=1 width=18) (actual time=0.002..0.002 rows=0 loops=98)
+                     Index Cond: (id = o.customer_id)
+                     Filter: (city = 'Костанай'::text)
+                     Rows Removed by Filter: 1
+                     Buffers: shared hit=47
+         -&gt;  Index Scan using plan_products_pkey on plan_products p  (cost=0.28..0.42 rows=1 width=25) (actual time=0.005..0.005 rows=0 loops=21)
+               Index Cond: (id = o.product_id)
+               Filter: (category = 'electronics'::text)
+               Rows Removed by Filter: 1
+               Buffers: shared hit=23
+ Planning Time: 0.440 ms
+ Execution Time: 0.642 ms
+(21 rows)</pre>
+      </div>
+
+      <p>
+        Обрати внимание на красоту: планировщик сам переключился с <code>Hash Join</code> + <code>Sort</code> на <code>Nested Loop</code> + <code>Index Scan Backward</code>! Он прочитал всего 98 самых дорогих заказов (вместо 100 000!), проверил их клиентов (<code>loops=98</code>), из них 21 оказались из Костаная, проверил их товары (<code>loops=21</code>) — и как только набралось 5 заказов электроники, <code>Limit</code> остановил весь конвейер. Время упало с 15.49 мс до <strong>0.642 мс</strong>!
+      </p>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 05 ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Опасные ловушки EXPLAIN и разбор реальных ошибок</h2>
+      <p>
+        <code>EXPLAIN ANALYZE</code> — мощнейший скальпель, но если держать его неправильно, можно больно порезаться. Разберём три главные ловушки, на которых спотыкаются даже опытные разработчики.
+      </p>
+
+      <h3>Ловушка №1: EXPLAIN ANALYZE реально изменяет данные!</h3>
+      <p>
+        Помнишь аналогию с машиной? <code>EXPLAIN ANALYZE</code> <strong>действительно запускает запрос</strong>. Если ты напишешь <code>EXPLAIN ANALYZE DELETE FROM plan_orders;</code> — таблица станет пустой! Чтобы проверить план для <code>INSERT</code>, <code>UPDATE</code> или <code>DELETE</code> и ничего не сломать, всегда оборачивай его в транзакцию с откатом <code>ROLLBACK</code>.
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">EXPLAIN ANALYZE
+DELETE FROM plan_orders
+WHERE status = 'cancelled';</code></pre>
+            </div>
+            <p>Запрос покажет красивый план… и <strong>навсегда удалит 5 000 заказов</strong> из базы!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">BEGIN;
+EXPLAIN (ANALYZE, BUFFERS)
+DELETE FROM plan_orders
+WHERE status = 'cancelled';
+ROLLBACK;</code></pre>
+            </div>
+            <p>Запрос выполнится, замерит время, а команда <code>ROLLBACK</code> мгновенно вернёт все строки назад.</p>
+          </div>
+        </div>
+      </div>
+
+      <p>
+        Убедимся на практике, что <code>EXPLAIN ANALYZE</code> реально пытается менять данные — попробуем «просто посмотреть план» удаления клиента №1 (на которого ссылаются заказы через внешний ключ) и заодно посмотрим частую ошибку с опцией <code>TIMING</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 5: реальные ошибки при работе с EXPLAIN</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Ошибка А: просим замерить реальное время (TIMING), но забыли включить ANALYZE
+EXPLAIN (TIMING true)
+SELECT * FROM plan_customers WHERE id = 1;
+
+-- Ошибка Б: доказательство, что EXPLAIN ANALYZE реально пытается удалить строку!
+BEGIN;
+EXPLAIN ANALYZE
+DELETE FROM plan_customers WHERE id = 1;
+ROLLBACK;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL (запрос А)</div>
+        <pre>ERROR:  EXPLAIN option TIMING requires ANALYZE</pre>
+      </div>
+
+      <div class="error-block standalone">
+        <div class="output-label">Ошибка PostgreSQL (запрос Б)</div>
+        <pre>ERROR:  update or delete on table "plan_customers" violates foreign key constraint "plan_orders_customer_id_fkey" on table "plan_orders"
+DETAIL:  Key (id)=(1) is still referenced from table "plan_orders".</pre>
+      </div>
+
+      <p>
+        В первом случае PostgreSQL честно отвечает: нельзя замерить реальное время (<code>TIMING</code>), если не включён <code>ANALYZE</code> (запрос ведь не запускается). Во втором случае сработало ограничение внешнего ключа — лучшее доказательство, что <code>EXPLAIN ANALYZE</code> по-настоящему удаляет данные, если его не остановить!
+      </p>
+
+      <h3>Ловушка №2: «слепой» индекс из-за функции в WHERE</h3>
+      <p>
+        В Уроке 3.2 ты уже узнал, что обёртка колонки в функцию ломает обычный B-Tree индекс. Давай посмотрим, как это выглядит прямо в <code>EXPLAIN (ANALYZE, BUFFERS)</code> на примере поиска заказов за январь 2024 года!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 6: сравниваем план с функцией и с диапазоном дат</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Создаём индекс по дате создания заказа
+CREATE INDEX idx_plan_orders_created_at ON plan_orders (created_at);
+
+-- Вариант 1 (ловушка): прячем колонку внутрь функции date_trunc
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM plan_orders
+WHERE date_trunc('month', created_at AT TIME ZONE 'UTC') = TIMESTAMP '2024-01-01';
+
+-- Вариант 2 (правильный): оставляем колонку чистой и задаём диапазон
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM plan_orders
+WHERE created_at &gt;= TIMESTAMPTZ '2024-01-01 00:00:00+00'
+  AND created_at &lt;  TIMESTAMPTZ '2024-02-01 00:00:00+00';</code></pre>
+      </div>
+
+      <div class="compare-grid stacked">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо: функция вокруг колонки</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">Aggregate  (actual time=36.410..36.411 rows=1 loops=1)
+  -&gt; Seq Scan on plan_orders  (cost=0.00..2685.00 rows=500 width=0) (actual time=0.032..34.810 rows=44639 loops=1)
+       Filter: (date_trunc('month', timezone('UTC', created_at)) = '2024-01-01 00:00:00')
+       Rows Removed by Filter: 55361
+       Buffers: shared hit=935</code></pre>
+            </div>
+            <p>Обрати внимание на <strong>две катастрофы сразу</strong>: индекс полностью проигнорирован (<code>Seq Scan</code>, 935 страниц), а прогноз ошибся в <strong>89 раз</strong> (планировщик ждал <code>rows=500</code>, а реально нашлось <code>44639</code> строк)!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно: чистая колонка и диапазон дат</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">Aggregate  (actual time=6.120..6.121 rows=1 loops=1)
+  -&gt; Index Only Scan using idx_plan_orders_created_at on plan_orders
+       (cost=0.29..1124.50 rows=44600 width=0) (actual time=0.035..4.210 rows=44639 loops=1)
+       Index Cond: ((created_at &gt;= '2024-01-01 00:00:00+00') AND (created_at &lt; '2024-02-01 00:00:00+00'))
+       Heap Fetches: 0
+       Buffers: shared hit=124</code></pre>
+            </div>
+            <p>Сработал <code>Index Only Scan</code>, прогноз точен почти до строки (<code>44600</code> vs <code>44639</code>), прочитано в <strong>7.5 раз меньше страниц</strong> (124 вместо 935), а время упало с 36.4 мс до 6.1 мс!</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Частая ошибка (ловушка «холодного кеша»):</strong> Если ты запускаешь запрос в первый раз, он идёт на диск (<code>shared read</code>) и работает 50 мс. После создания индекса ты запускаешь его второй раз, и данные уже лежат в памяти (<code>shared hit</code>) — выходит 2 мс. Всегда прогоняй <code>EXPLAIN (ANALYZE, BUFFERS)</code> <strong>дважды</strong> до и после оптимизации, и сравнивай в первую очередь суммарное число страниц (<code>hit + read</code>), а не только миллисекунды!
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== РАЗДЕЛ 06 ==================== -->
+    <section>
+      <h2><span class="sec-num">06</span> Шпаргалка детектива и мини-практикум</h2>
+      <p>
+        Перед тем как решать задачи, сохрани короткий чек-лист «красных флагов». Если видишь любой из этих 5 пунктов в выводе <code>EXPLAIN (ANALYZE, BUFFERS)</code> — ты нашёл виновника тормозов:
+      </p>
+
+      <div class="focus-box" style="margin-bottom: 1.75rem;">
+        <div class="focus-title">Шпаргалка перед практикой: 5 красных флагов в плане</div>
+        <ul>
+          <li><strong><code>Seq Scan</code> + огромный <code>Rows Removed by Filter</code></strong> — база прочитала полтаблицы и выкинула 99% строк. Нужен индекс (или ты спрятал колонку в функцию).</li>
+          <li><strong>Прогноз <code>rows</code> отличается от <code>actual rows</code> в 10+ раз</strong> — статистика устарела (запусти <code>ANALYZE имя_таблицы;</code>) или условие слишком хитрое для планировщика.</li>
+          <li><strong>Огромные <code>Buffers (shared hit + read)</code></strong> — запрос перелопачивает десятки мегабайт ради маленького ответа.</li>
+          <li><strong><code>Sort Method: external merge Disk</code></strong> — сортировка не влезла в оперативную память (<code>work_mem</code>) и свалилась на медленный диск!</li>
+          <li><strong>Большой <code>loops</code> внутри <code>Nested Loop</code></strong> — если внутренний узел выполняется <code>loops=50000</code>, даже 0.1 мс на шаг превратятся в 5 секунд ожидания.</li>
+        </ul>
+      </div>
+
+      <p>
+        Теперь твоя очередь! Все 4 задания ниже автономны и работают на таблицах <code>plan_customers</code>, <code>plan_products</code> и <code>plan_orders</code> из Раздела 02 (убедись, что выполнил скрипт подготовки данных). Попробуй решить каждое самостоятельно, прежде чем открывать ответ.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый уровень). Диагноз для фильтра по статусу</div>
+        <p style="margin-bottom: 0;">
+          Выполни <code>EXPLAIN (ANALYZE, BUFFERS)</code> для запроса, который ищет все заказы из <code>plan_orders</code> со статусом <code>'cancelled'</code> и суммой <code>amount &gt; 44000</code>. Определи по плану: какой тип сканирования выбрал PostgreSQL, сколько лишних строк было отброшено фильтром (<code>Rows Removed by Filter</code>) и сколько всего страниц по 8 КБ прочитал запрос?
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Запускаем рентген запроса
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, customer_id, amount
+FROM plan_orders
+WHERE status = 'cancelled'
+  AND amount &gt; 44000;
+
+-- Что ты увидишь в плане:
+-- 1. Если индекса по amount ещё нет — будет Seq Scan (прочитано ~935 страниц,
+--    отброшено &gt;99 000 строк).
+-- 2. Если индекс по amount уже создан — будет Bitmap Heap Scan / Index Scan
+--    по amount &gt; 44000 с дополнительным Filter: (status = 'cancelled').</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Средний уровень). Почини «сломанный» поиск по email</div>
+        <p style="margin-bottom: 0;">
+          Коллега создал обычный индекс <code>CREATE INDEX idx_task2_email ON plan_customers (email);</code>, но запрос <code>SELECT * FROM plan_customers WHERE lower(email) = 'user42@shop.example';</code> всё равно делает <code>Seq Scan</code>. Создай функциональный индекс по <code>lower(email)</code> (или перепиши запрос без функции, если email уже в нижнем регистре) и докажи через <code>EXPLAIN (ANALYZE, BUFFERS)</code>, что появился <code>Index Scan</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Автономная подготовка: удаляем старый индекс, если запускали раньше
+DROP INDEX IF EXISTS idx_task2_email_lower;
+
+-- Создаём функциональный индекс точно под выражение в WHERE
+CREATE INDEX idx_task2_email_lower
+    ON plan_customers (lower(email));
+
+ANALYZE plan_customers;
+
+-- Проверяем план: теперь должен быть Index Scan по idx_task2_email_lower
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, full_name, email
+FROM plan_customers
+WHERE lower(email) = 'user42@shop.example';</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Продвинутый уровень). Добейся Index Only Scan с нулевым чтением Heap</div>
+        <p style="margin-bottom: 0;">
+          Для отчёта часто запускается запрос: найти <code>count(*)</code> и <code>avg(amount)</code> по всем заказам товара <code>product_id = 15</code>. Создай такой покрывающий индекс, чтобы <code>EXPLAIN (ANALYZE, BUFFERS)</code> показал <strong><code>Index Only Scan</code></strong> и ровно <strong><code>Heap Fetches: 0</code></strong>. Не забудь команду, которая обновляет карту видимости!
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Автономная очистка перед созданием
+DROP INDEX IF EXISTS idx_task3_product_inc_amount;
+
+-- Покрывающий индекс: поиск по product_id, значение amount внутри листа
+CREATE INDEX idx_task3_product_inc_amount
+    ON plan_orders (product_id) INCLUDE (amount);
+
+-- ВАЖНО: обновляем Visibility Map, иначе Heap Fetches будет больше 0
+VACUUM ANALYZE plan_orders;
+
+-- Проверяем: в плане Index Only Scan и Heap Fetches: 0
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*), round(avg(amount), 2)
+FROM plan_orders
+WHERE product_id = 15;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Боевой сценарий). Безопасный профиль массового UPDATE</div>
+        <p style="margin-bottom: 0;">
+          Тебе нужно проверить, сколько времени и страниц займёт повышение цены (<code>price = price * 1.10</code>) для всех товаров категории <code>'electronics'</code> в таблице <code>plan_products</code>. Выполни <code>EXPLAIN (ANALYZE, BUFFERS)</code> так, чтобы реальные цены в базе <strong>не изменились</strong>, и после отката проверь сумму цен товаров этой категории.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- 1. Запоминаем исходную сумму цен электроники
+SELECT sum(price) AS price_before
+FROM plan_products
+WHERE category = 'electronics';
+
+-- 2. Безопасно профилируем UPDATE внутри транзакции с откатом
+BEGIN;
+
+EXPLAIN (ANALYZE, BUFFERS)
+UPDATE plan_products
+SET price = round(price * 1.10, 2)
+WHERE category = 'electronics';
+
+ROLLBACK;
+
+-- 3. Убеждаемся, что сумма цен осталась прежней
+SELECT sum(price) AS price_after
+FROM plan_products
+WHERE category = 'electronics';</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_3/practice.html#sec-3-3"><strong>Практикум по Уроку 3.3 →</strong></a> — там 11 пошаговых заданий с ответами на чтение <code>EXPLAIN (ANALYZE, BUFFERS)</code>, <code>Bitmap Scan</code>, <code>Index Only Scan</code>, 3-табличные <code>JOIN</code>, <code>work_mem</code> и безопасное профилирование <code>UPDATE</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока</span>
+      Теперь <code>EXPLAIN (ANALYZE, BUFFERS)</code> для тебя не «стена непонятного текста», а рентген базы данных: ты умеешь читать дерево плана снизу вверх, отличать дорогой <code>Seq Scan</code> от быстрого <code>Index Only Scan</code>, видеть реальное количество 8-килобайтных страниц (<code>shared hit / read</code>) и безопасно проверять запросы на изменение данных через <code>BEGIN ... ROLLBACK</code>.
+      <br /><br />
+      Но присмотрись к Заданию 4: когда <code>UPDATE</code> меняет строки, PostgreSQL сначала правит страницы в оперативной памяти (<code>Shared Buffers</code>), и в выводе <code>BUFFERS</code> появляется пометка <code>dirtied</code> («грязная страница»). А что произойдёт, если прямо в эту миллисекунду на сервере вырубят электричество и вся оперативная память сотрётся? В следующем уроке — <strong>Урок 3.4: Журнал предзаписи (WAL) и восстановление после сбоев (Crash Recovery)</strong> — мы узнаем, какой «чёрный ящик» спасает твои данные от любых аварий!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_3_2.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">3.2 · Индексы: устройство B-Tree, составные индексы, ло…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_3_4.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">3.4 · Журнал предзаписи (WAL) и восстановление после сб…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

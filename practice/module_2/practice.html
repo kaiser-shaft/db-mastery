@@ -1,0 +1,3286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Практикум · Модуль 2: Проектирование схем и продвинутый SQL</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --accent-border: #bfdbfe;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --purple-bg: #f5f3ff;
+      --purple-border: #ddd6fe;
+      --purple-text: #6d28d9;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      padding: 2.25rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .lecture {
+      max-width: 880px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.75rem 3.25rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== НАВИГАЦИЯ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    /* ==================== ШАПКА ==================== */
+    .lecture-header {
+      padding-bottom: 1.85rem;
+      margin-bottom: 2.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary { background: var(--accent-soft); color: var(--accent); }
+    .pill-tip { background: var(--tip-bg); color: var(--tip-text); }
+    .pill-neutral { background: #f1f5f9; color: var(--muted); }
+
+    h1 {
+      margin: 0 0 0.75rem;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    .hero-sub {
+      margin: 0 0 1.4rem;
+      color: var(--muted);
+      font-size: 0.97rem;
+    }
+
+    /* Прогресс-бар и фильтры */
+    .practice-toolbar {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem 1.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .progress-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.88rem;
+    }
+
+    .progress-label {
+      font-weight: 600;
+      color: var(--text-body);
+    }
+
+    .progress-label strong {
+      font-family: "JetBrains Mono", monospace;
+      color: var(--tip-border);
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #16a34a);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+    }
+
+    .filter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .filter-btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-body);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.3rem 0.7rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .reset-btn {
+      appearance: none;
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.76rem;
+      font-weight: 500;
+      padding: 0.26rem 0.62rem;
+      border-radius: 7px;
+      cursor: pointer;
+      display: none;
+    }
+
+    .reset-btn.visible { display: inline-block; }
+    .reset-btn:hover { border-color: var(--err-border); color: var(--err-border); }
+
+    /* Оглавление */
+    .toc-box {
+      margin-top: 1.15rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li { border-bottom: 1px solid #f1f5f9; }
+    .toc-list li:last-child { border-bottom: none; }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.36rem 0.5rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover { background: var(--surface-soft); color: var(--accent); }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.85rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 2.75rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type { margin-top: 0; }
+    section.hidden { display: none; }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.38rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 1.75rem 0 0.75rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p { margin: 0 0 1rem; }
+    ul, ol { margin: 0 0 1.2rem; padding-left: 1.4rem; }
+    li { margin-bottom: 0.45rem; }
+
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.14em 0.4em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* ==================== БЛОКИ КОДА ==================== */
+    .code-block {
+      margin: 1rem 0 1.25rem;
+      border-radius: 11px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.45rem 0.95rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.74rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.74rem;
+      font-weight: 500;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover { background: #21262d; border-color: #8b949e; color: #ffffff; }
+    .copy-btn.copied { border-color: #238636; color: #3fb950; }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1rem 1.2rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.86rem;
+      line-height: 1.58;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    /* ==================== ВЫНОСКИ И ТАБЛИЦЫ ==================== */
+    .callout {
+      display: flex;
+      gap: 0.85rem;
+      margin: 1.25rem 0;
+      padding: 1rem 1.2rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.94rem;
+      line-height: 1.6;
+    }
+
+    .callout-icon { flex-shrink: 0; width: 20px; height: 20px; margin-top: 0.18rem; color: var(--accent); }
+    .callout-body strong { color: #1e40af; }
+
+    .callout.warn { background: var(--warn-bg); border-left-color: var(--warn-border); }
+    .callout.warn .callout-icon { color: var(--warn-border); }
+    .callout.warn .callout-body strong { color: var(--warn-text); }
+
+    .callout.tip { background: var(--tip-bg); border-left-color: var(--tip-border); }
+    .callout.tip .callout-icon { color: var(--tip-border); }
+    .callout.tip .callout-body strong { color: var(--tip-text); }
+
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1rem 0 1.4rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.72rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-soft);
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    /* ==================== ER-ДИАГРАММА И ПРЕДПРОСМОТР ДАННЫХ ==================== */
+    .schema-box {
+      margin: 1rem 0 1.25rem;
+      padding: 1.15rem 1.15rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .er-scroll {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .er-svg {
+      display: block;
+      width: 100%;
+      min-width: 700px;
+      height: auto;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .er-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem 1rem;
+      margin-top: 0.9rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .er-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .er-tag {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.08rem 0.38rem;
+      border-radius: 5px;
+      line-height: 1.3;
+    }
+
+    .er-tag-pk   { background: #dbeafe; color: #1d4ed8; }
+    .er-tag-fk   { background: #fef3c7; color: #b45309; }
+    .er-tag-uk   { background: #f3e8ff; color: #7e22ce; }
+    .er-tag-null { background: #fee2e2; color: #b91c1c; }
+
+    .quirks-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.65rem;
+      margin-top: 0.9rem;
+    }
+
+    .quirk-chip {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.62rem 0.82rem;
+      font-size: 0.84rem;
+      line-height: 1.48;
+      color: var(--text-body);
+    }
+
+    .quirk-chip strong {
+      color: var(--text);
+    }
+
+    details.data-preview {
+      margin: 0.95rem 0 0;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    details.data-preview summary {
+      cursor: pointer;
+      padding: 0.78rem 1.05rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: #ffffff;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    details.data-preview summary::-webkit-details-marker { display: none; }
+
+    details.data-preview summary::after {
+      content: "Развернуть ▾";
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    details.data-preview[open] summary {
+      border-bottom: 1px solid var(--border);
+      background: var(--accent-soft);
+    }
+
+    details.data-preview[open] summary::after {
+      content: "Свернуть ▴";
+      color: var(--accent);
+    }
+
+    .preview-body {
+      padding: 1rem 1.1rem 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .preview-table-title {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .preview-table-title span {
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .preview-body .table-wrapper {
+      margin: 0;
+      border-radius: 9px;
+    }
+
+    .preview-body table {
+      font-size: 0.81rem;
+      line-height: 1.4;
+    }
+
+    .preview-body th,
+    .preview-body td {
+      padding: 0.44rem 0.65rem;
+      white-space: nowrap;
+    }
+
+    .null-pill {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.05rem 0.38rem;
+      border-radius: 4px;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .status-pill {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.73rem;
+      font-weight: 600;
+      padding: 0.05rem 0.4rem;
+      border-radius: 5px;
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    @media (max-width: 720px) {
+      .quirks-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ==================== КАРТОЧКИ ЗАДАНИЙ ==================== */
+    .task-card {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.15rem 1.35rem;
+      margin: 0.95rem 0;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .task-card.done {
+      background: #f8fdf9;
+      border-color: #bbf7d0;
+    }
+
+    .task-card.hidden { display: none; }
+
+    .task-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .task-title-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      min-width: 0;
+    }
+
+    .task-check {
+      appearance: none;
+      width: 19px;
+      height: 19px;
+      margin-top: 0.22rem;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-strong);
+      background: #ffffff;
+      cursor: pointer;
+      display: grid;
+      place-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .task-check:hover { border-color: var(--accent); }
+    .task-check:checked { background: var(--tip-border); border-color: var(--tip-border); }
+    .task-check:checked::after {
+      content: "✓";
+      color: #ffffff;
+      font-size: 0.76rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .task-card.done .task-title { color: var(--tip-text); }
+
+    .task-num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      padding: 0.08rem 0.45rem;
+      border-radius: 6px;
+      margin-right: 0.45rem;
+    }
+
+    .task-card.done .task-num {
+      background: var(--tip-bg);
+      border-color: #bbf7d0;
+      color: var(--tip-text);
+    }
+
+    .lvl-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.16rem 0.55rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .lvl-easy   { background: var(--tip-bg);    color: var(--tip-text);    border: 1px solid #bbf7d0; }
+    .lvl-base   { background: var(--accent-soft); color: var(--accent);    border: 1px solid var(--accent-border); }
+    .lvl-mid    { background: var(--warn-bg);   color: var(--warn-text);   border: 1px solid #fde68a; }
+    .lvl-boss   { background: var(--purple-bg); color: var(--purple-text); border: 1px solid var(--purple-border); }
+
+    .task-desc {
+      margin: 0 0 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    .task-desc:last-of-type { margin-bottom: 0; }
+
+    .task-hint {
+      margin: 0.45rem 0 0;
+      font-size: 0.87rem;
+      color: var(--muted);
+    }
+
+    details.solution {
+      margin-top: 0.8rem;
+      border-top: 1px dashed var(--border-strong);
+      padding-top: 0.65rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover { text-decoration: underline; }
+    details.solution .code-block { margin: 0.7rem 0 0; }
+
+    .solution-note {
+      margin: 0.55rem 0 0;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    .file-link-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.42rem 0.8rem;
+      border-radius: 9px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.84rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .file-link-bar:hover {
+      background: #dbeafe;
+      border-color: var(--accent);
+    }
+
+    .empty-filter {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+      border: 1px dashed var(--border-strong);
+      border-radius: 12px;
+      color: var(--muted);
+      margin-top: 1.5rem;
+    }
+
+    .empty-filter.visible { display: block; }
+
+    @media (max-width: 680px) {
+      body { padding: 1rem 0.7rem 3rem; font-size: 15px; }
+      .lecture { padding: 1.5rem 1.2rem; border-radius: 12px; }
+      h1 { font-size: 1.55rem; }
+      h2 { font-size: 1.2rem; }
+      .task-head { flex-direction: column; gap: 0.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../../docker_guide.html">Гид по Docker</a>
+      </div>
+    </nav>
+
+    <!-- ==================== ШАПКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Практикум · Модуль 2</span>
+        <span class="pill pill-tip">50 заданий · От самого лёгкого</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · learning_db</span>
+      </div>
+
+      <h1>Практические задания: Проектирование схем и продвинутый SQL</h1>
+      <p class="hero-sub">
+        Тренажёр по Урокам 2.1–2.5: от связей <code>3НФ</code>, таблиц-мостиков и безопасных миграций к <code>LEFT JOIN</code>, <code>UNION</code>, <code>CASE WHEN</code>, <code>GROUP BY / HAVING</code>, многошаговым <code>CTE</code>, <code>JSONB</code>, оконным функциям и комплексной аналитике.
+      </p>
+
+      <div class="practice-toolbar">
+        <div>
+          <div class="progress-head">
+            <span class="progress-label">Выполнено заданий: <strong id="progress-text">0 / 50 (0%)</strong></span>
+            <button type="button" class="reset-btn" id="reset-progress">Сбросить прогресс</button>
+          </div>
+          <div class="progress-bar" style="margin-top: 0.45rem;">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="toolbar-actions">
+          <div class="filter-pills" role="group" aria-label="Фильтр заданий">
+            <button type="button" class="filter-btn active" data-filter="all">Все (50)</button>
+            <button type="button" class="filter-btn" data-filter="todo">Невыполненные</button>
+            <button type="button" class="filter-btn" data-filter="2_1">Урок 2.1</button>
+            <button type="button" class="filter-btn" data-filter="2_2">Урок 2.2</button>
+            <button type="button" class="filter-btn" data-filter="2_3">Урок 2.3</button>
+            <button type="button" class="filter-btn" data-filter="2_4">Урок 2.4</button>
+            <button type="button" class="filter-btn" data-filter="2_5">Урок 2.5</button>
+          </div>
+        </div>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание практикума"></nav>
+    </header>
+
+    <!-- ==================== 00. ПОДГОТОВКА И INIT.SQL ==================== -->
+    <section id="sec-init" data-section-lesson="init">
+      <h2><span class="sec-num">00</span> Подготовка стенда и базы данных: как и где использовать init.sql</h2>
+      <p>
+        Для всех заданий Модуля 2 подготовлен единый SQL-скрипт — <a class="file-link-bar" href="init.sql">📄 practice/module_2/init.sql</a>. Он разворачивает в базе <code>learning_db</code> нормализованную схему интернет-магазина (3НФ) из 6 таблиц: <code>cities</code>, <code>customers</code>, <code>products</code>, <code>orders</code>, <code>order_items</code> и <code>newsletter_leads</code> — уже с <code>JSONB</code>-характеристиками, «грязными» строками, датами за 4 месяца и специальными краевыми кейсами.
+      </p>
+
+      <div class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Когда запускать <code>init.sql</code>:</strong>
+          <ul style="margin: 0.4rem 0 0; padding-left: 1.25rem;">
+            <li><strong>Для всех уроков 2.1–2.5</strong> используется один и тот же базовый контейнер <code>course_pg_primary</code> (дополнительные Docker-профили не нужны — достаточно <code>docker compose up -d</code>).</li>
+            <li><strong>Перед стартом Урока 2.1</strong> загрузи <code>init.sql</code> один раз — и все 50 заданий практикума сразу заработают на едином датасете.</li>
+            <li><strong>Для сброса состояния:</strong> скрипт полностью идемпотентен — он безопасно удалит старые и учебные таблицы (включая <code>tags</code>, <code>product_tags</code>, <code>schema_migrations</code> из Урока 2.1) и вернёт базу к чистому старту.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Шаг 1. Убедись, что Docker-контейнер PostgreSQL запущен</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · Запуск базового контейнера (из корневой папки курса)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker compose up -d</code></pre>
+      </div>
+
+      <h3>Шаг 2. Загрузи <code>init.sql</code> в базу <code>learning_db</code> (выбери удобный способ)</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · Linux / macOS / Git Bash (из корневой папки курса)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker exec -i course_pg_primary psql -U student -d learning_db &lt; practice/module_2/init.sql</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">PowerShell · Windows (из корневой папки курса)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-powershell">Get-Content practice/module_2/init.sql -Raw | docker exec -i course_pg_primary psql -U student -d learning_db</code></pre>
+      </div>
+
+      <p>
+        <strong>Через графический клиент (DBeaver / DataGrip / Adminer):</strong> подключись к базе <code>learning_db</code> (<code>localhost:5432</code>, логин <code>student</code>, пароль <code>student_pass</code>), открой файл <code>practice/module_2/init.sql</code> и выполни скрипт целиком. В конце ты увидишь сводку по строкам: <code>cities: 4</code>, <code>customers: 7</code>, <code>products: 10</code>, <code>orders: 12</code>, <code>order_items: 19</code>, <code>newsletter_leads: 4</code>.
+      </p>
+
+      <h3>Шаг 3. Открой консоль <code>psql</code> для решения заданий</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · Вход в интерактивный терминал psql</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+      </div>
+
+      <h3>Схема базы данных из <code>init.sql</code> (ER-диаграмма в 3НФ)</h3>
+      <div class="schema-box">
+        <div class="er-scroll">
+          <svg class="er-svg" viewBox="0 0 870 584" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ER-диаграмма базы данных Модуля 2: customers, cities, newsletter_leads, orders, order_items, products">
+            <defs>
+              <filter id="cardShadow" x="-4%" y="-4%" width="108%" height="112%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.06" />
+              </filter>
+              <marker id="arrowMany" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+                <path d="M 1 1 L 10 6 L 1 11 M 10 6 L 1 6" fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </marker>
+              <marker id="tickOne" viewBox="0 0 10 12" refX="4" refY="6" markerWidth="8" markerHeight="10" orient="auto">
+                <path d="M 4 1 L 4 11" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round" />
+              </marker>
+            </defs>
+
+            <!-- ==================== СВЯЗИ (непересекающиеся 1 : N) ==================== -->
+            <!-- 1. customers.id (358, 62) -> orders.customer_id (462, 86) -->
+            <path d="M 361 62 L 410 62 L 410 86 L 459 86" fill="none" stroke="#64748b" stroke-width="1.8" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <rect x="387" y="40" width="46" height="17" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+            <text x="410" y="52" text-anchor="middle" font-size="10.5" font-weight="700" fill="#334155">1 : N</text>
+            <text x="410" y="102" text-anchor="middle" font-size="9.5" fill="#64748b">RESTRICT</text>
+
+            <!-- 2. cities.id (358, 266) -> customers.city_id (358, 134) -->
+            <path d="M 361 266 L 404 266 L 404 134 L 361 134" fill="none" stroke="#64748b" stroke-width="1.8" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <rect x="381" y="186" width="46" height="17" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+            <text x="404" y="198" text-anchor="middle" font-size="10.5" font-weight="700" fill="#334155">1 : N</text>
+            <text x="404" y="216" text-anchor="middle" font-size="9.5" fill="#64748b">RESTRICT</text>
+
+            <!-- 3. orders.id (808, 62) -> order_items.order_id (808, 266) -->
+            <path d="M 811 62 L 838 62 L 838 266 L 811 266" fill="none" stroke="#64748b" stroke-width="1.8" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <rect x="817" y="148" width="42" height="17" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+            <text x="838" y="160" text-anchor="middle" font-size="10" font-weight="700" fill="#334155">1 : N</text>
+            <text x="838" y="178" text-anchor="middle" font-size="9" fill="#64748b">CASCADE</text>
+
+            <!-- 4. products.id (808, 446) -> order_items.product_id (808, 290) -->
+            <path d="M 811 446 L 838 446 L 838 290 L 811 290" fill="none" stroke="#64748b" stroke-width="1.8" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <rect x="817" y="354" width="42" height="17" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+            <text x="838" y="366" text-anchor="middle" font-size="10" font-weight="700" fill="#334155">1 : N</text>
+            <text x="838" y="384" text-anchor="middle" font-size="9" fill="#64748b">RESTRICT</text>
+
+            <!-- ==================== ТАБЛИЦА 1: customers ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="18" width="340" height="164" rx="10" fill="#ffffff" stroke="#86efac" stroke-width="1.5" />
+              <path d="M 18 28 Q 18 18 28 18 L 348 18 Q 358 18 358 28 L 358 50 L 18 50 Z" fill="#f0fdf4" />
+              <line x1="18" y1="50" x2="358" y2="50" stroke="#bbf7d0" stroke-width="1" />
+              <text x="32" y="39" font-size="13.5" font-weight="700" fill="#14532d" font-family="JetBrains Mono, monospace">customers</text>
+              <rect x="287" y="25" width="59" height="18" rx="9" fill="#dcfce7" />
+              <text x="316.5" y="37.5" text-anchor="middle" font-size="10" font-weight="600" fill="#166534">7 строк</text>
+
+              <!-- id -->
+              <rect x="30" y="55" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="42" y="66" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="62" y="66" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="346" y="66" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <!-- full_name -->
+              <line x1="28" y1="75" x2="348" y2="75" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="90" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">full_name</text>
+              <text x="346" y="90" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- email -->
+              <line x1="28" y1="99" x2="348" y2="99" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="30" y="103" width="24" height="15" rx="4" fill="#f3e8ff" />
+              <text x="42" y="114" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="62" y="114" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">email</text>
+              <text x="346" y="114" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- city_id -->
+              <line x1="28" y1="123" x2="348" y2="123" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="30" y="127" width="24" height="15" rx="4" fill="#fef3c7" />
+              <text x="42" y="138" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="62" y="138" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">city_id</text>
+              <rect x="266" y="127" width="36" height="15" rx="4" fill="#fee2e2" />
+              <text x="284" y="138" text-anchor="middle" font-size="9" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono, monospace">NULL</text>
+              <text x="346" y="138" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <!-- registered_at -->
+              <line x1="28" y1="147" x2="348" y2="147" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="162" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">registered_at</text>
+              <text x="346" y="162" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TIMESTAMPTZ</text>
+            </g>
+
+            <!-- ==================== ТАБЛИЦА 2: cities ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="222" width="340" height="114" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" />
+              <path d="M 18 232 Q 18 222 28 222 L 348 222 Q 358 222 358 232 L 358 254 L 18 254 Z" fill="#eff6ff" />
+              <line x1="18" y1="254" x2="358" y2="254" stroke="#bfdbfe" stroke-width="1" />
+              <text x="32" y="243" font-size="13.5" font-weight="700" fill="#1e3a8a" font-family="JetBrains Mono, monospace">cities</text>
+              <rect x="285" y="229" width="61" height="18" rx="9" fill="#dbeafe" />
+              <text x="315.5" y="241.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1d4ed8">4 строки</text>
+
+              <!-- id -->
+              <rect x="30" y="259" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="42" y="270" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="62" y="270" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="346" y="270" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <!-- name -->
+              <line x1="28" y1="279" x2="348" y2="279" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="30" y="283" width="24" height="15" rx="4" fill="#f3e8ff" />
+              <text x="42" y="294" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="62" y="294" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">name</text>
+              <text x="346" y="294" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- timezone -->
+              <line x1="28" y1="303" x2="348" y2="303" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="318" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">timezone</text>
+              <text x="346" y="318" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+            </g>
+
+            <!-- ==================== ТАБЛИЦА 3: newsletter_leads ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="384" width="340" height="114" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="5 3" />
+              <path d="M 18 394 Q 18 384 28 384 L 348 384 Q 358 384 358 394 L 358 416 L 18 416 Z" fill="#f1f5f9" />
+              <line x1="18" y1="416" x2="358" y2="416" stroke="#e2e8f0" stroke-width="1" />
+              <text x="32" y="405" font-size="13.5" font-weight="700" fill="#334155" font-family="JetBrains Mono, monospace">newsletter_leads</text>
+              <rect x="285" y="391" width="61" height="18" rx="9" fill="#e2e8f0" />
+              <text x="315.5" y="403.5" text-anchor="middle" font-size="10" font-weight="600" fill="#334155">4 строки</text>
+
+              <!-- id -->
+              <rect x="30" y="421" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="42" y="432" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="62" y="432" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="346" y="432" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <!-- full_name -->
+              <line x1="28" y1="441" x2="348" y2="441" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="456" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">full_name</text>
+              <text x="346" y="456" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- email -->
+              <line x1="28" y1="465" x2="348" y2="465" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="30" y="469" width="24" height="15" rx="4" fill="#f3e8ff" />
+              <text x="42" y="480" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="62" y="480" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">email</text>
+              <text x="346" y="480" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+            </g>
+            <text x="188" y="518" text-anchor="middle" font-size="10.5" fill="#64748b">Склеивается с customers через UNION / UNION ALL (2 общих email)</text>
+
+            <!-- ==================== ТАБЛИЦА 4: orders ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="462" y="18" width="346" height="164" rx="10" fill="#ffffff" stroke="#fcd34d" stroke-width="1.5" />
+              <path d="M 462 28 Q 462 18 472 18 L 798 18 Q 808 18 808 28 L 808 50 L 462 50 Z" fill="#fffbeb" />
+              <line x1="462" y1="50" x2="808" y2="50" stroke="#fde68a" stroke-width="1" />
+              <text x="476" y="39" font-size="13.5" font-weight="700" fill="#78350f" font-family="JetBrains Mono, monospace">orders</text>
+              <rect x="730" y="25" width="66" height="18" rx="9" fill="#fef3c7" />
+              <text x="763" y="37.5" text-anchor="middle" font-size="10" font-weight="600" fill="#92400e">12 строк</text>
+
+              <!-- id -->
+              <rect x="474" y="55" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="486" y="66" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="506" y="66" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="796" y="66" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <!-- customer_id -->
+              <line x1="472" y1="75" x2="798" y2="75" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="474" y="79" width="24" height="15" rx="4" fill="#fef3c7" />
+              <text x="486" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="506" y="90" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">customer_id</text>
+              <text x="796" y="90" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT → customers</text>
+
+              <!-- status -->
+              <line x1="472" y1="99" x2="798" y2="99" stroke="#f1f5f9" stroke-width="1" />
+              <text x="506" y="114" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">status</text>
+              <text x="796" y="114" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT (paid|cancelled|pending)</text>
+
+              <!-- created_at -->
+              <line x1="472" y1="123" x2="798" y2="123" stroke="#f1f5f9" stroke-width="1" />
+              <text x="506" y="138" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">created_at</text>
+              <text x="796" y="138" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TIMESTAMPTZ</text>
+
+              <!-- delivery_info -->
+              <line x1="472" y1="147" x2="798" y2="147" stroke="#f1f5f9" stroke-width="1" />
+              <text x="506" y="162" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">delivery_info</text>
+              <text x="796" y="162" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">JSONB</text>
+            </g>
+
+            <!-- ==================== ТАБЛИЦА 5: order_items (мостик M:N) ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="462" y="222" width="346" height="140" rx="10" fill="#ffffff" stroke="#fda4af" stroke-width="1.5" />
+              <path d="M 462 232 Q 462 222 472 222 L 798 222 Q 808 222 808 232 L 808 254 L 462 254 Z" fill="#fff1f2" />
+              <line x1="462" y1="254" x2="808" y2="254" stroke="#fecdd3" stroke-width="1" />
+              <text x="476" y="243" font-size="13.5" font-weight="700" fill="#881337" font-family="JetBrains Mono, monospace">order_items</text>
+              <rect x="730" y="229" width="66" height="18" rx="9" fill="#ffe4e6" />
+              <text x="763" y="241.5" text-anchor="middle" font-size="10" font-weight="600" fill="#9f1239">19 строк</text>
+
+              <!-- order_id -->
+              <rect x="474" y="259" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="486" y="270" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <rect x="501" y="259" width="24" height="15" rx="4" fill="#fef3c7" />
+              <text x="513" y="270" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="533" y="270" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">order_id</text>
+              <text x="796" y="270" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT → orders</text>
+
+              <!-- product_id -->
+              <line x1="472" y1="279" x2="798" y2="279" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="474" y="283" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="486" y="294" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <rect x="501" y="283" width="24" height="15" rx="4" fill="#fef3c7" />
+              <text x="513" y="294" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="533" y="294" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">product_id</text>
+              <text x="796" y="294" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT → products</text>
+
+              <!-- quantity -->
+              <line x1="472" y1="303" x2="798" y2="303" stroke="#f1f5f9" stroke-width="1" />
+              <text x="533" y="318" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">quantity</text>
+              <text x="796" y="318" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT &gt; 0</text>
+
+              <!-- unit_price -->
+              <line x1="472" y1="327" x2="798" y2="327" stroke="#f1f5f9" stroke-width="1" />
+              <text x="533" y="342" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">unit_price</text>
+              <text x="796" y="342" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">NUMERIC(10,2)</text>
+            </g>
+
+            <!-- ==================== ТАБЛИЦА 6: products ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="462" y="402" width="346" height="164" rx="10" fill="#ffffff" stroke="#c4b5fd" stroke-width="1.5" />
+              <path d="M 462 412 Q 462 402 472 402 L 798 402 Q 808 402 808 412 L 808 434 L 462 434 Z" fill="#f5f3ff" />
+              <line x1="462" y1="434" x2="808" y2="434" stroke="#ddd6fe" stroke-width="1" />
+              <text x="476" y="423" font-size="13.5" font-weight="700" fill="#4c1d95" font-family="JetBrains Mono, monospace">products</text>
+              <rect x="730" y="409" width="66" height="18" rx="9" fill="#ede9fe" />
+              <text x="763" y="421.5" text-anchor="middle" font-size="10" font-weight="600" fill="#6d28d9">10 строк</text>
+
+              <!-- id -->
+              <rect x="474" y="439" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="486" y="450" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="506" y="450" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="796" y="450" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <!-- title -->
+              <line x1="472" y1="459" x2="798" y2="459" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="474" y="463" width="24" height="15" rx="4" fill="#f3e8ff" />
+              <text x="486" y="474" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="506" y="474" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">title</text>
+              <text x="796" y="474" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- category -->
+              <line x1="472" y1="483" x2="798" y2="483" stroke="#f1f5f9" stroke-width="1" />
+              <text x="506" y="498" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">category</text>
+              <text x="796" y="498" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- price -->
+              <line x1="472" y1="507" x2="798" y2="507" stroke="#f1f5f9" stroke-width="1" />
+              <text x="506" y="522" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">price</text>
+              <text x="796" y="522" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">NUMERIC(10,2) &gt; 0</text>
+
+              <!-- specs -->
+              <line x1="472" y1="531" x2="798" y2="531" stroke="#f1f5f9" stroke-width="1" />
+              <text x="506" y="546" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">specs</text>
+              <text x="796" y="546" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">JSONB</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="er-legend">
+          <span class="er-legend-item"><span class="er-tag er-tag-pk">PK</span> Первичный ключ (в <code>order_items</code> — составной)</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-fk">FK</span> Внешний ключ</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-uk">UK</span> Уникальное (UNIQUE)</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-null">NULL</span> Может быть пустым</span>
+        </div>
+
+        <div class="quirks-grid">
+          <div class="quirk-chip">
+            <strong>Пустые связи для LEFT JOIN:</strong> город <code>Караганда</code> (<code>id=4</code>) без клиентов; Данияр (<code>id=5</code>) с <code>city_id IS NULL</code> и 0 заказов; Ольга (<code>id=6</code>) только с отменённым заказом.
+          </div>
+          <div class="quirk-chip">
+            <strong>Грязные строки и UNION:</strong> у Алексея (<code>id=1</code>) и Дины (<code>id=7</code>) пробелы и строчные буквы в имени; разный регистр в <code>email</code>; Мария и Тимур есть и в <code>newsletter_leads</code>.
+          </div>
+          <div class="quirk-chip">
+            <strong>Ничьи, 0 продаж и JSONB:</strong> цены <code>9000</code> (<code>id=3, 6</code>) и <code>6000</code> (<code>id=7, 8</code>) повторяются для <code>RANK/DENSE_RANK</code>; брелок (<code>id=10</code>) без продаж и без ключа <code>color</code> в <code>specs</code>.
+          </div>
+          <div class="quirk-chip">
+            <strong>Даты за 4 месяца и одна дата:</strong> 12 заказов за январь–апрель 2026 (<code>paid</code>, <code>cancelled</code>, <code>pending</code>); заказы №8 и №9 оба от <code>2026-03-20</code> — показывают разницу <code>ROWS</code> и <code>RANGE</code>!
+          </div>
+        </div>
+
+        <details class="data-preview">
+          <summary>Заглянуть в данные таблиц (что загрузил init.sql)</summary>
+          <div class="preview-body">
+
+            <div>
+              <div class="preview-table-title">cities <span>· 4 строки</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>id</th><th>name</th><th>timezone</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>Алматы</td><td>UTC+5</td></tr>
+                    <tr><td>2</td><td>Астана</td><td>UTC+5</td></tr>
+                    <tr><td>3</td><td>Шымкент</td><td>UTC+5</td></tr>
+                    <tr><td>4</td><td>Караганда</td><td>UTC+5</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <div class="preview-table-title">customers <span>· 7 строк</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>id</th><th>full_name</th><th>email</th><th>city_id</th><th>registered_at</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>'  алексей иванов  '</td><td>Alex.Ivanov@Mail.KZ</td><td>1</td><td>2025-11-05 10:00+05</td></tr>
+                    <tr><td>2</td><td>Мария Смирнова</td><td>maria@company.org</td><td>2</td><td>2025-11-20 14:15+05</td></tr>
+                    <tr><td>3</td><td>Тимур Касымов</td><td>timur.k@gmail.com</td><td>3</td><td>2025-12-12 09:30+05</td></tr>
+                    <tr><td>4</td><td>Елена Волкова</td><td>ELENA.VOLKOVA@Shop.KZ</td><td>1</td><td>2026-01-08 16:45+05</td></tr>
+                    <tr><td>5</td><td>Данияр Нурланов</td><td>daniyar@tech.kz</td><td><span class="null-pill">NULL</span></td><td>2026-02-01 12:00+05</td></tr>
+                    <tr><td>6</td><td>Ольга Ким</td><td>olga.kim@mail.kz</td><td>2</td><td>2026-02-15 11:10+05</td></tr>
+                    <tr><td>7</td><td>'  дина алиева'</td><td>dina.alieva@gmail.com</td><td>1</td><td>2026-03-01 09:00+05</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <div class="preview-table-title">products <span>· 10 строк</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>id</th><th>title</th><th>category</th><th>price</th><th>specs (JSONB)</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>Механическая клавиатура</td><td>Гаджеты</td><td>39000.00</td><td>{"brand":"KeyPro","color":"white","weight_g":820,"tags":["hit","pro"]}</td></tr>
+                    <tr><td>2</td><td>Беспроводная мышь</td><td>Гаджеты</td><td>18000.00</td><td>{"brand":"KeyPro","color":"black","weight_g":95,"tags":["pro"]}</td></tr>
+                    <tr><td>3</td><td>Коврик для мыши XL</td><td>Гаджеты</td><td>9000.00</td><td>{"color":"dark-gray","width_cm":90,"waterproof":true,"tags":["pro"]}</td></tr>
+                    <tr><td>4</td><td>Худи «SQL Master»</td><td>Мерч</td><td>15000.00</td><td>{"color":"black","size":"L","material":"cotton","tags":["hit","winter"]}</td></tr>
+                    <tr><td>5</td><td>Свитшот «PostgreSQL»</td><td>Мерч</td><td>12000.00</td><td>{"color":"navy","size":"M","material":"cotton","tags":["winter"]}</td></tr>
+                    <tr><td>6</td><td>Футболка «SELECT *»</td><td>Мерч</td><td>9000.00</td><td>{"color":"white","size":"M","material":"cotton","tags":["summer"]}</td></tr>
+                    <tr><td>7</td><td>Термокружка кодера</td><td>Аксессуары</td><td>6000.00</td><td>{"color":"black","volume_ml":450,"waterproof":true,"tags":["hit","gift"]}</td></tr>
+                    <tr><td>8</td><td>Кепка «PG 16»</td><td>Аксессуары</td><td>6000.00</td><td>{"color":"blue","size":"one-size","tags":["gift"]}</td></tr>
+                    <tr><td>9</td><td>Стикерпак «Postgres»</td><td>Аксессуары</td><td>2000.00</td><td>{"color":"blue","pcs":12,"waterproof":true,"tags":["gift"]}</td></tr>
+                    <tr><td>10</td><td>Брелок «Слон Postgres»</td><td>Аксессуары</td><td>1500.00</td><td>{"tags":["gift"]}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <div class="preview-table-title">orders <span>· 12 строк</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>id</th><th>customer_id</th><th>status</th><th>created_at</th><th>delivery_info (JSONB)</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>1</td><td><span class="status-pill">paid</span></td><td>2026-01-10 10:00</td><td>{"courier":"FastBox","express":true,"address":{"city":"Алматы","street":"Абая 15"}}</td></tr>
+                    <tr><td>2</td><td>2</td><td><span class="status-pill">paid</span></td><td>2026-01-22 14:30</td><td>{"courier":"PostKZ","express":false,"address":{"city":"Астана","street":"Достык 8"}}</td></tr>
+                    <tr><td>3</td><td>1</td><td><span class="status-pill">paid</span></td><td>2026-02-05 12:00</td><td>{"courier":"FastBox","express":true,"address":{"city":"Алматы","street":"Абая 15"}}</td></tr>
+                    <tr><td>4</td><td>3</td><td><span class="status-pill">cancelled</span></td><td>2026-02-10 18:00</td><td>{"courier":"PostKZ","express":false,"address":{"city":"Шымкент","street":"Тауке Хана 7"}}</td></tr>
+                    <tr><td>5</td><td>4</td><td><span class="status-pill">paid</span></td><td>2026-02-18 11:15</td><td>{"courier":"FastBox","express":false,"address":{"city":"Алматы","street":"Сатпаева 30"}}</td></tr>
+                    <tr><td>6</td><td>6</td><td><span class="status-pill">cancelled</span></td><td>2026-02-18 19:00</td><td>{"courier":"PostKZ","express":false,"address":{"city":"Астана","street":"Мангилик Ел 12"}}</td></tr>
+                    <tr><td>7</td><td>2</td><td><span class="status-pill">paid</span></td><td>2026-03-04 16:00</td><td>{"courier":"FastBox","express":true,"address":{"city":"Астана","street":"Достык 8"}}</td></tr>
+                    <tr><td>8</td><td>1</td><td><span class="status-pill">paid</span></td><td>2026-03-20 09:45</td><td>{"courier":"FastBox","express":true,"address":{"city":"Алматы","street":"Абая 15"}}</td></tr>
+                    <tr><td>9</td><td>7</td><td><span class="status-pill">paid</span></td><td>2026-03-20 15:20</td><td>{"courier":"PostKZ","express":false,"address":{"city":"Алматы","street":"Достык 40"}}</td></tr>
+                    <tr><td>10</td><td>3</td><td><span class="status-pill">paid</span></td><td>2026-04-02 15:00</td><td>{"courier":"PostKZ","express":false,"address":{"city":"Шымкент","street":"Тауке Хана 7"}}</td></tr>
+                    <tr><td>11</td><td>4</td><td><span class="status-pill">paid</span></td><td>2026-04-15 13:20</td><td>{"courier":"FastBox","express":true,"address":{"city":"Алматы","street":"Сатпаева 30"}}</td></tr>
+                    <tr><td>12</td><td>7</td><td><span class="status-pill">pending</span></td><td>2026-04-20 17:10</td><td>{"courier":"FastBox","express":false,"address":{"city":"Алматы","street":"Достык 40"}}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <div class="preview-table-title">order_items <span>· 19 строк</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>order_id</th><th>product_id</th><th>quantity</th><th>unit_price</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>4</td><td>1</td><td>15000.00</td></tr>
+                    <tr><td>1</td><td>9</td><td>2</td><td>2000.00</td></tr>
+                    <tr><td>2</td><td>2</td><td>1</td><td>18000.00</td></tr>
+                    <tr><td>2</td><td>7</td><td>2</td><td>6000.00</td></tr>
+                    <tr><td>3</td><td>1</td><td>1</td><td>39000.00</td></tr>
+                    <tr><td>4</td><td>5</td><td>1</td><td>12000.00</td></tr>
+                    <tr><td>5</td><td>4</td><td>1</td><td>15000.00</td></tr>
+                    <tr><td>5</td><td>8</td><td>1</td><td>6000.00</td></tr>
+                    <tr><td>6</td><td>1</td><td>1</td><td>39000.00</td></tr>
+                    <tr><td>7</td><td>5</td><td>1</td><td>12000.00</td></tr>
+                    <tr><td>7</td><td>7</td><td>2</td><td>6000.00</td></tr>
+                    <tr><td>8</td><td>6</td><td>1</td><td>9000.00</td></tr>
+                    <tr><td>8</td><td>3</td><td>1</td><td>9000.00</td></tr>
+                    <tr><td>9</td><td>7</td><td>1</td><td>6000.00</td></tr>
+                    <tr><td>9</td><td>9</td><td>3</td><td>2000.00</td></tr>
+                    <tr><td>10</td><td>1</td><td>1</td><td>39000.00</td></tr>
+                    <tr><td>10</td><td>2</td><td>1</td><td>18000.00</td></tr>
+                    <tr><td>11</td><td>5</td><td>1</td><td>12000.00</td></tr>
+                    <tr><td>12</td><td>6</td><td>2</td><td>9000.00</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <div class="preview-table-title">newsletter_leads <span>· 4 строки</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>id</th><th>full_name</th><th>email</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>Мария Смирнова</td><td>maria@company.org</td></tr>
+                    <tr><td>2</td><td>Егор Савин</td><td>egor@mail.kz</td></tr>
+                    <tr><td>3</td><td>Жанна Нур</td><td>zhanna@gmail.com</td></tr>
+                    <tr><td>4</td><td>Тимур Касымов</td><td>timur.k@gmail.com</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 01. УРОК 2.1 ==================== -->
+    <section id="sec-2-1" data-section-lesson="2_1">
+      <h2><span class="sec-num">01</span> Урок 2.1 · Нормализация (1НФ–3НФ), связи M:N и миграции (9 заданий)</h2>
+      <p>
+        Начинаем с простого знакомства с нашей схемой в 3НФ, затем создаём таблицу-мостик <code>M:N</code>, пробуем сломать составной ключ, приводим «грязную» таблицу к 1НФ и пишем настоящую транзакционную UP/DOWN-миграцию.
+      </p>
+
+      <h3>Часть А. Разминка: изучаем нормализованную схему 3НФ</h3>
+
+      <div class="task-card" data-task-id="2_1_1" data-lesson="2_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.1" />
+            <div class="task-title"><span class="task-num">2.1.1</span> Справочник городов (3НФ)</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">Выведи все строки справочника <code>cities</code>: колонки <code>id</code>, <code>name</code> и <code>timezone</code>, отсортированные по <code>id</code>.</p>
+        <p class="task-hint">Подсказка: в 3НФ часовой пояс вынесен в отдельную таблицу, чтобы не дублировать его у каждого покупателя.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT id, name, timezone
+FROM cities
+ORDER BY id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_1_2" data-lesson="2_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.2" />
+            <div class="task-title"><span class="task-num">2.1.2</span> Соединяем покупателей с их городами</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Соедини таблицы <code>customers</code> (<code>c</code>) и <code>cities</code> (<code>ci</code>) через <code>INNER JOIN</code> по <code>c.city_id = ci.id</code>. Выведи <code>c.id</code>, <code>c.full_name</code>, <code>ci.name AS city</code>, <code>ci.timezone</code>. Отсортируй по <code>c.id</code>.
+        </p>
+        <p class="task-hint">Подсказка: обрати внимание, что Данияр (<code>id = 5</code>) с <code>city_id IS NULL</code> не попадёт в <code>INNER JOIN</code> — в Уроке 2.2 мы исправим это с помощью <code>LEFT JOIN</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    c.id,
+    c.full_name,
+    ci.name AS city,
+    ci.timezone
+FROM customers AS c
+INNER JOIN cities AS ci
+    ON ci.id = c.city_id
+ORDER BY c.id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_1_3" data-lesson="2_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.3" />
+            <div class="task-title"><span class="task-num">2.1.3</span> Собираем чек заказа № 1 через таблицу-мостик</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Соедини <code>order_items</code> (<code>oi</code>) и <code>products</code> (<code>p</code>) для заказа <code>oi.order_id = 1</code>. Выведи <code>p.title</code>, <code>oi.quantity</code>, <code>oi.unit_price</code> и сумму позиции <code>oi.quantity * oi.unit_price AS line_total</code>. Отсортируй по <code>p.id</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    p.title,
+    oi.quantity,
+    oi.unit_price,
+    oi.quantity * oi.unit_price AS line_total
+FROM order_items AS oi
+INNER JOIN products AS p
+    ON p.id = oi.product_id
+WHERE oi.order_id = 1
+ORDER BY p.id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <h3>Часть Б. Связь «многие-ко-многим» (M:N) и приведение к 1НФ</h3>
+
+      <div class="task-card" data-task-id="2_1_4" data-lesson="2_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.4" />
+            <div class="task-title"><span class="task-num">2.1.4</span> Создаём справочник тегов и таблицу-мостик</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Создай две таблицы: 1) <code>tags</code> (<code>id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY</code>, <code>name TEXT NOT NULL UNIQUE</code>); 2) таблицу-мостик <code>product_tags</code> с колонками <code>product_id</code> (ссылка на <code>products(id) ON DELETE CASCADE</code>), <code>tag_id</code> (ссылка на <code>tags(id) ON DELETE CASCADE</code>) и составным <code>PRIMARY KEY (product_id, tag_id)</code>. Добавь 3 тега (<code>'хит'</code>, <code>'подарок'</code>, <code>'зима'</code>) и привяжи: к товару <code>1</code> — тег <code>1</code>, к товару <code>4</code> — теги <code>1</code> и <code>3</code>, к товару <code>7</code> — теги <code>1</code> и <code>2</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS product_tags, tags CASCADE;
+
+CREATE TABLE tags (
+    id   INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE product_tags (
+    product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    tag_id     INT NOT NULL REFERENCES tags(id)     ON DELETE CASCADE,
+    PRIMARY KEY (product_id, tag_id)
+);
+
+INSERT INTO tags (name) VALUES
+    ('хит'),     -- id = 1
+    ('подарок'), -- id = 2
+    ('зима');    -- id = 3
+
+INSERT INTO product_tags (product_id, tag_id) VALUES
+    (1, 1),
+    (4, 1), (4, 3),
+    (7, 1), (7, 2);</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_1_5" data-lesson="2_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.5" />
+            <div class="task-title"><span class="task-num">2.1.5</span> Читаем товары с их тегами через мостик</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Выведи названия товаров и привязанные к ним теги из таблиц <code>products</code> (<code>p</code>), <code>product_tags</code> (<code>pt</code>) и <code>tags</code> (<code>t</code>): колонки <code>p.title</code> и <code>t.name AS tag_name</code>. Отсортируй по <code>p.id, t.name</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    p.title,
+    t.name AS tag_name
+FROM products AS p
+INNER JOIN product_tags AS pt
+    ON pt.product_id = p.id
+INNER JOIN tags AS t
+    ON t.id = pt.tag_id
+ORDER BY p.id, t.name;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_1_6" data-lesson="2_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.6" />
+            <div class="task-title"><span class="task-num">2.1.6</span> Эксперимент: проверяем защиту составного ключа и FK</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Эксперимент</span>
+        </div>
+        <p class="task-desc">
+          Попробуй выполнить два «ломающих» <code>INSERT</code> в таблицу <code>product_tags</code>: 1) повесь тег <code>1</code> на товар <code>1</code> повторно (<code>(1, 1)</code>); 2) привяжи несуществующий тег <code>999</code> к товару <code>1</code> (<code>(1, 999)</code>). Посмотри на сообщения об ошибках PostgreSQL.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- 1. Ошибка дубликата составного PRIMARY KEY (product_tags_pkey):
+INSERT INTO product_tags (product_id, tag_id) VALUES (1, 1);
+
+-- 2. Ошибка внешнего ключа (product_tags_tag_id_fkey):
+INSERT INTO product_tags (product_id, tag_id) VALUES (1, 999);</code></pre>
+          </div>
+          <p class="solution-note">Обе попытки будут заблокированы самой СУБД: составной ключ запрещает дубли, а <code>FOREIGN KEY</code> — ссылки на несуществующие теги.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_1_7" data-lesson="2_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.7" />
+            <div class="task-title"><span class="task-num">2.1.7</span> Разбираем список через запятую в 1НФ</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Создай «грязную» таблицу <code>bad_orders_sheet (order_id INT, customer_name TEXT, items_list TEXT)</code>, вставь 2 строки: <code>(101, 'Алиса Ким', 'Худи, Стикерпак')</code> и <code>(102, 'Тимур Касымов', 'Клавиатура, Мышь, Коврик')</code>. Затем напиши <code>SELECT</code>, который развернёт <code>items_list</code> в <strong>1НФ</strong> (1 товар = 1 строка) с колонками <code>order_id</code>, <code>customer_name</code> и <code>item_name</code>.
+        </p>
+        <p class="task-hint">Подсказка: используй связку <code>TRIM(unnest(string_to_array(items_list, ','))) AS item_name</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS bad_orders_sheet;
+
+CREATE TABLE bad_orders_sheet (
+    order_id      INT,
+    customer_name TEXT,
+    items_list    TEXT
+);
+
+INSERT INTO bad_orders_sheet VALUES
+    (101, 'Алиса Ким',     'Худи, Стикерпак'),
+    (102, 'Тимур Касымов', 'Клавиатура, Мышь, Коврик');
+
+SELECT
+    order_id,
+    customer_name,
+    TRIM(unnest(string_to_array(items_list, ','))) AS item_name
+FROM bad_orders_sheet
+ORDER BY order_id, item_name;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <h3>Часть В. Безопасные миграции схемы БД (UP и DOWN)</h3>
+
+      <div class="task-card" data-task-id="2_1_8" data-lesson="2_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.8" />
+            <div class="task-title"><span class="task-num">2.1.8</span> Безопасная UP-миграция: добавляем NOT NULL колонку <code>sku</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Создай журнал версий <code>schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())</code>. Затем внутри транзакции <code>BEGIN; ... COMMIT;</code> добавь в непустую таблицу <code>products</code> колонку <code>sku TEXT</code>, заполни старые строки (backfill) значениями <code>'SKU-' || LPAD(id::TEXT, 4, '0')</code>, включи <code>SET NOT NULL</code> и ограничение <code>products_sku_unique UNIQUE (sku)</code>, а в конце запиши <code>'001_add_product_sku'</code> в <code>schema_migrations</code>.
+        </p>
+        <p class="task-hint">Подсказка: в непустую таблицу нельзя сразу добавить <code>NOT NULL</code> без значения по умолчанию — действуй в 3 шага: <code>ADD COLUMN</code> → <code>UPDATE</code> → <code>SET NOT NULL</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">CREATE TABLE IF NOT EXISTS schema_migrations (
+    version    TEXT PRIMARY KEY,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+BEGIN;
+
+ALTER TABLE products
+    ADD COLUMN sku TEXT;
+
+UPDATE products
+SET sku = 'SKU-' || LPAD(id::TEXT, 4, '0')
+WHERE sku IS NULL;
+
+ALTER TABLE products
+    ALTER COLUMN sku SET NOT NULL,
+    ADD CONSTRAINT products_sku_unique UNIQUE (sku);
+
+INSERT INTO schema_migrations (version)
+VALUES ('001_add_product_sku');
+
+COMMIT;
+
+SELECT id, title, sku FROM products ORDER BY id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_1_9" data-lesson="2_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.9" />
+            <div class="task-title"><span class="task-num">2.1.9</span> Откат схемы (DOWN-миграция 001)</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Напиши парную <code>DOWN</code>-миграцию внутри транзакции <code>BEGIN; ... COMMIT;</code>: удали ограничение <code>products_sku_unique</code> и колонку <code>sku</code> из <code>products</code> (используй <code>IF EXISTS</code>), а затем убери запись <code>'001_add_product_sku'</code> из <code>schema_migrations</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">BEGIN;
+
+ALTER TABLE products
+    DROP CONSTRAINT IF EXISTS products_sku_unique,
+    DROP COLUMN IF EXISTS sku;
+
+DELETE FROM schema_migrations
+WHERE version = '001_add_product_sku';
+
+COMMIT;
+
+SELECT * FROM schema_migrations;</code></pre>
+          </div>
+          <p class="solution-note">В PostgreSQL DDL-команды (<code>ALTER TABLE</code>, <code>CREATE TABLE</code>) работают внутри транзакции: при любой ошибке схема откатится целиком.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 02. УРОК 2.2 ==================== -->
+    <section id="sec-2-2" data-section-lesson="2_2">
+      <h2><span class="sec-num">02</span> Урок 2.2 · LEFT JOIN, UNION, CASE WHEN, GROUP BY и HAVING (12 заданий)</h2>
+      <p>
+        Учимся находить «молчунов» и непроданные товары через <code>LEFT JOIN</code>, не попадаться в ловушку фильтра в <code>WHERE</code>, склеивать списки через <code>UNION</code>, размечать строки через <code>CASE WHEN</code> и строить сводки с <code>GROUP BY / HAVING</code>.
+      </p>
+
+      <h3>Часть А. Разминка: LEFT JOIN и анти-джойн</h3>
+
+      <div class="task-card" data-task-id="2_2_1" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.1" />
+            <div class="task-title"><span class="task-num">2.2.1</span> Все города и их покупатели (даже пустые города)</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выведи ВСЕ города из <code>cities</code> (<code>ci</code>) и имена покупателей из <code>customers</code> (<code>c</code>) через <code>LEFT JOIN</code>: колонки <code>ci.name AS city</code> и <code>c.full_name</code>. Отсортируй по <code>ci.id, c.id</code>.
+        </p>
+        <p class="task-hint">Подсказка: в результате должна появиться <code>Караганда</code> с пустой ячейкой (<code>NULL</code>) в <code>full_name</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    ci.name AS city,
+    c.full_name
+FROM cities AS ci
+LEFT JOIN customers AS c
+    ON c.city_id = ci.id
+ORDER BY ci.id, c.id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_2_2" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.2" />
+            <div class="task-title"><span class="task-num">2.2.2</span> Анти-джойн: клиенты без единого заказа</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Найди в таблице <code>customers</code> (<code>c</code>) тех, кто ещё не оформил ни одного заказа в <code>orders</code> (<code>o</code>). Выведи <code>c.id</code>, <code>c.full_name</code>, <code>c.email</code>.
+        </p>
+        <p class="task-hint">Подсказка: сделай <code>LEFT JOIN orders</code> и оставь строки, где <code>o.id IS NULL</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    c.id,
+    c.full_name,
+    c.email
+FROM customers AS c
+LEFT JOIN orders AS o
+    ON o.customer_id = c.id
+WHERE o.id IS NULL;</code></pre>
+          </div>
+          <p class="solution-note">Вернётся 1 строка — Данияр Нурланов (<code>id = 5</code>).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_2_3" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.3" />
+            <div class="task-title"><span class="task-num">2.2.3</span> Товар-«невидимка» без единой продажи</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Найди товары из <code>products</code> (<code>p</code>), которые ещё ни разу не попадали в таблицу <code>order_items</code> (<code>oi</code>). Выведи <code>p.id</code>, <code>p.title</code>, <code>p.price</code>, отсортировав по <code>p.id</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    p.id,
+    p.title,
+    p.price
+FROM products AS p
+LEFT JOIN order_items AS oi
+    ON oi.product_id = p.id
+WHERE oi.product_id IS NULL
+ORDER BY p.id;</code></pre>
+          </div>
+          <p class="solution-note">Вернётся 1 строка — «Брелок «Слон Postgres»» (<code>id = 10</code>, цена <code>1500.00</code>).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_2_4" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.4" />
+            <div class="task-title"><span class="task-num">2.2.4</span> Ловушка LEFT JOIN: фильтр в <code>ON</code> против <code>WHERE</code></div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Выведи <strong>всех 7 клиентов</strong> (<code>c.id</code>, <code>c.full_name</code>) и номера только их <strong>оплаченных</strong> заказов (<code>o.id AS paid_order_id</code>, <code>o.status</code>). Клиенты без оплаченных заказов (Данияр и Ольга) обязательно должны остаться в списке с <code>NULL</code>. Отсортируй по <code>c.id, o.id</code>.
+        </p>
+        <p class="task-hint">Подсказка: условие <code>o.status = 'paid'</code> нужно ставить в <code>ON</code>, а не в <code>WHERE</code>!</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    c.id,
+    c.full_name,
+    o.id AS paid_order_id,
+    o.status
+FROM customers AS c
+LEFT JOIN orders AS o
+    ON o.customer_id = c.id
+   AND o.status = 'paid'
+ORDER BY c.id, o.id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <h3>Часть Б. UNION / UNION ALL и условная логика CASE WHEN</h3>
+
+      <div class="task-card" data-task-id="2_2_5" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.5" />
+            <div class="task-title"><span class="task-num">2.2.5</span> Единая база контактов без дублей (UNION)</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Склей вертикально списки <code>full_name, email</code> из таблиц <code>customers</code> и <code>newsletter_leads</code> так, чтобы дубликаты (Мария и Тимур) автоматически удалились. Отсортируй результат по <code>email</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT full_name, email
+FROM customers
+
+UNION
+
+SELECT full_name, email
+FROM newsletter_leads
+ORDER BY email;</code></pre>
+          </div>
+          <p class="solution-note">Из 7 + 4 = 11 записей останутся 9 уникальных контактов.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_2_6" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.6" />
+            <div class="task-title"><span class="task-num">2.2.6</span> Сверка двух баз с меткой источника (UNION ALL)</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Собери все записи из <code>customers</code> и <code>newsletter_leads</code> <strong>без удаления дублей</strong>, добавив третью колонку <code>source</code>: <code>'Покупатель'</code> для клиентов и <code>'Подписчик'</code> для рассылки. Отсортируй по <code>email, source</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT full_name, email, 'Покупатель' AS source
+FROM customers
+
+UNION ALL
+
+SELECT full_name, email, 'Подписчик' AS source
+FROM newsletter_leads
+ORDER BY email, source;</code></pre>
+          </div>
+          <p class="solution-note">Вернётся ровно 11 строк: для Марии и Тимура будет видно оба источника.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_2_7" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.7" />
+            <div class="task-title"><span class="task-num">2.2.7</span> Ценовые бейджи товаров (CASE WHEN)</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Для всех товаров из <code>products</code> выведи <code>title</code>, <code>price</code> и вычисляемую колонку <code>price_tier</code>: дешевле <code>7000</code> → <code>'Бюджетный'</code>, от <code>7000</code> до <code>18000</code> включительно → <code>'Средний'</code>, дороже <code>18000</code> → <code>'Премиум'</code>. Отсортируй по <code>price ASC, id ASC</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    title,
+    price,
+    CASE
+        WHEN price &lt; 7000   THEN 'Бюджетный'
+        WHEN price &lt;= 18000 THEN 'Средний'
+        ELSE 'Премиум'
+    END AS price_tier
+FROM products
+ORDER BY price ASC, id ASC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_2_8" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.8" />
+            <div class="task-title"><span class="task-num">2.2.8</span> Переводим статусы заказов на русский</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Выведи из <code>orders</code> колонки <code>id AS order_id</code>, <code>status</code> и переведённую колонку <code>status_ru</code>: <code>'paid'</code> → <code>'Оплачен'</code>, <code>'cancelled'</code> → <code>'Отменён'</code>, <code>'pending'</code> → <code>'Ожидает оплаты'</code>, иначе <code>'Другой'</code>. Отсортируй по <code>id</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    id AS order_id,
+    status,
+    CASE status
+        WHEN 'paid'      THEN 'Оплачен'
+        WHEN 'cancelled' THEN 'Отменён'
+        WHEN 'pending'   THEN 'Ожидает оплаты'
+        ELSE 'Другой'
+    END AS status_ru
+FROM orders
+ORDER BY id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <h3>Часть В. Агрегация GROUP BY, HAVING и условный подсчёт</h3>
+
+      <div class="task-card" data-task-id="2_2_9" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.9" />
+            <div class="task-title"><span class="task-num">2.2.9</span> Сводка по категориям товаров (GROUP BY)</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Сгруппируй таблицу <code>products</code> по <code>category</code> и выведи: <code>category</code>, число товаров (<code>products_cnt</code>), среднюю цену с округлением до 2 знаков (<code>avg_price</code>), минимальную (<code>min_price</code>) и максимальную (<code>max_price</code>). Отсортируй по <code>avg_price DESC</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    category,
+    COUNT(*)             AS products_cnt,
+    ROUND(AVG(price), 2) AS avg_price,
+    MIN(price)           AS min_price,
+    MAX(price)           AS max_price
+FROM products
+GROUP BY category
+ORDER BY avg_price DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_2_10" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.10" />
+            <div class="task-title"><span class="task-num">2.2.10</span> Дорогие категории (HAVING)</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Дополни предыдущий запрос так, чтобы остались только категории, у которых средняя цена строго больше <code>10000</code>.
+        </p>
+        <p class="task-hint">Подсказка: фильтрация по агрегатной функции <code>AVG(price)</code> пишется в <code>HAVING</code>, а не в <code>WHERE</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    category,
+    COUNT(*)             AS products_cnt,
+    ROUND(AVG(price), 2) AS avg_price
+FROM products
+GROUP BY category
+HAVING AVG(price) &gt; 10000
+ORDER BY avg_price DESC;</code></pre>
+          </div>
+          <p class="solution-note">Останутся 2 категории: «Гаджеты» (22000.00) и «Мерч» (12000.00).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_2_11" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.11" />
+            <div class="task-title"><span class="task-num">2.2.11</span> Ловушка <code>COUNT(*)</code>: число всех и оплаченных заказов на клиента</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Для <strong>каждого</strong> клиента из <code>customers</code> (<code>c</code>) посчитай: <code>c.full_name</code>, общее число заказов (<code>total_orders</code>) и число оплаченных заказов (<code>paid_orders</code>). Убедись, что у Данияра (<code>id = 5</code>) в обеих колонках стоит <code>0</code>, а не <code>1</code>! Отсортируй по <code>paid_orders DESC, c.id</code>.
+        </p>
+        <p class="task-hint">Подсказка: используй <code>COUNT(o.id)</code> вместо <code>COUNT(*)</code> и клаузу <code>FILTER (WHERE o.status = 'paid')</code> (или <code>CASE WHEN</code>).</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    c.full_name,
+    COUNT(o.id)                                     AS total_orders,
+    COUNT(o.id) FILTER (WHERE o.status = 'paid')    AS paid_orders
+FROM customers AS c
+LEFT JOIN orders AS o
+    ON o.customer_id = c.id
+GROUP BY c.id, c.full_name
+ORDER BY paid_orders DESC, c.id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_2_12" data-lesson="2_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.2.12" />
+            <div class="task-title"><span class="task-num">2.2.12</span> Выручка по всем городам (4 таблицы + COALESCE)</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Для каждого города из <code>cities</code> (<code>ci</code>) посчитай: <code>ci.name AS city</code>, число уникальных клиентов (<code>customers_cnt</code>), число уникальных оплаченных заказов (<code>paid_orders_cnt</code>) и суммарную оплаченную выручку (<code>total_revenue</code>, если продаж не было — <code>0.00</code>). Город «Караганда» должен остаться в отчёте с нулями! Отсортируй по <code>total_revenue DESC, ci.name</code>.
+        </p>
+        <p class="task-hint">Подсказка: цепочка <code>cities → LEFT JOIN customers → LEFT JOIN orders (... AND o.status = 'paid') → LEFT JOIN order_items</code>; для подсчёта клиентов и заказов добавь <code>DISTINCT</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    ci.name                                    AS city,
+    COUNT(DISTINCT c.id)                       AS customers_cnt,
+    COUNT(DISTINCT o.id)                       AS paid_orders_cnt,
+    COALESCE(SUM(oi.quantity * oi.unit_price), 0.00) AS total_revenue
+FROM cities AS ci
+LEFT JOIN customers AS c
+    ON c.city_id = ci.id
+LEFT JOIN orders AS o
+    ON o.customer_id = c.id
+   AND o.status = 'paid'
+LEFT JOIN order_items AS oi
+    ON oi.order_id = o.id
+GROUP BY ci.id, ci.name
+ORDER BY total_revenue DESC, ci.name;</code></pre>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 03. УРОК 2.3 ==================== -->
+    <section id="sec-2-3" data-section-lesson="2_3">
+      <h2><span class="sec-num">03</span> Урок 2.3 · Подзапросы, CTE, даты, строки и JSONB (12 заданий)</h2>
+      <p>
+        Учимся «причёсывать» грязные тексты, фильтровать даты полуоткрытыми интервалами, писать безопасный <code>NOT EXISTS</code>, раскладывать сложные запросы на шаги через <code>WITH</code> (CTE) и извлекать данные из <code>JSONB</code>.
+      </p>
+
+      <h3>Часть А. Разминка: строки и даты</h3>
+
+      <div class="task-card" data-task-id="2_3_1" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.1" />
+            <div class="task-title"><span class="task-num">2.3.1</span> Причёсываем грязные имена и email</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Из таблицы <code>customers</code> выведи: <code>id</code>, очищенное имя с заглавных букв (<code>clean_name</code>), email в нижнем регистре (<code>clean_email</code>) и домен почты после символа <code>@</code> (<code>email_domain</code>). Отсортируй по <code>id</code>.
+        </p>
+        <p class="task-hint">Подсказка: используй <code>INITCAP(TRIM(full_name))</code>, <code>LOWER(email)</code> и <code>SPLIT_PART(LOWER(email), '@', 2)</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    id,
+    INITCAP(TRIM(full_name))          AS clean_name,
+    LOWER(email)                      AS clean_email,
+    SPLIT_PART(LOWER(email), '@', 2)  AS email_domain
+FROM customers
+ORDER BY id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_3_2" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.2" />
+            <div class="task-title"><span class="task-num">2.3.2</span> Регистронезависимый поиск по каталогу (ILIKE)</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Найди в таблице <code>products</code> все товары, в названии которых встречается подстрока <code>'postgres'</code> в любом регистре. Выведи <code>id</code>, <code>title</code>, <code>price</code>, отсортировав по <code>id</code>.
+        </p>
+        <p class="task-hint">Подсказка: в PostgreSQL для поиска без учёта регистра есть оператор <code>ILIKE</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT id, title, price
+FROM products
+WHERE title ILIKE '%postgres%'
+ORDER BY id;</code></pre>
+          </div>
+          <p class="solution-note">Найдутся 3 товара: «Свитшот «PostgreSQL»», «Стикерпак «Postgres»» и «Брелок «Слон Postgres»».</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_3_3" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.3" />
+            <div class="task-title"><span class="task-num">2.3.3</span> Срезаем дату до месяца (DATE_TRUNC и EXTRACT)</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Для всех оплаченных заказов (<code>status = 'paid'</code>) из <code>orders</code> выведи: <code>id AS order_id</code>, дату без времени (<code>order_date</code>), первый день месяца заказа (<code>order_month</code>) и номер дня недели (<code>day_of_week</code>). Отсортируй по <code>created_at</code>.
+        </p>
+        <p class="task-hint">Подсказка: используй <code>created_at::date</code>, <code>DATE_TRUNC('month', created_at)::date</code> и <code>EXTRACT(DOW FROM created_at)::int</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    id                                   AS order_id,
+    created_at::date                     AS order_date,
+    DATE_TRUNC('month', created_at)::date AS order_month,
+    EXTRACT(DOW FROM created_at)::int    AS day_of_week
+FROM orders
+WHERE status = 'paid'
+ORDER BY created_at;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_3_4" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.4" />
+            <div class="task-title"><span class="task-num">2.3.4</span> Безопасный полуоткрытый диапазон дат (февраль 2026)</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Выбери все заказы из <code>orders</code>, оформленные в <strong>феврале 2026 года</strong>, не оборачивая колонку <code>created_at</code> в функции. Выведи <code>id</code>, <code>customer_id</code>, <code>status</code>, <code>created_at</code>, отсортировав по <code>created_at</code>.
+        </p>
+        <p class="task-hint">Подсказка: используй <code>&gt;= TIMESTAMPTZ '2026-02-01 00:00:00+05'</code> и <code>&lt; TIMESTAMPTZ '2026-02-01 00:00:00+05' + INTERVAL '1 month'</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT id, customer_id, status, created_at
+FROM orders
+WHERE created_at &gt;= TIMESTAMPTZ '2026-02-01 00:00:00+05'
+  AND created_at &lt;  TIMESTAMPTZ '2026-02-01 00:00:00+05' + INTERVAL '1 month'
+ORDER BY created_at;</code></pre>
+          </div>
+          <p class="solution-note">Вернутся 4 февральских заказа (№ 3, 4, 5 и 6). Такой фильтр дружит с B-Tree индексами (увидим в Модуле 3).</p>
+        </details>
+      </div>
+
+      <h3>Часть Б. Подзапросы и CTE (WITH)</h3>
+
+      <div class="task-card" data-task-id="2_3_5" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.5" />
+            <div class="task-title"><span class="task-num">2.3.5</span> Скалярный подзапрос: товары дороже средней цены</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выведи <code>id</code>, <code>title</code>, <code>price</code> всех товаров из <code>products</code>, чья цена строго выше средней цены по всему каталогу. Отсортируй по <code>price DESC</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT id, title, price
+FROM products
+WHERE price &gt; (SELECT AVG(price) FROM products)
+ORDER BY price DESC;</code></pre>
+          </div>
+          <p class="solution-note">Средняя цена по 10 товарам — <code>11750.00</code>, поэтому в выборку попадут 4 товара (от 12 000 до 39 000).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_3_6" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.6" />
+            <div class="task-title"><span class="task-num">2.3.6</span> Безопасный <code>NOT EXISTS</code>: клиенты без оплаченных покупок</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Найди клиентов из <code>customers</code> (<code>c</code>), для которых в таблице <code>orders</code> (<code>o</code>) нет ни одного заказа со статусом <code>'paid'</code>. Используй <code>NOT EXISTS</code>. Выведи <code>c.id</code>, <code>INITCAP(TRIM(c.full_name)) AS clean_name</code>, <code>LOWER(c.email) AS clean_email</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    c.id,
+    INITCAP(TRIM(c.full_name)) AS clean_name,
+    LOWER(c.email)             AS clean_email
+FROM customers AS c
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM orders AS o
+    WHERE o.customer_id = c.id
+      AND o.status = 'paid'
+)
+ORDER BY c.id;</code></pre>
+          </div>
+          <p class="solution-note">Вернутся 2 клиента: Данияр (0 заказов) и Ольга (только отменённый заказ). В отличие от <code>NOT IN</code>, <code>NOT EXISTS</code> никогда не ломается от <code>NULL</code>.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_3_7" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.7" />
+            <div class="task-title"><span class="task-num">2.3.7</span> Первый CTE: крупные оплаченные заказы (от 30 000)</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          В CTE <code>order_totals</code> посчитай для каждого оплаченного заказа <code>order_id</code>, <code>customer_id</code> и сумму <code>order_total</code>. Во внешнем запросе присоедини <code>customers</code> и выведи только заказы с <code>order_total &gt;= 30000</code>: <code>order_id</code>, <code>clean_name</code>, <code>order_total</code>. Отсортируй по <code>order_total DESC</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">WITH order_totals AS (
+    SELECT
+        o.id                             AS order_id,
+        o.customer_id,
+        SUM(oi.quantity * oi.unit_price) AS order_total
+    FROM orders AS o
+    INNER JOIN order_items AS oi
+        ON oi.order_id = o.id
+    WHERE o.status = 'paid'
+    GROUP BY o.id, o.customer_id
+)
+SELECT
+    ot.order_id,
+    INITCAP(TRIM(c.full_name)) AS clean_name,
+    ot.order_total
+FROM order_totals AS ot
+INNER JOIN customers AS c
+    ON c.id = ot.customer_id
+WHERE ot.order_total &gt;= 30000
+ORDER BY ot.order_total DESC;</code></pre>
+          </div>
+          <p class="solution-note">Вернутся 3 заказа: №10 (57 000), №3 (39 000) и №2 (30 000).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_3_8" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.8" />
+            <div class="task-title"><span class="task-num">2.3.8</span> Двухшаговый CTE: клиенты с тратами выше среднего</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Шаг 1 (CTE <code>customer_totals</code>): посчитай <code>clean_name</code> и общую сумму оплаченных покупок (<code>total_spent</code>) по каждому платящему клиенту. Шаг 2 (CTE <code>store_avg</code>): вычисли среднее <code>ROUND(AVG(total_spent), 2) AS avg_spent</code>. В финальном <code>SELECT</code> выведи тех, у кого <code>total_spent &gt; avg_spent</code>, вместе с колонкой отрыва <code>total_spent - avg_spent AS above_avg</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">WITH customer_totals AS (
+    SELECT
+        c.id                             AS customer_id,
+        INITCAP(TRIM(c.full_name))       AS clean_name,
+        SUM(oi.quantity * oi.unit_price) AS total_spent
+    FROM customers AS c
+    INNER JOIN orders AS o
+        ON o.customer_id = c.id
+    INNER JOIN order_items AS oi
+        ON oi.order_id = o.id
+    WHERE o.status = 'paid'
+    GROUP BY c.id, c.full_name
+),
+store_avg AS (
+    SELECT ROUND(AVG(total_spent), 2) AS avg_spent
+    FROM customer_totals
+)
+SELECT
+    ct.clean_name,
+    ct.total_spent,
+    sa.avg_spent,
+    ct.total_spent - sa.avg_spent AS above_avg
+FROM customer_totals AS ct
+CROSS JOIN store_avg AS sa
+WHERE ct.total_spent &gt; sa.avg_spent
+ORDER BY ct.total_spent DESC;</code></pre>
+          </div>
+          <p class="solution-note">Средние траты среди 5 платящих клиентов — <code>46400.00</code>. Выше среднего: Алексей (76 000), Тимур (57 000) и Мария (54 000).</p>
+        </details>
+      </div>
+
+      <h3>Часть В. Работа с гибким JSONB</h3>
+
+      <div class="task-card" data-task-id="2_3_9" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.9" />
+            <div class="task-title"><span class="task-num">2.3.9</span> Достаём свойство из JSONB (<code>-&gt;&gt;</code> и <code>COALESCE</code>)</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выведи для всех товаров из <code>products</code> колонки <code>id</code>, <code>title</code> и цвет из поля <code>specs</code> (<code>color</code>). Если ключа <code>color</code> в JSONB нет (как у брелока № 10), подставь <code>'не указан'</code>. Отсортируй по <code>id</code>.
+        </p>
+        <p class="task-hint">Подсказка: <code>COALESCE(specs -&gt;&gt; 'color', 'не указан') AS color</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    id,
+    title,
+    COALESCE(specs -&gt;&gt; 'color', 'не указан') AS color
+FROM products
+ORDER BY id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_3_10" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.10" />
+            <div class="task-title"><span class="task-num">2.3.10</span> Поиск по тегу (<code>@&gt;</code>) и приведение числа (<code>::int</code>)</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Найди в <code>products</code> все товары, у которых в <code>specs</code> внутри массива <code>tags</code> есть тег <code>"hit"</code> (используй оператор <code>@&gt;</code>). Выведи <code>title</code>, <code>price</code>, цвет (<code>color</code>) и вес в граммах как целое число (<code>weight_g</code>). Отсортируй по <code>price DESC</code>.
+        </p>
+        <p class="task-hint">Подсказка: условие вхождения — <code>specs @&gt; '{"tags": ["hit"]}'::jsonb</code>, число — <code>(specs -&gt;&gt; 'weight_g')::int</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    title,
+    price,
+    specs -&gt;&gt; 'color'            AS color,
+    (specs -&gt;&gt; 'weight_g')::int  AS weight_g
+FROM products
+WHERE specs @&gt; '{"tags": ["hit"]}'::jsonb
+ORDER BY price DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_3_11" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.11" />
+            <div class="task-title"><span class="task-num">2.3.11</span> Вложенный путь <code>#&gt;&gt;</code>: статистика доставок по городам</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Для всех оплаченных заказов (<code>status = 'paid'</code>) из <code>orders</code> извлеки город доставки из вложенного объекта <code>delivery_info.address.city</code> (<code>delivery_city</code>) и службу доставки (<code>courier</code>). Сгруппируй и посчитай число заказов (<code>orders_cnt</code>), отсортировав по <code>orders_cnt DESC, delivery_city</code>.
+        </p>
+        <p class="task-hint">Подсказка: вложенный текст достаётся оператором <code>delivery_info #&gt;&gt; '{address, city}'</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    delivery_info #&gt;&gt; '{address, city}' AS delivery_city,
+    delivery_info -&gt;&gt; 'courier'         AS courier,
+    COUNT(*)                            AS orders_cnt
+FROM orders
+WHERE status = 'paid'
+GROUP BY 1, 2
+ORDER BY orders_cnt DESC, delivery_city;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_3_12" data-lesson="2_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.3.12" />
+            <div class="task-title"><span class="task-num">2.3.12</span> Распаковываем массив тегов JSONB (<code>jsonb_array_elements_text</code>)</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Разверни JSON-массив <code>specs -&gt; 'tags'</code> из таблицы <code>products</code> в отдельные строки и посчитай, у скольких товаров встречается каждый тег: выведи <code>tag</code> и <code>COUNT(*) AS products_cnt</code>. Отсортируй по <code>products_cnt DESC, tag ASC</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    tag,
+    COUNT(*) AS products_cnt
+FROM products,
+     jsonb_array_elements_text(specs -&gt; 'tags') AS tag
+GROUP BY tag
+ORDER BY products_cnt DESC, tag ASC;</code></pre>
+          </div>
+          <p class="solution-note">Лидер по частоте — тег <code>gift</code> (4 товара), за ним <code>hit</code> и <code>pro</code> (по 3 товара).</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 04. УРОК 2.4 ==================== -->
+    <section id="sec-2-4" data-section-lesson="2_4">
+      <h2><span class="sec-num">04</span> Урок 2.4 · Оконные функции — аналитика без схлопывания строк (10 заданий)</h2>
+      <p>
+        Считаем средние и доли без потери строк через <code>OVER</code> и <code>PARTITION BY</code>, разбираемся с ничьими в <code>ROW_NUMBER / RANK / DENSE_RANK</code>, находим «Топ-N в группе», сравниваем периоды через <code>LAG / LEAD</code> и строим накопительные итоги с <code>ROWS BETWEEN</code>.
+      </p>
+
+      <h3>Часть А. Разминка: OVER () и PARTITION BY</h3>
+
+      <div class="task-card" data-task-id="2_4_1" data-lesson="2_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.4.1" />
+            <div class="task-title"><span class="task-num">2.4.1</span> Цена каждого товара рядом со средней ценой магазина</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Из таблицы <code>products</code> выведи <code>title</code>, <code>price</code>, среднюю цену по всей таблице с округлением до 2 знаков (<code>store_avg</code> через пустое <code>OVER ()</code>) и разницу <code>price - ROUND(AVG(price) OVER (), 2) AS diff_store</code>. Отсортируй по <code>price DESC, id</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    title,
+    price,
+    ROUND(AVG(price) OVER (), 2)         AS store_avg,
+    price - ROUND(AVG(price) OVER (), 2) AS diff_store
+FROM products
+ORDER BY price DESC, id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_4_2" data-lesson="2_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.4.2" />
+            <div class="task-title"><span class="task-num">2.4.2</span> Средняя цена категории рядом с каждым товаром</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выведи для каждого товара <code>category</code>, <code>title</code>, <code>price</code> и среднюю цену внутри его категории (<code>cat_avg</code> через <code>PARTITION BY category</code>). Все 10 строк должны остаться на месте! Отсортируй по <code>category, price DESC, id</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    category,
+    title,
+    price,
+    ROUND(AVG(price) OVER (PARTITION BY category), 2) AS cat_avg
+FROM products
+ORDER BY category, price DESC, id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_4_3" data-lesson="2_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.4.3" />
+            <div class="task-title"><span class="task-num">2.4.3</span> Именованное окно <code>WINDOW</code> и доля цены в категории</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Используя именованное окно <code>WINDOW w AS (PARTITION BY category)</code>, выведи из <code>products</code>: <code>category</code>, <code>title</code>, <code>price</code>, сумму цен категории (<code>cat_total</code>) и долю товара в процентах с округлением до 1 знака (<code>share_pct</code>). Отсортируй по <code>category, price DESC, id</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    category,
+    title,
+    price,
+    SUM(price) OVER w                            AS cat_total,
+    ROUND(price * 100.0 / SUM(price) OVER w, 1)  AS share_pct
+FROM products
+WINDOW w AS (PARTITION BY category)
+ORDER BY category, price DESC, id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <h3>Часть Б. Рейтинги и классическая задача «Топ-N в группе»</h3>
+
+      <div class="task-card" data-task-id="2_4_4" data-lesson="2_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.4.4" />
+            <div class="task-title"><span class="task-num">2.4.4</span> Три рейтинга на ничьих: ROW_NUMBER, RANK, DENSE_RANK</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Отсортируй все 10 товаров из <code>products</code> по <code>price DESC, id</code> и выведи <code>title</code>, <code>price</code> и три колонки рейтинга: <code>rn</code> (<code>ROW_NUMBER</code> с тай-брейкером <code>id</code>), <code>rnk</code> (<code>RANK</code>) и <code>dense_rnk</code> (<code>DENSE_RANK</code>). Сравни числа на товарах за <code>9000</code> и <code>6000</code>!
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    title,
+    price,
+    ROW_NUMBER() OVER (ORDER BY price DESC, id) AS rn,
+    RANK()       OVER (ORDER BY price DESC)     AS rnk,
+    DENSE_RANK() OVER (ORDER BY price DESC)     AS dense_rnk
+FROM products
+ORDER BY price DESC, id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_4_5" data-lesson="2_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.4.5" />
+            <div class="task-title"><span class="task-num">2.4.5</span> Топ-2 самых дорогих товара в каждой категории</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Выведи по 2 самых дорогих товара в каждой категории из <code>products</code>: колонки <code>category</code>, <code>pos</code> (номер места 1 или 2), <code>title</code>, <code>price</code>. Отсортируй по <code>category, pos</code>.
+        </p>
+        <p class="task-hint">Подсказка: оконную функцию нельзя фильтровать в <code>WHERE</code> напрямую — сначала пронумеруй товары в CTE, а потом отфильтруй <code>WHERE pos &lt;= 2</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">WITH ranked_products AS (
+    SELECT
+        category,
+        title,
+        price,
+        ROW_NUMBER() OVER (
+            PARTITION BY category
+            ORDER BY price DESC, id
+        ) AS pos
+    FROM products
+)
+SELECT category, pos, title, price
+FROM ranked_products
+WHERE pos &lt;= 2
+ORDER BY category, pos;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_4_6" data-lesson="2_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.4.6" />
+            <div class="task-title"><span class="task-num">2.4.6</span> Самый крупный оплаченный заказ каждого клиента</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Для каждого платящего клиента найди его <strong>один самый дорогой оплаченный заказ</strong>. Выведи <code>clean_name</code>, <code>order_id</code>, <code>order_date</code> и <code>order_total</code>. Отсортируй по <code>order_total DESC</code>.
+        </p>
+        <p class="task-hint">Подсказка: шаг 1 (CTE <code>order_totals</code>) — суммы оплаченных заказов; шаг 2 (CTE <code>ranked</code>) — <code>ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_total DESC, order_id)</code>; финал — <code>WHERE rn = 1</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">WITH order_totals AS (
+    SELECT
+        o.customer_id,
+        INITCAP(TRIM(c.full_name))       AS clean_name,
+        o.id                             AS order_id,
+        o.created_at::date               AS order_date,
+        SUM(oi.quantity * oi.unit_price) AS order_total
+    FROM orders AS o
+    INNER JOIN customers AS c
+        ON c.id = o.customer_id
+    INNER JOIN order_items AS oi
+        ON oi.order_id = o.id
+    WHERE o.status = 'paid'
+    GROUP BY o.customer_id, c.full_name, o.id, o.created_at
+),
+ranked AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY customer_id
+            ORDER BY order_total DESC, order_id
+        ) AS rn
+    FROM order_totals
+)
+SELECT clean_name, order_id, order_date, order_total
+FROM ranked
+WHERE rn = 1
+ORDER BY order_total DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <h3>Часть В. Смещение (LAG / LEAD) и скользящие рамки (ROWS BETWEEN)</h3>
+
+      <div class="task-card" data-task-id="2_4_7" data-lesson="2_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.4.7" />
+            <div class="task-title"><span class="task-num">2.4.7</span> Динамика выручки по месяцам (MoM через LAG)</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          В CTE <code>monthly_sales</code> посчитай оплаченную выручку по месяцам (<code>sales_month</code>, <code>revenue</code>). Во внешнем запросе с помощью <code>LAG(revenue)</code> добавь выручку прошлого месяца (<code>prev_revenue</code>), разницу (<code>diff_amount</code>) и процент изменения с округлением до 1 знака (<code>growth_pct</code>). Отсортируй по <code>sales_month</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">WITH monthly_sales AS (
+    SELECT
+        DATE_TRUNC('month', o.created_at)::date AS sales_month,
+        SUM(oi.quantity * oi.unit_price)        AS revenue
+    FROM orders AS o
+    INNER JOIN order_items AS oi
+        ON oi.order_id = o.id
+    WHERE o.status = 'paid'
+    GROUP BY sales_month
+)
+SELECT
+    sales_month,
+    revenue,
+    LAG(revenue) OVER w                                              AS prev_revenue,
+    revenue - LAG(revenue) OVER w                                    AS diff_amount,
+    ROUND((revenue - LAG(revenue) OVER w) * 100.0 / LAG(revenue) OVER w, 1) AS growth_pct
+FROM monthly_sales
+WINDOW w AS (ORDER BY sales_month)
+ORDER BY sales_month;</code></pre>
+          </div>
+          <p class="solution-note">Январь: 49 000 (prev = NULL), февраль: 60 000 (+22.4%), март: 54 000 (-10.0%), апрель: 69 000 (+27.8%).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_4_8" data-lesson="2_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.4.8" />
+            <div class="task-title"><span class="task-num">2.4.8</span> Сколько дней проходит между покупками клиента?</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Для каждого оплаченного заказа выведи очищенное имя клиента (<code>clean_name</code>), <code>o.id AS order_id</code>, дату заказа (<code>order_date</code>), дату предыдущего оплаченного заказа этого же клиента (<code>prev_order_date</code>) и разницу в днях (<code>days_between</code>). Отсортируй по <code>c.id, o.created_at, o.id</code>.
+        </p>
+        <p class="task-hint">Подсказка: в PostgreSQL вычитание двух дат (<code>date - date</code>) сразу возвращает целое число дней.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    INITCAP(TRIM(c.full_name))                       AS clean_name,
+    o.id                                             AS order_id,
+    o.created_at::date                               AS order_date,
+    LAG(o.created_at::date) OVER w                   AS prev_order_date,
+    o.created_at::date - LAG(o.created_at::date) OVER w AS days_between
+FROM orders AS o
+INNER JOIN customers AS c
+    ON c.id = o.customer_id
+WHERE o.status = 'paid'
+WINDOW w AS (PARTITION BY o.customer_id ORDER BY o.created_at, o.id)
+ORDER BY c.id, o.created_at, o.id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_4_9" data-lesson="2_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.4.9" />
+            <div class="task-title"><span class="task-num">2.4.9</span> Накопительная выручка и скользящее среднее за 3 заказа</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          В CTE <code>order_totals</code> собери все оплаченные заказы (<code>order_id</code>, <code>order_date</code>, <code>order_total</code>). Во внешнем запросе посчитай накопительный итог (<code>running_total</code> с явным <code>ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code>) и скользящее среднее за последние 3 заказа с округлением до 2 знаков (<code>moving_avg_3</code> с <code>ROWS BETWEEN 2 PRECEDING AND CURRENT ROW</code>). Отсортируй по <code>order_date, order_id</code>.
+        </p>
+        <p class="task-hint">Подсказка: обрати внимание на заказы № 8 и № 9 от <code>2026-03-20</code> — благодаря <code>ROWS</code> и <code>order_id</code> в <code>ORDER BY</code> они накапливаются по очереди, без скачка <code>RANGE</code>!</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">WITH order_totals AS (
+    SELECT
+        o.id                             AS order_id,
+        o.created_at::date               AS order_date,
+        SUM(oi.quantity * oi.unit_price) AS order_total
+    FROM orders AS o
+    INNER JOIN order_items AS oi
+        ON oi.order_id = o.id
+    WHERE o.status = 'paid'
+    GROUP BY o.id, o.created_at
+)
+SELECT
+    order_id,
+    order_date,
+    order_total,
+    SUM(order_total) OVER (
+        ORDER BY order_date, order_id
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS running_total,
+    ROUND(
+        AVG(order_total) OVER (
+            ORDER BY order_date, order_id
+            ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+        ),
+        2
+    ) AS moving_avg_3
+FROM order_totals
+ORDER BY order_date, order_id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_4_10" data-lesson="2_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.4.10" />
+            <div class="task-title"><span class="task-num">2.4.10</span> Дата следующей покупки (LEAD) и вклад заказа в траты клиента</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          На основе оплаченных заказов (через CTE <code>order_totals</code>) выведи для каждого заказа: <code>clean_name</code>, <code>order_date</code>, <code>order_total</code>, дату <strong>следующего</strong> заказа того же клиента (<code>next_order_date</code> через <code>LEAD</code>) и долю этого заказа в процентах от всех оплаченных трат данного клиента (<code>pct_of_client_total</code>, округлить до 1 знака). Отсортируй по <code>customer_id, order_date, order_id</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">WITH order_totals AS (
+    SELECT
+        o.customer_id,
+        INITCAP(TRIM(c.full_name))       AS clean_name,
+        o.id                             AS order_id,
+        o.created_at::date               AS order_date,
+        SUM(oi.quantity * oi.unit_price) AS order_total
+    FROM orders AS o
+    INNER JOIN customers AS c
+        ON c.id = o.customer_id
+    INNER JOIN order_items AS oi
+        ON oi.order_id = o.id
+    WHERE o.status = 'paid'
+    GROUP BY o.customer_id, c.full_name, o.id, o.created_at
+)
+SELECT
+    clean_name,
+    order_date,
+    order_total,
+    LEAD(order_date) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date, order_id
+    ) AS next_order_date,
+    ROUND(
+        order_total * 100.0
+        / SUM(order_total) OVER (PARTITION BY customer_id),
+        1
+    ) AS pct_of_client_total
+FROM order_totals
+ORDER BY customer_id, order_date, order_id;</code></pre>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 05. УРОК 2.5 ==================== -->
+    <section id="sec-2-5" data-section-lesson="2_5">
+      <h2><span class="sec-num">05</span> Урок 2.5 · Практикум-чекпоинт: комплексные SQL-задачи (7 заданий)</h2>
+      <p>
+        Финальная проверка всего арсенала Модуля 2: объединяем <code>LEFT JOIN</code>, очистку строк, <code>CASE WHEN</code>, <code>GROUP BY / HAVING</code>, многошаговые CTE, <code>JSONB</code> и оконные функции в боевых отчётах интернет-магазина.
+      </p>
+
+      <div class="task-card" data-task-id="2_5_1" data-lesson="2_5">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.5.1" />
+            <div class="task-title"><span class="task-num">2.5.1</span> Полная витрина лояльности клиентов</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Выведи <strong>всех 7 клиентов</strong>: очищенное имя (<code>customer_name</code>), название города (<code>city</code>, если <code>NULL</code> — <code>'Не указан'</code>), число оплаченных заказов (<code>paid_orders</code>), сумму оплаченных покупок (<code>total_spent</code>, если нет — <code>0.00</code>) и сегмент (<code>segment</code>): <code>&gt;= 50000</code> → <code>'VIP'</code>, <code>&gt; 0</code> → <code>'Активный'</code>, иначе <code>'Спящий'</code>. Отсортируй по <code>total_spent DESC, c.id</code>.
+        </p>
+        <p class="task-hint">Подсказка: соединяй <code>customers</code> с <code>cities</code>, <code>orders</code> (с <code>AND o.status = 'paid'</code> в <code>ON</code>) и <code>order_items</code> через <code>LEFT JOIN</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    INITCAP(TRIM(c.full_name))                       AS customer_name,
+    COALESCE(ci.name, 'Не указан')                   AS city,
+    COUNT(DISTINCT o.id)                             AS paid_orders,
+    COALESCE(SUM(oi.quantity * oi.unit_price), 0.00) AS total_spent,
+    CASE
+        WHEN COALESCE(SUM(oi.quantity * oi.unit_price), 0.00) &gt;= 50000 THEN 'VIP'
+        WHEN COALESCE(SUM(oi.quantity * oi.unit_price), 0.00) &gt; 0      THEN 'Активный'
+        ELSE 'Спящий'
+    END AS segment
+FROM customers AS c
+LEFT JOIN cities AS ci
+    ON ci.id = c.city_id
+LEFT JOIN orders AS o
+    ON o.customer_id = c.id
+   AND o.status = 'paid'
+LEFT JOIN order_items AS oi
+    ON oi.order_id = o.id
+GROUP BY c.id, c.full_name, ci.name
+ORDER BY total_spent DESC, c.id;</code></pre>
+          </div>
+          <p class="solution-note">VIP (3): Алексей (76 000), Тимур (57 000), Мария (54 000); Активный (2): Елена (33 000), Дина (12 000); Спящий (2): Данияр и Ольга (0.00).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_5_2" data-lesson="2_5">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.5.2" />
+            <div class="task-title"><span class="task-num">2.5.2</span> Почтовые домены и их вклад в выручку</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Извлеки почтовый домен каждого клиента (часть <code>email</code> после <code>@</code> в нижнем регистре, псевдоним <code>email_domain</code>). Посчитай число уникальных клиентов на домен (<code>customers_cnt</code>) и их суммарную оплаченную выручку (<code>total_revenue</code>). Оставь только домены с выручкой <code>&gt; 0</code> и отсортируй по <code>total_revenue DESC</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    SPLIT_PART(LOWER(c.email), '@', 2)               AS email_domain,
+    COUNT(DISTINCT c.id)                             AS customers_cnt,
+    COALESCE(SUM(oi.quantity * oi.unit_price), 0.00) AS total_revenue
+FROM customers AS c
+LEFT JOIN orders AS o
+    ON o.customer_id = c.id
+   AND o.status = 'paid'
+LEFT JOIN order_items AS oi
+    ON oi.order_id = o.id
+GROUP BY email_domain
+HAVING COALESCE(SUM(oi.quantity * oi.unit_price), 0.00) &gt; 0
+ORDER BY total_revenue DESC;</code></pre>
+          </div>
+          <p class="solution-note">Домен <code>tech.kz</code> (Данияр) отсеется в <code>HAVING</code>, а <code>mail.kz</code> (Алексей + Ольга) покажет <code>2</code> клиента и выручку <code>76000.00</code>.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_5_3" data-lesson="2_5">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.5.3" />
+            <div class="task-title"><span class="task-num">2.5.3</span> Товары со слабым спросом (0 или 1 продажа)</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Посчитай по каждому товару из <code>products</code> количество проданных штук в <strong>оплаченных</strong> заказах (<code>units_sold</code>, 0 если не продавались) и выручку (<code>revenue</code>). Оставь только товары, которых продано <strong>не больше 1 штуки</strong> (включая 0!). Выведи <code>p.title</code>, <code>p.category</code>, <code>units_sold</code>, <code>revenue</code>. Отсортируй по <code>units_sold ASC, p.id</code>.
+        </p>
+        <p class="task-hint">Подсказка: используй условную сумму <code>SUM(CASE WHEN o.status = 'paid' THEN oi.quantity ELSE 0 END)</code> после <code>LEFT JOIN</code>, чтобы отменённые и ожидающие заказы не искажали подсчёт и не удаляли товар.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    p.title,
+    p.category,
+    SUM(CASE WHEN o.status = 'paid' THEN oi.quantity ELSE 0 END)                  AS units_sold,
+    SUM(CASE WHEN o.status = 'paid' THEN oi.quantity * oi.unit_price ELSE 0.00 END) AS revenue
+FROM products AS p
+LEFT JOIN order_items AS oi
+    ON oi.product_id = p.id
+LEFT JOIN orders AS o
+    ON o.id = oi.order_id
+GROUP BY p.id, p.title, p.category
+HAVING SUM(CASE WHEN o.status = 'paid' THEN oi.quantity ELSE 0 END) &lt;= 1
+ORDER BY units_sold ASC, p.id;</code></pre>
+          </div>
+          <p class="solution-note">В отчёт попадут 4 товара: Брелок (0 шт.), Коврик (1 шт.), Футболка (1 шт., т. к. заказ №12 в статусе <code>pending</code>) и Кепка (1 шт.).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_5_4" data-lesson="2_5">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.5.4" />
+            <div class="task-title"><span class="task-num">2.5.4</span> Эффективность курьерских служб из JSONB</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Сравни службы доставки по <strong>оплаченным</strong> заказам: выведи <code>courier</code> (из <code>delivery_info -&gt;&gt; 'courier'</code>), число заказов (<code>orders_cnt</code>), число экспресс-заказов (<code>express_orders_cnt</code>), общую выручку (<code>total_revenue</code>) и средний чек заказа с округлением до 2 знаков (<code>avg_order_total</code>). Отсортируй по <code>total_revenue DESC</code>.
+        </p>
+        <p class="task-hint">Подсказка: сначала посчитай сумму каждого заказа в CTE, иначе <code>AVG</code> усреднит отдельные товарные позиции вместо целых заказов!</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">WITH order_totals AS (
+    SELECT
+        o.id                                                AS order_id,
+        o.delivery_info -&gt;&gt; 'courier'                       AS courier,
+        (o.delivery_info @&gt; '{"express": true}'::jsonb)     AS is_express,
+        SUM(oi.quantity * oi.unit_price)                    AS order_total
+    FROM orders AS o
+    INNER JOIN order_items AS oi
+        ON oi.order_id = o.id
+    WHERE o.status = 'paid'
+    GROUP BY o.id, o.delivery_info
+)
+SELECT
+    courier,
+    COUNT(*)                                  AS orders_cnt,
+    COUNT(*) FILTER (WHERE is_express)        AS express_orders_cnt,
+    SUM(order_total)                          AS total_revenue,
+    ROUND(AVG(order_total), 2)                AS avg_order_total
+FROM order_totals
+GROUP BY courier
+ORDER BY total_revenue DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_5_5" data-lesson="2_5">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.5.5" />
+            <div class="task-title"><span class="task-num">2.5.5</span> Финансовый дашборд: выручка, экспресс-доля, LAG и накопление</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Собери помесячный отчёт по оплаченным заказам: <code>sales_month</code>, общую выручку (<code>revenue</code>), выручку экспресс-заказов (<code>express_revenue</code> через <code>FILTER</code> и <code>@&gt; '{"express": true}'::jsonb</code>), разницу с прошлым месяцем (<code>diff_prev_month</code> через <code>LAG</code>) и накопительную выручку с начала года (<code>running_total</code> с явным <code>ROWS BETWEEN</code>). Отсортируй по <code>sales_month</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">WITH monthly AS (
+    SELECT
+        DATE_TRUNC('month', o.created_at)::date AS sales_month,
+        SUM(oi.quantity * oi.unit_price)        AS revenue,
+        COALESCE(
+            SUM(oi.quantity * oi.unit_price)
+                FILTER (WHERE o.delivery_info @&gt; '{"express": true}'::jsonb),
+            0.00
+        ) AS express_revenue
+    FROM orders AS o
+    INNER JOIN order_items AS oi
+        ON oi.order_id = o.id
+    WHERE o.status = 'paid'
+    GROUP BY sales_month
+)
+SELECT
+    sales_month,
+    revenue,
+    express_revenue,
+    revenue - LAG(revenue) OVER (ORDER BY sales_month) AS diff_prev_month,
+    SUM(revenue) OVER (
+        ORDER BY sales_month
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS running_total
+FROM monthly
+ORDER BY sales_month;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_5_6" data-lesson="2_5">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.5.6" />
+            <div class="task-title"><span class="task-num">2.5.6</span> Лидер продаж в каждой категории + доля в кассе и флаг <code>hit</code></div>
+          </div>
+          <span class="lvl-badge lvl-boss">Финал модуля</span>
+        </div>
+        <p class="task-desc">
+          Среди всех <strong>оплаченных</strong> заказов найди самый прибыльный товар в каждой категории. Выведи: <code>category</code>, <code>title</code>, булев флаг наличия тега <code>"hit"</code> в <code>specs</code> (<code>is_hit</code>), выручку товара (<code>product_revenue</code>) и его долю в процентах от всей оплаченной выручки магазина (<code>store_share_pct</code>, округлить до 1 знака). Отсортируй по <code>product_revenue DESC</code>.
+        </p>
+        <p class="task-hint">Подсказка: шаг 1 (CTE <code>product_sales</code>) — выручка по товарам; шаг 2 (CTE <code>ranked</code>) — доля через <code>SUM(product_revenue) OVER ()</code> и <code>ROW_NUMBER() OVER (PARTITION BY category ORDER BY product_revenue DESC, id)</code>; финал — <code>WHERE pos = 1</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">WITH product_sales AS (
+    SELECT
+        p.id,
+        p.category,
+        p.title,
+        (p.specs @&gt; '{"tags": ["hit"]}'::jsonb) AS is_hit,
+        SUM(oi.quantity * oi.unit_price)        AS product_revenue
+    FROM products AS p
+    INNER JOIN order_items AS oi
+        ON oi.product_id = p.id
+    INNER JOIN orders AS o
+        ON o.id = oi.order_id
+    WHERE o.status = 'paid'
+    GROUP BY p.id, p.category, p.title, p.specs
+),
+ranked AS (
+    SELECT
+        *,
+        ROUND(product_revenue * 100.0 / SUM(product_revenue) OVER (), 1) AS store_share_pct,
+        ROW_NUMBER() OVER (
+            PARTITION BY category
+            ORDER BY product_revenue DESC, id
+        ) AS pos
+    FROM product_sales
+)
+SELECT category, title, is_hit, product_revenue, store_share_pct
+FROM ranked
+WHERE pos = 1
+ORDER BY product_revenue DESC;</code></pre>
+          </div>
+          <p class="solution-note">Лидеры категорий: «Механическая клавиатура» (78 000, 33.6%), «Худи «SQL Master»» (30 000, 12.9%), «Термокружка кодера» (30 000, 12.9%) — все трое с тегом <code>hit</code>!</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_5_7" data-lesson="2_5">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.5.7" />
+            <div class="task-title"><span class="task-num">2.5.7</span> Повторные покупатели: рост чека и накопительные траты</div>
+          </div>
+          <span class="lvl-badge lvl-boss">Финал модуля</span>
+        </div>
+        <p class="task-desc">
+          Оставь только клиентов, у которых есть <strong>минимум 2 оплаченных заказа</strong>. Для каждого их оплаченного заказа выведи: очищенное имя (<code>customer_name</code>), порядковый номер покупки клиента (<code>purchase_num</code>: 1, 2, 3…), дату (<code>order_date</code>), сумму заказа (<code>order_total</code>), изменение чека относительно предыдущей покупки этого клиента (<code>diff_from_prev</code>) и накопительную сумму трат клиента (<code>client_running_total</code> с явным <code>ROWS BETWEEN</code>). Отсортируй по <code>customer_name, purchase_num</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">WITH order_totals AS (
+    SELECT
+        o.customer_id,
+        INITCAP(TRIM(c.full_name))       AS customer_name,
+        o.id                             AS order_id,
+        o.created_at::date               AS order_date,
+        SUM(oi.quantity * oi.unit_price) AS order_total
+    FROM orders AS o
+    INNER JOIN customers AS c
+        ON c.id = o.customer_id
+    INNER JOIN order_items AS oi
+        ON oi.order_id = o.id
+    WHERE o.status = 'paid'
+    GROUP BY o.customer_id, c.full_name, o.id, o.created_at
+),
+enriched AS (
+    SELECT
+        *,
+        COUNT(*) OVER (PARTITION BY customer_id) AS total_orders,
+        ROW_NUMBER() OVER (
+            PARTITION BY customer_id
+            ORDER BY order_date, order_id
+        ) AS purchase_num,
+        order_total - LAG(order_total) OVER (
+            PARTITION BY customer_id
+            ORDER BY order_date, order_id
+        ) AS diff_from_prev,
+        SUM(order_total) OVER (
+            PARTITION BY customer_id
+            ORDER BY order_date, order_id
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS client_running_total
+    FROM order_totals
+)
+SELECT
+    customer_name,
+    purchase_num,
+    order_date,
+    order_total,
+    diff_from_prev,
+    client_running_total
+FROM enriched
+WHERE total_orders &gt;= 2
+ORDER BY customer_name, purchase_num;</code></pre>
+          </div>
+          <p class="solution-note">В выборку попадут 3 повторных покупателя: Алексей Иванов (3 заказа), Елена Волкова (2 заказа) и Мария Смирнова (2 заказа).</p>
+        </details>
+      </div>
+    </section>
+
+    <div class="empty-filter" id="empty-filter">
+      Все задания по выбранному фильтру уже выполнены! Отличная работа 🎉
+    </div>
+
+  </article>
+
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Автоматическое оглавление из <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = Array.from(document.querySelectorAll('article.lecture > section'));
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${clone.textContent.trim()}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Разделы практикума</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 3. Копирование кода (с fallback для file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (_) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => { btn.textContent = originalText; }, 1800);
+          }
+        });
+      });
+
+      // 4. Прогресс и фильтрация заданий
+      const STORAGE_KEY = 'db_course_practice_m2_v1';
+      const cards = Array.from(document.querySelectorAll('.task-card[data-task-id]'));
+      const progressText = document.getElementById('progress-text');
+      const progressFill = document.getElementById('progress-fill');
+      const resetBtn = document.getElementById('reset-progress');
+      const filterBtns = Array.from(document.querySelectorAll('.filter-btn'));
+      const emptyFilter = document.getElementById('empty-filter');
+      let currentFilter = 'all';
+
+      function loadDone() {
+        try {
+          return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+        } catch (_) {
+          return new Set();
+        }
+      }
+
+      function saveDone(set) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(set)));
+        } catch (_) {}
+      }
+
+      const doneSet = loadDone();
+
+      function applyFilter() {
+        let visibleCards = 0;
+
+        cards.forEach((card) => {
+          const id = card.dataset.taskId;
+          const lesson = card.dataset.lesson;
+          const isDone = doneSet.has(id);
+          let show = true;
+
+          if (currentFilter === 'todo') show = !isDone;
+          else if (currentFilter !== 'all') show = lesson === currentFilter;
+
+          card.classList.toggle('hidden', !show);
+          if (show) visibleCards++;
+        });
+
+        sections.forEach((sec) => {
+          const secLesson = sec.dataset.sectionLesson;
+          if (secLesson === 'init') {
+            sec.classList.toggle('hidden', currentFilter !== 'all' && currentFilter !== 'todo');
+            return;
+          }
+          const secCards = Array.from(sec.querySelectorAll('.task-card'));
+          const anyVisible = secCards.some((c) => !c.classList.contains('hidden'));
+          sec.classList.toggle('hidden', !anyVisible);
+        });
+
+        emptyFilter.classList.toggle('visible', visibleCards === 0);
+      }
+
+      function syncUI() {
+        let doneCount = 0;
+        cards.forEach((card) => {
+          const id = card.dataset.taskId;
+          const cb = card.querySelector('.task-check');
+          const isDone = doneSet.has(id);
+          cb.checked = isDone;
+          card.classList.toggle('done', isDone);
+          if (isDone) doneCount++;
+        });
+
+        const total = cards.length;
+        const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+        progressText.textContent = `${doneCount} / ${total} (${pct}%)`;
+        progressFill.style.width = `${pct}%`;
+        resetBtn.classList.toggle('visible', doneCount > 0);
+        applyFilter();
+      }
+
+      cards.forEach((card) => {
+        const cb = card.querySelector('.task-check');
+        cb.addEventListener('change', () => {
+          const id = card.dataset.taskId;
+          if (cb.checked) doneSet.add(id);
+          else doneSet.delete(id);
+          saveDone(doneSet);
+          syncUI();
+        });
+      });
+
+      filterBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          currentFilter = btn.dataset.filter;
+          filterBtns.forEach((b) => b.classList.toggle('active', b === btn));
+          applyFilter();
+        });
+      });
+
+      resetBtn.addEventListener('click', () => {
+        doneSet.clear();
+        saveDone(doneSet);
+        syncUI();
+      });
+
+      syncUI();
+    });
+  </script>
+</body>
+</html>

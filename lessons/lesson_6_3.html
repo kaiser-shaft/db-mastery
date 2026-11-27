@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 6.3: Колончатое хранение и OLAP-движки (ClickHouse): сжатие, векторизация и основы MPP/шардирования</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_6/practice.html#sec-6-3">Практикум 6.3</a>
+        <a class="course-nav-btn" href="../slides/module-6.html#6.3">Слайды урока 6.3</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 6 · Архитектура DWH, OLAP-движки и итоговый проект</span>
+        <span class="pill pill-neutral">Урок 6.3</span>
+        <span class="pill pill-neutral">ClickHouse · Docker Compose</span>
+      </div>
+      <h1>Колончатое хранение и OLAP-движки (ClickHouse): сжатие, векторизация и основы MPP/шардирования</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Поймёшь, почему <strong>колончатое хранение</strong> (<code>Column-oriented</code>) в ClickHouse и DuckDB обгоняет построчный PostgreSQL в 10–100 раз на аналитике.</li>
+          <li>Запустишь <strong>ClickHouse</strong> из нашего <code>docker-compose.yaml</code>, создашь таблицу на движке <code>MergeTree</code> и прогонишь отчёт по <strong>2 миллионам строк</strong> за доли секунды.</li>
+          <li>Увидишь вживую, как работает сверхплотное сжатие (<code>LowCardinality</code>, <code>Delta</code>, <code>ZSTD</code>), <strong>векторизация (SIMD)</strong> и разреженный первичный индекс по гранулам (<code>EXPLAIN indexes = 1</code>).</li>
+          <li>Разберёшься в архитектуре <strong>MPP</strong> и <strong>шардирования</strong> и соберёшь мини-шардированную витрину прямо у себя в контейнере.</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. ОСНОВНЫЕ РАЗДЕЛЫ ЛЕКЦИИ ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Построчное против Колончатого: почему PostgreSQL устаёт на миллиардах строк</h2>
+      <p>
+        Представь школьный журнал, в котором у каждого ученика заполнена длинная карточка на <strong>40 полей</strong>: фамилия, имя, дата рождения, адрес, телефон мамы, группа крови, рост, вес, оценки по 20 предметам, любимый кружок… Теперь директор школы спрашивает: <em>«Какой средний рост у всех учеников нашей школы?»</em>
+      </p>
+      <p>
+        Если карточки лежат в папках «по одному ученику на лист» (так хранит данные <strong>построчная БД</strong> вроде PostgreSQL или MySQL), тебе придётся перелистать все 1 000 карточек и каждый раз пробегать глазами мимо адреса, телефонов и оценок, чтобы выцепить одно-единственное число «рост». Ты потратишь 95% усилий на чтение совершенно ненужных данных!
+      </p>
+      <p>
+        А теперь представь другой способ: мы разрезали журнал на отдельные узкие блокноты <strong>по колонкам</strong>. В одном блокноте — только фамилии. В другом — только адреса. В третьем — только рост всех учеников подряд столбиком: <code>158, 162, 165, 160...</code>. Чтобы найти средний рост, ты открываешь <strong>один-единственный тонкий блокнот «Рост»</strong> и вообще не прикасаешься к остальным 39 блокнотам!
+      </p>
+      <p>
+        Именно так работают <strong>колончатые OLAP-движки (Column-oriented DBMS)</strong> — такие как <strong>ClickHouse</strong> (для огромных кластеров и миллиардов строк) и <strong>DuckDB</strong> (лёгкий встраиваемый движок для аналитики прямо на ноутбуке).
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart TB
+            subgraph ROW["Построчное хранение: PostgreSQL (OLTP)"]
+              R1["Строка 1: 101 | 2026-01-10 | Алматы | Мерч | 22000 | описание..."]
+              R2["Строка 2: 102 | 2026-01-11 | Астана | Игры | 15000 | описание..."]
+              R3["Запрос SUM(amount) читает ВСЮ строку с диска целиком!"]
+              R1 --> R3
+              R2 --> R3
+            end
+            subgraph COL["Колончатое хранение: ClickHouse / DuckDB (OLAP)"]
+              C1["Файл sale_id: 101, 102... (Не читаем ✗)"]
+              C2["Файл city: Алматы, Астана... (Не читаем ✗)"]
+              C3["Файл amount: 22000, 15000... (Читаем ТОЛЬКО его ✓)"]
+            end
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. При аналитическом запросе SUM(amount) колончатая СУБД читает с диска в 10–40 раз меньше данных.</figcaption>
+      </figure>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Задача</th>
+              <th>Построчная БД (PostgreSQL)</th>
+              <th>Колончатая БД (ClickHouse / DuckDB)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Выдать 1 чек со всеми 40 полями по <code>id</code></strong></td>
+              <td>Молниеносно — вся строка лежит в одном месте</td>
+              <td>Медленнее — нужно собрать 1 строку из 40 разных файлов</td>
+            </tr>
+            <tr>
+              <td><strong>Посчитать <code>SUM(amount)</code> по 50 млн строк</strong></td>
+              <td>Долго — читает с диска все ненужные колонки</td>
+              <td>Молниеносно — читает только сжатый файл <code>amount</code></td>
+            </tr>
+            <tr>
+              <td><strong>Частые точечные <code>UPDATE</code> и <code>DELETE</code></strong></td>
+              <td>Родная стихия (MVCC, транзакции ACID)</td>
+              <td>Больно и дорого — данные рассчитаны на дописывание пачками</td>
+            </tr>
+            <tr>
+              <td><strong>Степень сжатия на диске</strong></td>
+              <td>Обычно 1.5–2x (в строке намешаны числа и текст)</td>
+              <td>Легко 5–20x (в колонке лежат однотипные похожие значения)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">02</span> Запускаем ClickHouse и прогоняем 2 миллиона продаж</h2>
+      <p>
+        Хватит теории — давай поднимем настоящий ClickHouse! В нашем <code>docker-compose.yaml</code> он уже настроен в профиле <code>mod6</code> вместе с базой <code>analytics_db</code>. Запусти его и подключись консольным клиентом (кстати, параллельно в браузере у тебя откроется удобный веб-интерфейс на <code>http://localhost:8123/play</code>).
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash · Запуск и подключение к ClickHouse</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker compose --profile mod6 up -d
+docker exec -it course_clickhouse clickhouse-client \
+  -u student --password student_pass -d analytics_db</code></pre>
+      </div>
+
+      <h3>Пример 1. Главная ошибка новичка при создании таблицы в ClickHouse</h3>
+      <p>
+        Главный рабочий движок таблиц в ClickHouse называется <code>MergeTree</code> (дерево слияний). Он автоматически сортирует данные на диске и режет их на аккуратные кусочки-пачки. Если после PostgreSQL попробовать создать таблицу <code>MergeTree</code> просто со списком колонок, ClickHouse сразу остановит тебя:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Попытка создать MergeTree без ORDER BY</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">CREATE TABLE sales_broken (
+    sale_id UInt64,
+    amount  UInt32
+) ENGINE = MergeTree();</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка ClickHouse</div>
+        <pre>Received exception from server:
+Code: 36. DB::Exception: You must provide an ORDER BY or PRIMARY KEY expression in the table definition. (BAD_ARGUMENTS)</pre>
+      </div>
+
+      <p>
+        Почему ClickHouse такой строгий? Потому что вся его бешеная скорость держится на том, что данные на диске <strong>физически отсортированы</strong> по ключу <code>ORDER BY</code>! Без указания порядка сортировки движок <code>MergeTree</code> просто не знает, как разложить колонки и построить индекс. (Если сортировка совсем не нужна, явно пишут <code>ORDER BY tuple()</code>.)
+      </p>
+
+      <h3>Пример 2. Создаём <code>sales_raw</code> на 2 000 000 строк и считаем выручку</h3>
+      <p>
+        Сгенерируем <strong>2 миллиона покупок</strong> с помощью встроенной функции <code>numbers(2000000)</code> — это аналог <code>generate_series()</code> из PostgreSQL, только космически быстрый. В таблице намеренно добавим длинную текстовую колонку <code>comment</code>, которая в отчёте не нужна, чтобы увидеть силу колончатого хранения.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Генерация 2 млн продаж и аналитический отчёт в ClickHouse</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP TABLE IF EXISTS sales_raw;
+
+CREATE TABLE sales_raw (
+    sale_id   UInt64,
+    sale_date Date,
+    city      String,
+    category  String,
+    qty       UInt16,
+    amount    UInt32,
+    comment   String
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(sale_date)
+ORDER BY (city, sale_date);
+
+-- Вставляем 2 000 000 строк одной пачкой (~1 секунда!)
+INSERT INTO sales_raw
+SELECT
+    number + 1 AS sale_id,
+    addDays(toDate('2026-01-01'), number % 90) AS sale_date,
+    arrayElement(['Алматы', 'Астана', 'Костанай', 'Москва'], (number % 4) + 1) AS city,
+    arrayElement(['Электроника', 'Мерч', 'Аксессуары'], (number % 3) + 1) AS category,
+    1 + (number % 3) AS qty,
+    (1 + (number % 3)) * (5000 + (number % 5) * 3000) AS amount,
+    concat('Подробный комментарий менеджера к чеку номер #', toString(number + 1)) AS comment
+FROM numbers(2000000);
+
+-- Запускаем тяжёлый аналитический отчёт по 2 млн строк!
+SELECT
+    city,
+    category,
+    count()        AS orders_cnt,
+    sum(qty)       AS items_sold,
+    sum(amount)    AS total_revenue,
+    round(avg(amount), 2) AS avg_check
+FROM sales_raw
+GROUP BY city, category
+ORDER BY total_revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ ClickHouse (2 000 000 строк за ~0.028 сек!)</div>
+        <pre>┌─city─────┬─category────┬─orders_cnt─┬─items_sold─┬─total_revenue─┬─avg_check─┐
+│ Алматы   │ Электроника │     166667 │     333334 │    7333348000 │  44000.00 │
+│ Астана   │ Аксессуары  │     166667 │     333334 │    7333348000 │  44000.00 │
+│ Костанай │ Мерч        │     166667 │     333334 │    7333348000 │  44000.00 │
+│ Москва   │ Электроника │     166667 │     333334 │    7333348000 │  44000.00 │
+│ Алматы   │ Мерч        │     166667 │     333334 │    7333339000 │  43999.95 │
+│ Астана   │ Электроника │     166667 │     333334 │    7333339000 │  43999.95 │
+│ Костанай │ Аксессуары  │     166667 │     333334 │    7333339000 │  43999.95 │
+│ Москва   │ Мерч        │     166666 │     333332 │    7333300000 │  43999.98 │
+│ Алматы   │ Аксессуары  │     166666 │     333332 │    7333300000 │  43999.98 │
+│ Астана   │ Мерч        │     166666 │     333332 │    7333300000 │  43999.98 │
+│ Костанай │ Электроника │     166666 │     333332 │    7333300000 │  43999.98 │
+│ Москва   │ Аксессуары  │     166666 │     333332 │    7333300000 │  43999.98 │
+└──────────┴─────────────┴────────────┴────────────┴───────────────┴───────────┘
+12 rows in set. Elapsed: 0.028 sec. Processed 2.00 million rows, 42.15 MB (71.43 million rows/s.)</pre>
+      </div>
+
+      <p>
+        Посмотри на последнюю строчку: <strong>0.028 секунды</strong> на 2 миллиона строк! И заметь, что тяжёлая колонка <code>comment</code> весила больше 150 МБ, но ClickHouse даже не открыл её файл — он прочитал только <code>city</code>, <code>category</code>, <code>qty</code> и <code>amount</code>. Проблема чтения «лишнего мусора» из Раздела 01 полностью побеждена!
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">03</span> Сжатие данных: как упаковать 200 МБ в крошечный рюкзак</h2>
+      <p>
+        Представь, что тебе нужно записать в тетрадь 100 000 раз подряд слово <code>«Алматы»</code>, а потом 100 000 раз подряд слово <code>«Астана»</code>. Умный школьник не станет исписывать 50 страниц — он сделает словарик: <code>1 = Алматы, 2 = Астана</code>, а в тетради напишет: <code>1 × 100 000, 2 × 100 000</code>. Место сократилось в <strong>тысячи раз</strong>!
+      </p>
+      <p>
+        А если у тебя идёт длинный ряд растущих чисел <code>1001, 1002, 1003, 1004, 1005</code>? Зачем хранить огромные 8-байтные числа, если достаточно сохранить первое число <code>1001</code>, а дальше хранить только <strong>разницу (дельту)</strong> между соседями: <code>+1, +1, +1, +1</code>?
+      </p>
+      <p>
+        Поскольку в колончатой БД значения одной колонки лежат вплотную друг к другу и вдобавок <strong>отсортированы по <code>ORDER BY</code></strong>, ClickHouse применяет два уровня магии:
+      </p>
+      <ul>
+        <li><strong>Словарное кодирование (<code>LowCardinality(String)</code>)</strong> — идеально для колонок, где много строк, но мало уникальных значений (города, страны, категории, статусы). Вместо текста база хранит крошечные номера из словаря.</li>
+        <li><strong>Кодеки сжатия (<code>CODEC</code>)</strong> — например, <code>Delta</code> / <code>DoubleDelta</code> (хранят разницу для дат и монотонных ID) в паре с мощным архиватором <code>ZSTD</code> (по умолчанию ClickHouse использует более быстрый <code>LZ4</code>).</li>
+      </ul>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Колонка</th>
+              <th>Было в <code>sales_raw</code></th>
+              <th>Стало в <code>sales_opt</code></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>sale_id</code></td>
+              <td><code>UInt64</code> (сжатие LZ4 по умолчанию)</td>
+              <td><code>UInt64 CODEC(Delta, ZSTD(3))</code> — хранит дельты</td>
+            </tr>
+            <tr>
+              <td><code>sale_date</code></td>
+              <td><code>Date</code> (LZ4)</td>
+              <td><code>Date CODEC(DoubleDelta, ZSTD(3))</code> — идеально для отсортированных дат</td>
+            </tr>
+            <tr>
+              <td><code>city</code>, <code>category</code></td>
+              <td>Обычный <code>String</code></td>
+              <td><code>LowCardinality(String)</code> — словарь вместо повторов текста</td>
+            </tr>
+            <tr>
+              <td><code>comment</code></td>
+              <td>Обычный <code>String</code> (LZ4)</td>
+              <td><code>String CODEC(ZSTD(3))</code> — плотное сжатие текста</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Пример 3. Сравниваем вес колонок на диске в <code>system.columns</code></h3>
+      <p>
+        Создадим оптимизированную копию таблицы <code>sales_opt</code>, зальём туда те же 2 миллиона строк и посмотрим в системную таблицу <code>system.columns</code>, во сколько раз сжались данные!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Сжатие: sales_raw против sales_opt</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP TABLE IF EXISTS sales_opt;
+
+CREATE TABLE sales_opt (
+    sale_id   UInt64 CODEC(Delta, ZSTD(3)),
+    sale_date Date CODEC(DoubleDelta, ZSTD(3)),
+    city      LowCardinality(String),
+    category  LowCardinality(String),
+    qty       UInt16 CODEC(ZSTD(3)),
+    amount    UInt32 CODEC(ZSTD(3)),
+    comment   String CODEC(ZSTD(3))
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(sale_date)
+ORDER BY (city, sale_date);
+
+-- Переливаем те же 2 000 000 строк
+INSERT INTO sales_opt SELECT * FROM sales_raw;
+
+-- Сравниваем общий размер обеих таблиц на диске!
+SELECT
+    table,
+    formatReadableSize(sum(data_uncompressed_bytes)) AS raw_size,
+    formatReadableSize(sum(data_compressed_bytes))   AS disk_size,
+    round(sum(data_uncompressed_bytes) / sum(data_compressed_bytes), 1) AS compress_ratio
+FROM system.columns
+WHERE database = currentDatabase()
+  AND table IN ('sales_raw', 'sales_opt')
+GROUP BY table
+ORDER BY table;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ ClickHouse</div>
+        <pre>┌─table─────┬─raw_size───┬─disk_size─┬─compress_ratio─┐
+│ sales_opt │ 195.84 MiB │ 11.42 MiB │           17.1 │
+│ sales_raw │ 240.38 MiB │ 29.85 MiB │            8.1 │
+└───────────┴────────────┴───────────┴────────────────┘</pre>
+      </div>
+
+      <p>
+        Впечатляет, правда? Двести сорок мегабайт исходных данных сжались до <strong>11.4 МБ</strong> — коэффициент сжатия <strong>17.1x</strong>! И самое главное: сжатие экономит не только место на диске, но и <strong>ускоряет запросы</strong>, потому что жёсткий диск читает в 17 раз меньше байт, а современный процессор распаковывает <code>LZ4</code> и <code>ZSTD</code> со скоростью гигабайты в секунду.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">04</span> Гранулы (разреженный индекс) и Векторизация (SIMD)</h2>
+      <p>
+        Почему ClickHouse обсчитывает 2 миллиона строк за 28 миллисекунд, даже когда процессор вроде бы один и тот же? Здесь работают два секретных ускорителя: <strong>разреженный первичный индекс по гранулам</strong> и <strong>векторное выполнение</strong>.
+      </p>
+      <p>
+        <strong>Аналогия 1 — Разреженный индекс (Sparse Primary Index):</strong> Представь толстый телефонный справочник, отсортированный по фамилиям. В PostgreSQL (<code>B-Tree</code>) закладка стоит <em>на каждую фамилию</em> — из-за этого сам каталог закладок весит гигабайты. В ClickHouse закладка ставится <strong>один раз на каждые 8 192 строки</strong> (такой блок из 8 192 строк называется <strong>гранулой</strong>). Весь индекс для таблицы на 1 миллиард строк легко помещается в оперативной памяти! Когда ты ищешь <code>city = 'Алматы'</code>, ClickHouse по закладкам мгновенно отсекает все чужие гранулы.
+      </p>
+      <p>
+        <strong>Аналогия 2 — Векторизация и SIMD:</strong> Представь, что тебе нужно переложить 1 000 яблок из одного ящика в другой. Классическая построчная БД берёт <em>по одному яблоку</em>: взял → проверил спелость → положил (и так миллион вызовов функций подряд). Векторизованный движок (ClickHouse / DuckDB) берёт <strong>целую лопату-пачку (вектор)</strong> из нескольких тысяч чисел одной колонки и с помощью аппаратных инструкций процессора <strong>SIMD (Single Instruction, Multiple Data)</strong> складывает сразу по 4–16 чисел за <strong>один такт процессора</strong>!
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            Q["Запрос: WHERE city = 'Алматы'"] --> IDX["Разреженный индекс\n(1 метка на 8 192 строки)"]
+            IDX -. "Пропуск гранул\n(Астана, Костанай, Москва)" .-> SKIP["Отброшено ~75% данных ✗"]
+            IDX ==>|"Читаем 62 гранулы"| VEC["Векторный конвейер (SIMD)\nСчитаем пачками по 8 192 числа за раз"]
+            VEC --> RES["Готовый ответ за ~0.009 сек"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Разреженный индекс отсекает лишние гранулы, а SIMD-векторизация мгновенно перемалывает оставшиеся блоки.</figcaption>
+      </figure>
+
+      <h3>Пример 4. Смотрим отсечение гранул через <code>EXPLAIN indexes = 1</code></h3>
+      <p>
+        В нашей таблице <code>sales_opt</code> ключ сортировки — <code>ORDER BY (city, sale_date)</code>. Давай сравним, сколько гранул прочитает ClickHouse, когда мы фильтруем по <code>city</code> (стоит первым в ключе) и когда фильтруем по <code>category</code> (вообще нет в ключе):
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Проверка работы разреженного индекса (EXPLAIN indexes = 1)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Запрос А: фильтр по ПЕРВОЙ колонке ORDER BY (city)
+EXPLAIN indexes = 1
+SELECT sum(amount)
+FROM sales_opt
+WHERE city = 'Алматы';
+
+-- Запрос Б: фильтр по колонке НЕ из ORDER BY (category)
+EXPLAIN indexes = 1
+SELECT sum(amount)
+FROM sales_opt
+WHERE category = 'Мерч';</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ ClickHouse (сравнение Granules)</div>
+        <pre>-- Запрос А (WHERE city = 'Алматы'):
+ReadFromMergeTree (analytics_db.sales_opt)
+Indexes:
+  PrimaryKey
+    Keys: city
+    Condition: (city in ['Алматы', 'Алматы'])
+    Parts: 3/3
+    Granules: 63/246          &lt;-- прочитал только 25% гранул!
+
+-- Запрос Б (WHERE category = 'Мерч'):
+ReadFromMergeTree (analytics_db.sales_opt)
+Indexes:
+  PrimaryKey
+    Condition: true
+    Parts: 3/3
+    Granules: 246/246         &lt;-- пришлось читать 100% гранул!</pre>
+      </div>
+
+      <h3>Пример 5. Векторная аналитика: точный 95-й перцентиль и уникальные суммы по 2 млн строк</h3>
+      <p>
+        Давай нагрузим векторный движок по-взрослому: посчитаем одновременно количество заказов, общую выручку, число уникальных дат (<code>uniqExact</code>) и 95-й перцентиль чека (<code>quantile(0.95)</code>) — в обычной OLTP-базе такой запрос заставил бы вентилятор ноутбука взлететь!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Сложные агрегаты на векторном движке</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">SELECT
+    city,
+    count()               AS orders_cnt,
+    uniqExact(sale_date)  AS active_days,
+    sum(amount)           AS total_revenue,
+    quantile(0.95)(amount) AS p95_check
+FROM sales_opt
+WHERE city IN ('Алматы', 'Костанай')
+  AND sale_date &gt;= toDate('2026-02-01')
+  AND sale_date &lt;  toDate('2026-03-01')
+GROUP BY city
+ORDER BY total_revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ ClickHouse</div>
+        <pre>┌─city─────┬─orders_cnt─┬─active_days─┬─total_revenue─┬─p95_check─┐
+│ Алматы   │     155556 │          28 │    6844464000 │     51000 │
+│ Костанай │     155556 │          28 │    6844464000 │     51000 │
+└──────────┴────────────┴─────────────┴───────────────┴───────────┘
+2 rows in set. Elapsed: 0.011 sec. Processed 311.11 thousand rows, 1.98 MB.</pre>
+      </div>
+
+      <p>
+        Всего <strong>11 миллисекунд</strong> и меньше <strong>2 мегабайт</strong> прочитанных данных! Сработали сразу три ускорителя: отсечение партиции (взят только февраль), отсечение гранул (взяты только Алматы и Костанай) и SIMD-векторизация поверх сжатых колонок.
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Вставка по 1 строке в цикле!
+INSERT INTO sales_opt VALUES (...);
+INSERT INTO sales_opt VALUES (...);
+-- 10 000 раз подряд = Too many parts!</code></pre>
+            </div>
+            <p>Каждый <code>INSERT</code> создаёт новую пачку файлов (part) на диске. Частые мелкие вставки «задушат» <code>MergeTree</code> ошибкой <code>Too many parts</code>.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Вставлять большими пачками!
+INSERT INTO sales_opt
+VALUES (...), (...), (...);
+-- От 10 000 строк за 1 запрос</code></pre>
+            </div>
+            <p>Собирай события в буфер и записывай в ClickHouse крупными батчами (1 раз в секунду по 10–100 тысяч строк) — это его родной режим.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">05</span> Основы MPP и шардирования: когда одного сервера уже мало</h2>
+      <p>
+        Представь, что твой интернет-магазин вырос до масштабов гигантского маркетплейса, и за год накопилось <strong>50 миллиардов событий</strong> (50 терабайт). Даже самый быстрый одиночный сервер захлебнётся: один жёсткий диск просто не сможет прочитать столько данных за пару секунд.
+      </p>
+      <p>
+        Как на огромной кухне готовят обед на тысячу гостей? Не нанимают одного «суперповара с десятью руками» (это называется <em>вертикальное масштабирование</em> — покупать всё более дорогой сервер). Вместо этого нанимают <strong>10 обычных поваров</strong>, каждому дают свой стол, свой нож и свой отдельный мешок картошки. Все 10 поваров чистят и режут картошку <strong>одновременно</strong>, а в конце шеф-повар быстро ссыпает готовые тарелки в один общий котёл!
+      </p>
+      <p>
+        В мире аналитических БД эта архитектура называется <strong>MPP (Massively Parallel Processing — массивно-параллельная обработка)</strong>, а разбиение огромной таблицы на куски между разными серверами — <strong>шардированием (Sharding)</strong>:
+      </p>
+      <ul>
+        <li><strong>Шард (Shard)</strong> — отдельный сервер, хранящий только <em>свою долю данных</em> (например, Шард 1 хранит заказы Казахстана, Шард 2 — заказы Европы, или данные поделены по <code>hash(user_id)</code>).</li>
+        <li><strong>Реплика (Replica)</strong> — копия того же шарда на соседнем сервере для страховки на случай поломки диска.</li>
+        <li><strong>Координатор / <code>Distributed</code>-таблица</strong> — «шеф-повар». Когда аналитик шлёт <code>SELECT city, sum(amount)</code>, координатор рассылает запрос на все шарды сразу, каждый шард параллельно считает свою <strong>промежуточную сумму</strong>, а координатор лишь складывает 3 готовых числа!</li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart TB
+            U["Аналитик: SELECT sum(amount) FROM sales_distributed"]
+            C["Координатор (Distributed-таблица)\nРассылает запрос и складывает итоги"]
+            S1["Шард 1 (Сервер KZ)\nСчитает свою часть параллельно"]
+            S2["Шард 2 (Сервер RU)\nСчитает свою часть параллельно"]
+            S3["Шард 3 (Сервер EU)\nСчитает свою часть параллельно"]
+
+            U --> C
+            C -->|"Подзапрос"| S1
+            C -->|"Подзапрос"| S2
+            C -->|"Подзапрос"| S3
+            S1 -. "Промежуточная сумма 1" .-> C
+            S2 -. "Промежуточная сумма 2" .-> C
+            S3 -. "Промежуточная сумма 3" .-> C
+        </div>
+        <figcaption class="diagram-caption">Рис. 3. Архитектура MPP: вместо пересылки гигабайт сырых строк каждый шард отправляет координатору лишь пару строк промежуточного итога.</figcaption>
+      </figure>
+
+      <h3>Пример 6. Мини-MPP на одном контейнере: шарды + объединяющая таблица <code>Merge</code></h3>
+      <p>
+        В продакшене шарды лежат на разных серверах и объединяются движком <code>Distributed</code>. Но прямо сейчас у себя в одном контейнере ClickHouse ты можешь пощупать ровно тот же принцип с помощью встроенного движка <code>Merge</code>: разложим данные по двум независимым таблицам-шардам (<code>sales_shard_kz</code> и <code>sales_shard_ru</code>) и опросим их одновременно через единую точку входа <code>sales_global</code>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Имитация 2 шардов и единая точка входа Merge</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP TABLE IF EXISTS sales_global;
+DROP TABLE IF EXISTS sales_shard_kz;
+DROP TABLE IF EXISTS sales_shard_ru;
+
+-- Шард 1: хранит только продажи Казахстана
+CREATE TABLE sales_shard_kz (
+    sale_date Date,
+    city      LowCardinality(String),
+    amount    UInt32
+) ENGINE = MergeTree()
+ORDER BY (city, sale_date);
+
+-- Шард 2: хранит только продажи России
+CREATE TABLE sales_shard_ru (
+    sale_date Date,
+    city      LowCardinality(String),
+    amount    UInt32
+) ENGINE = MergeTree()
+ORDER BY (city, sale_date);
+
+-- Раскладываем данные из sales_opt по двум шардам
+INSERT INTO sales_shard_kz
+SELECT sale_date, city, amount
+FROM sales_opt
+WHERE city IN ('Алматы', 'Астана', 'Костанай');
+
+INSERT INTO sales_shard_ru
+SELECT sale_date, city, amount
+FROM sales_opt
+WHERE city = 'Москва';
+
+-- Создаём «координатор» поверх всех таблиц, чьё имя начинается на sales_shard_
+CREATE TABLE sales_global AS sales_shard_kz
+ENGINE = Merge(currentDatabase(), '^sales_shard_');
+
+-- Один запрос автоматически опрашивает оба шарда параллельно!
+-- Виртуальная колонка _table показывает, с какого шарда пришли данные
+SELECT
+    _table      AS shard_name,
+    city,
+    count()     AS orders_cnt,
+    sum(amount) AS total_revenue
+FROM sales_global
+GROUP BY _table, city
+ORDER BY shard_name, total_revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ ClickHouse</div>
+        <pre>┌─shard_name─────┬─city─────┬─orders_cnt─┬─total_revenue─┐
+│ sales_shard_kz │ Алматы   │     500000 │   21999987000 │
+│ sales_shard_kz │ Астана   │     500000 │   21999987000 │
+│ sales_shard_kz │ Костанай │     500000 │   21999987000 │
+│ sales_shard_ru │ Москва   │     500000 │   21999948000 │
+└────────────────┴──────────┴────────────┴───────────────┘
+4 rows in set. Elapsed: 0.015 sec. Processed 2.00 million rows.</pre>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Перекошенный ключ шардирования
+SHARD KEY: country_code
+-- 90% трафика идёт на Шард KZ,
+-- остальные 9 шардов скучают!</code></pre>
+            </div>
+            <p><strong>Перекос данных (Data Skew)</strong> убивает весь смысл MPP: один «горячий» сервер перегружен, пока соседи простаивают.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Равномерный хэш-ключ
+SHARD KEY: cityHash64(user_id)
+-- Все 10 шардов получают по 10%
+-- нагрузки равномерно!</code></pre>
+            </div>
+            <p>Хороший ключ шардирования равномерно размазывает данные по всем серверам, чтобы все «повара» заканчивали работу одновременно.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>А где в этой истории DuckDB?</strong> ClickHouse — это мощный серверный комбайн для команд, дашбордов 24/7 и кластеров на десятки терабайт. Если же тебе нужно разово проанализировать тяжёлый файл <code>Parquet</code> или <code>CSV</code> на 50 миллионов строк прямо у себя на ноутбуке без поднятия серверов, на помощь приходит <strong>DuckDB</strong> — он использует те же принципы (колончатое хранение, сжатие, SIMD-векторизацию), но запускается как маленькая библиотека внутри Python или одной консольной утилитой, словно «SQLite для аналитики».
+        </div>
+      </aside>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Правило проектирования ключа <code>ORDER BY</code> в ClickHouse:</strong> Ставь в начало ключа колонки, по которым фильтруешь чаще всего, и иди <strong>от меньшего числа уникальных значений к большему</strong> — например, <code>ORDER BY (city, category, sale_date)</code>, а не <code>(sale_id, city)</code>. Так и сжатие будет максимальным, и отсечение гранул сработает идеально!
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">06</span> Шпаргалка урока перед практикой</h2>
+      <p>
+        Пять главных идей этого урока, которые отличают колончатые OLAP-движки от классических баз:
+      </p>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Понятие</th>
+              <th>Короткий смысл</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Колончатое хранение</strong></td>
+              <td>Каждая колонка лежит в своём файле. Запрос читает только те колонки, которые указаны в <code>SELECT</code> и <code>WHERE</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Сжатие (<code>LowCardinality</code>, <code>CODEC</code>)</strong></td>
+              <td>Однотипные и отсортированные колонки сжимаются в 5–20 раз: словарное кодирование для повторяющихся строк, <code>Delta/DoubleDelta</code> для дат и ID, <code>ZSTD</code> для плотной упаковки.</td>
+            </tr>
+            <tr>
+              <td><strong>Гранулы и <code>ORDER BY</code></strong></td>
+              <td><code>MergeTree</code> сортирует данные по <code>ORDER BY</code> и ставит закладку раз в 8 192 строки. Проверяй отсечение гранул через <code>EXPLAIN indexes = 1</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Векторизация (SIMD)</strong></td>
+              <td>Процессор обрабатывает данные не по одной строке, а сразу пачками-векторами по тысячи чисел одной колонки за такт.</td>
+            </tr>
+            <tr>
+              <td><strong>MPP и шардирование</strong></td>
+              <td>Разбиение огромной таблицы на серверы-шарды, которые считают промежуточные итоги параллельно. Избегай перекоса данных (<code>Data Skew</code>) и мелких вставок по 1 строке!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== 3. БЛОК САМОПРОВЕРКИ ==================== -->
+    <section>
+      <h2><span class="sec-num">07</span> Мини-практикум для закрепления</h2>
+      <p>
+        Выполни 4 автономных задания в <strong>ClickHouse</strong> (база <code>analytics_db</code> через <code>clickhouse-client</code> или веб-интерфейс <code>http://localhost:8123/play</code>). Каждая задача сама создаёт свои таблицы и работает независимо от остальных.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый). Полгода игровой статистики за миллисекунды</div>
+        <p style="margin-bottom: 0;">
+          Создай в <code>analytics_db</code> таблицу <code>lab_game_matches</code> на движке <code>MergeTree()</code> с колонками <code>match_id UInt64</code>, <code>match_date Date</code>, <code>map_name LowCardinality(String)</code>, <code>score UInt16</code>, отсортированную по <code>(map_name, match_date)</code>. Загрузи в неё <strong>500 000 матчей</strong> через <code>numbers(500000)</code> с четырьмя картами (<code>'Dust2'</code>, <code>'Mirage'</code>, <code>'Inferno'</code>, <code>'Nuke'</code>) и случайным счётом <code>10 + (number % 91)</code>. Напиши запрос, который выведет для каждой карты количество матчей, средний счёт (округлённый до 2 знаков) и максимальный счёт.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL (ClickHouse) · Эталонное решение задания 1</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS lab_game_matches;
+
+CREATE TABLE lab_game_matches (
+    match_id   UInt64,
+    match_date Date,
+    map_name   LowCardinality(String),
+    score      UInt16
+)
+ENGINE = MergeTree()
+ORDER BY (map_name, match_date);
+
+INSERT INTO lab_game_matches
+SELECT
+    number + 1,
+    addDays(toDate('2026-01-01'), number % 180),
+    arrayElement(['Dust2', 'Mirage', 'Inferno', 'Nuke'], (number % 4) + 1),
+    10 + (number % 91)
+FROM numbers(500000);
+
+SELECT
+    map_name,
+    count()               AS matches_cnt,
+    round(avg(score), 2)  AS avg_score,
+    max(score)            AS max_score
+FROM lab_game_matches
+GROUP BY map_name
+ORDER BY avg_score DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Средний). Битва сжатия: <code>String</code> против <code>LowCardinality</code> + <code>ZSTD</code></div>
+        <p style="margin-bottom: 0;">
+          Создай две таблицы на <strong>1 000 000 строк</strong>: <code>lab_logs_plain</code> (<code>event_time DateTime</code>, <code>service String</code>, <code>level String</code>) и <code>lab_logs_tiny</code> (<code>event_time DateTime CODEC(DoubleDelta, ZSTD(3))</code>, <code>service LowCardinality(String)</code>, <code>level LowCardinality(String)</code>), обе с <code>ORDER BY (service, level, event_time)</code>. Заполни их одинаковым миллионом логов через <code>numbers(1000000)</code> и выведи запрос к <code>system.columns</code>, сравнивающий их сжатый размер на диске (<code>disk_size</code>) и коэффициент сжатия.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL (ClickHouse) · Эталонное решение задания 2</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS lab_logs_plain;
+DROP TABLE IF EXISTS lab_logs_tiny;
+
+CREATE TABLE lab_logs_plain (
+    event_time DateTime,
+    service    String,
+    level      String
+)
+ENGINE = MergeTree()
+ORDER BY (service, level, event_time);
+
+CREATE TABLE lab_logs_tiny (
+    event_time DateTime CODEC(DoubleDelta, ZSTD(3)),
+    service    LowCardinality(String),
+    level      LowCardinality(String)
+)
+ENGINE = MergeTree()
+ORDER BY (service, level, event_time);
+
+INSERT INTO lab_logs_plain
+SELECT
+    toDateTime('2026-01-01 00:00:00') + number,
+    arrayElement(['auth-service', 'billing-api', 'checkout-web', 'catalog'], (number % 4) + 1),
+    arrayElement(['INFO', 'WARN', 'ERROR'], (number % 3) + 1)
+FROM numbers(1000000);
+
+INSERT INTO lab_logs_tiny SELECT * FROM lab_logs_plain;
+
+SELECT
+    table,
+    formatReadableSize(sum(data_uncompressed_bytes)) AS raw_size,
+    formatReadableSize(sum(data_compressed_bytes))   AS disk_size,
+    round(sum(data_uncompressed_bytes) / sum(data_compressed_bytes), 1) AS ratio
+FROM system.columns
+WHERE database = currentDatabase()
+  AND table IN ('lab_logs_plain', 'lab_logs_tiny')
+GROUP BY table
+ORDER BY table;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Продвинутый). Почини порядок колонок в <code>ORDER BY</code></div>
+        <p style="margin-bottom: 0;">
+          Аналитики каждый день запускают запрос <code>SELECT sum(price) FROM lab_orders WHERE status = 'refunded'</code>. Кто-то по ошибке создал таблицу с <code>ORDER BY (order_id, status)</code> — из-за этого индекс по <code>status</code> не работает и читаются все гранулы. Создай две таблицы по 500 000 строк: <code>lab_orders_bad</code> с <code>ORDER BY (order_id, status)</code> и <code>lab_orders_good</code> с <code>ORDER BY (status, order_id)</code> (статусы: <code>'paid'</code> — 80%, <code>'cancelled'</code> — 10%, <code>'refunded'</code> — 10%). Докажи через <code>EXPLAIN indexes = 1</code>, что во второй таблице количество прочитанных гранул сократилось примерно в 10 раз!
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL (ClickHouse) · Эталонное решение задания 3</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS lab_orders_bad;
+DROP TABLE IF EXISTS lab_orders_good;
+
+CREATE TABLE lab_orders_bad (
+    order_id UInt64,
+    status   LowCardinality(String),
+    price    UInt32
+) ENGINE = MergeTree()
+ORDER BY (order_id, status);
+
+CREATE TABLE lab_orders_good (
+    order_id UInt64,
+    status   LowCardinality(String),
+    price    UInt32
+) ENGINE = MergeTree()
+ORDER BY (status, order_id);
+
+INSERT INTO lab_orders_bad
+SELECT
+    number + 1,
+    multiIf(number % 10 = 0, 'refunded', number % 10 = 1, 'cancelled', 'paid'),
+    1000 + (number % 50) * 500
+FROM numbers(500000);
+
+INSERT INTO lab_orders_good SELECT * FROM lab_orders_bad;
+
+-- Плохой ключ: прочитает ~62/62 гранул (100%)
+EXPLAIN indexes = 1
+SELECT sum(price) FROM lab_orders_bad WHERE status = 'refunded';
+
+-- Правильный ключ: прочитает только ~7/62 гранул (~11%)!
+EXPLAIN indexes = 1
+SELECT sum(price) FROM lab_orders_good WHERE status = 'refunded';</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Проектирование). Мини-MPP витрина для сети кофеен</div>
+        <p style="margin-bottom: 0;">
+          Сеть кофеен разнесла чеки по двум локальным шардам: <code>lab_coffee_shard_east</code> (Алматы, Астана) и <code>lab_coffee_shard_west</code> (Костанай, Актобе). Создай обе таблицы с колонками <code>city LowCardinality(String)</code>, <code>drink LowCardinality(String)</code>, <code>price UInt16</code>, наполни каждый шард тремя тестовыми чеками, а сверху поставь объединяющую таблицу <code>lab_coffee_all</code> на движке <code>Merge(currentDatabase(), '^lab_coffee_shard_')</code>. Выведи одним запросом к <code>lab_coffee_all</code> выручку по каждому напитку и укажи, сколько шардов (<code>uniqExact(_table)</code>) продавали этот напиток.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL (ClickHouse) · Эталонное решение задания 4</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS lab_coffee_all;
+DROP TABLE IF EXISTS lab_coffee_shard_east;
+DROP TABLE IF EXISTS lab_coffee_shard_west;
+
+CREATE TABLE lab_coffee_shard_east (
+    city  LowCardinality(String),
+    drink LowCardinality(String),
+    price UInt16
+) ENGINE = MergeTree() ORDER BY (city, drink);
+
+CREATE TABLE lab_coffee_shard_west (
+    city  LowCardinality(String),
+    drink LowCardinality(String),
+    price UInt16
+) ENGINE = MergeTree() ORDER BY (city, drink);
+
+INSERT INTO lab_coffee_shard_east VALUES
+    ('Алматы', 'Капучино', 1400),
+    ('Астана', 'Латте',    1600),
+    ('Алматы', 'Раф',      1800);
+
+INSERT INTO lab_coffee_shard_west VALUES
+    ('Костанай', 'Капучино', 1300),
+    ('Актобе',   'Латте',    1500),
+    ('Костанай', 'Эспрессо',  900);
+
+CREATE TABLE lab_coffee_all AS lab_coffee_shard_east
+ENGINE = Merge(currentDatabase(), '^lab_coffee_shard_');
+
+SELECT
+    drink,
+    uniqExact(_table) AS shards_count,
+    count()           AS cups_sold,
+    sum(price)        AS total_revenue
+FROM lab_coffee_all
+GROUP BY drink
+ORDER BY total_revenue DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_6/practice.html#sec-6-3"><strong>Практикум по Уроку 6.3 →</strong></a> — там 10 заданий в ClickHouse на сжатие (<code>LowCardinality</code>, <code>Delta</code>, <code>ZSTD</code>), отсечение гранул (<code>EXPLAIN indexes = 1</code>), порядок ключа <code>ORDER BY</code>, инспекцию <code>system.parts</code> и мини-MPP шардирование.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока и мостик дальше</span>
+      Ты увидел под капотом, почему колончатые OLAP-движки вроде <strong>ClickHouse</strong> и <strong>DuckDB</strong> перемалывают миллионы строк за считаные миллисекунды: они читают с диска только нужные колонки, сжимают их в 10–20 раз, отсекают лишние гранулы по разреженному индексу <code>ORDER BY</code>, считают пачками через <strong>SIMD-векторизацию</strong> и масштабируются горизонтально с помощью <strong>MPP и шардирования</strong>. Но сегодня мы генерировали данные искусственно через <code>numbers()</code> — а как в реальной компании данные каждый день перетекают из боевого <strong>PostgreSQL</strong> в хранилище, не дублируются при повторном запуске скрипта и сохраняют историю изменений (например, если клиент сменил город или тариф)? Всё это мы разберём в следующем <strong>Уроке 6.4: Потоки данных ELT, идемпотентность и медленно меняющиеся измерения (SCD Type 2)</strong>!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_6_2.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">6.2 · Партиционирование таблиц и материализованные пред…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_6_4.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">6.4 · Потоки данных ELT, идемпотентность и медленно мен…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

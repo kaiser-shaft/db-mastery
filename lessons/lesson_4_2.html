@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 4.2: MVCC (многоверсионность) и VACUUM в PostgreSQL</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_4/practice.html#sec-4-2">Практикум 4.2</a>
+        <a class="course-nav-btn" href="../slides/module-4.html#4.2">Слайды урока 4.2</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 4 · Транзакции, MVCC, блокировки и сравнение с MySQL/InnoDB</span>
+        <span class="pill pill-neutral">Урок 4.2</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>MVCC (многоверсионность) и VACUUM в PostgreSQL</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Поймёшь, как работает <strong>MVCC</strong> — почему читатели в PostgreSQL никогда не блокируют писателей, а писатели не блокируют читателей.</li>
+          <li>Заглянешь в скрытые системные столбцы каждой строки: <code>ctid</code>, <code>xmin</code> и <code>xmax</code>, и увидишь, как <code>UPDATE</code> на самом деле создаёт копию строки.</li>
+          <li>Узнаешь, откуда берутся <strong>мёртвые строки (Dead Tuples)</strong> и почему база начинает «пухнуть» на диске (<strong>Table Bloat</strong>).</li>
+          <li>Научишься пользоваться <code>VACUUM</code>, <code>VACUUM FULL</code>, <code>ANALYZE</code> и мониторить работу автоматического уборщика <strong>Autovacuum</strong> через <code>pg_stat_user_tables</code>.</li>
+        </ul>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. РАЗДЕЛ 01 ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Как читатели не мешают писателям? Магия MVCC</h2>
+      <p>
+        Представь школьную библиотеку с единственным экземпляром редкой энциклопедии. Если Вася взял её, чтобы переписать абзац, а Петя в эту же секунду хочет просто прочитать ту же страницу, им придётся либо драться за книгу, либо стоять в очереди.
+      </p>
+      <p>
+        В старых базах данных всё работало именно так: пока кто-то менял строку, все остальные не могли её даже прочитать — сайт «подвисал». PostgreSQL решает эту задачу гениально и просто: он <strong>никогда не стирает старую строку ластиком</strong>! Вместо этого при любом <code>UPDATE</code> он оставляет старую версию на месте (просто ставит на ней пометку «устарела»), а рядом дописывает <strong>новую версию</strong> этой же строки.
+      </p>
+      <p>
+        Такой механизм называется <strong>MVCC (Multi-Version Concurrency Control)</strong> — управление параллельным доступом с помощью множества версий. В PostgreSQL действует золотое правило: <strong>читатели никогда не блокируют писателей, а писатели никогда не блокируют читателей</strong>.
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            A["Версия 1 на диске<br/>ctid: (0,1) · balance=1000<br/>xmin=500 · xmax=0"] -->|"UPDATE в транзакции #501"| B["Версия 1 (помечена старой)<br/>ctid: (0,1) · balance=1000<br/>xmin=500 · xmax=501"]
+            A -->|"Создаётся новая копия"| C["Версия 2 (актуальная)<br/>ctid: (0,2) · balance=700<br/>xmin=501 · xmax=0"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Как PostgreSQL выполняет UPDATE под капотом: старая версия помечается в xmax, а рядом рождается новая версия с новым ctid.</figcaption>
+      </figure>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Секретный паспорт каждой строки:</strong> В PostgreSQL у любой строки есть три невидимых системных столбца:
+          <br />• <code>ctid</code> — точный физический адрес на диске: <code>(номер_страницы, номер_строки)</code>;
+          <br />• <code>xmin</code> — номер транзакции (ID), которая <strong>создала</strong> эту версию;
+          <br />• <code>xmax</code> — номер транзакции, которая <strong>удалила или обновила</strong> эту версию (<code>0</code>, если версия живая).
+        </div>
+      </aside>
+
+      <h3>Смотрим на невидимые столбцы в learning_db</h3>
+      <p>
+        Давай откроем рентген для PostgreSQL и посмотрим на <code>ctid</code>, <code>xmin</code> и <code>xmax</code> своими глазами! Создадим небольшую таблицу <code>mvcc_heroes</code> с тремя героями игры.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 1: Подготовка таблицы и осмотр скрытых столбцов</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Безопасно пересоздаём учебную таблицу
+DROP TABLE IF EXISTS mvcc_heroes;
+
+CREATE TABLE mvcc_heroes (
+    id   SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    gold INT NOT NULL
+);
+
+-- Вставляем три строки одной командой (в одной транзакции)
+INSERT INTO mvcc_heroes (name, gold) VALUES
+    ('Рыцарь', 100),
+    ('Маг',    250),
+    ('Лучник', 180);
+
+-- Просим PostgreSQL показать скрытые системные столбцы
+SELECT ctid, xmin, xmax, id, name, gold
+FROM mvcc_heroes
+ORDER BY id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> ctid  | xmin | xmax | id |  name  | gold
+-------+------+------+----+--------+------
+ (0,1) |  742 |    0 |  1 | Рыцарь |  100
+ (0,2) |  742 |    0 |  2 | Маг    |  250
+ (0,3) |  742 |    0 |  3 | Лучник |  180
+(3 rows)</pre>
+      </div>
+
+      <p>
+        Смотри, как красиво! Все три строки родились в одной транзакции (у тебя номер <code>xmin</code> будет свой, например <code>742</code>), у всех <code>xmax = 0</code> (никто их не трогал), а живут они на странице <code>0</code> в ячейках <code>1</code>, <code>2</code> и <code>3</code>.
+      </p>
+
+      <h3>Доказываем, что UPDATE — это «переезд» на новый адрес</h3>
+      <p>
+        А теперь дадим Рыцарю +50 золотых и снова посмотрим на скрытые столбцы. Если бы PostgreSQL менял данные прямо на месте, адрес <code>ctid</code> остался бы <code>(0,1)</code>. Проверим, что случится на самом деле!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 2: Проверяем, как меняется ctid после UPDATE</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Обновляем золото только у Рыцаря
+UPDATE mvcc_heroes
+SET gold = gold + 50
+WHERE name = 'Рыцарь';
+
+-- Смотрим, куда «переехала» строка Рыцаря!
+SELECT ctid, xmin, xmax, id, name, gold
+FROM mvcc_heroes
+ORDER BY id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> ctid  | xmin | xmax | id |  name  | gold
+-------+------+------+----+--------+------
+ (0,4) |  743 |    0 |  1 | Рыцарь |  150
+ (0,2) |  742 |    0 |  2 | Маг    |  250
+ (0,3) |  742 |    0 |  3 | Лучник |  180
+(3 rows)</pre>
+      </div>
+
+      <p>
+        Видишь?! Адрес Рыцаря изменился с <code>(0,1)</code> на <code>(0,4)</code>, а его <code>xmin</code> вырос с <code>742</code> до <code>743</code>! Старая строка на месте <code>(0,1)</code> никуда не испарилась — она всё ещё лежит на диске, просто помечена <code>xmax = 743</code> и скрыта от новых запросов. Так решилась наша загадка из прошлого урока: именно благодаря таким копиям читатели и писатели не толкаются в очереди!
+      </p>
+    </section>
+
+    <!-- ==================== 3. РАЗДЕЛ 02 ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Снимки времени (Snapshots): как два окна видят разное</h2>
+      <p>
+        Представь, что учитель пишет задачи на школьной доске. Ты достал телефон и сделал фотографию доски. Даже если учитель прямо сейчас начнёт стирать старый пример и писать новый, на твоём фото всё останется ровно таким, каким было в момент щелчка камеры.
+      </p>
+      <p>
+        Когда транзакция в PostgreSQL выполняет запрос, она получает свой <strong>снимок данных (Snapshot)</strong> — список номеров транзакций, которые уже завершились к этому моменту. Пробегая по строкам таблицы, PostgreSQL сравнивает <code>xmin</code> и <code>xmax</code> каждой версии с этим снимком и решает: <em>«Эту версию я тебе покажу, а эту — скрою»</em>.
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Что происходит в Терминале 2</th>
+              <th>Что лежит в таблице на диске</th>
+              <th>Что видит Терминал 1</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ещё ничего не менял</td>
+              <td><code>(0,2)</code> Маг: 250 (<code>xmax = 0</code>)</td>
+              <td>Маг: <strong>250</strong></td>
+            </tr>
+            <tr>
+              <td>Сделал <code>UPDATE</code> до 999, но <strong>без COMMIT</strong></td>
+              <td><code>(0,2)</code> Маг: 250 (<code>xmax = T2</code>)<br /><code>(0,5)</code> Маг: 999 (<code>xmin = T2</code>)</td>
+              <td>Маг: <strong>250</strong> (версия <code>T2</code> ещё не подтверждена!)</td>
+            </tr>
+            <tr>
+              <td>Нажал <code>COMMIT</code></td>
+              <td><code>(0,2)</code> — мёртвая строка<br /><code>(0,5)</code> — живая строка</td>
+              <td>Маг: <strong>999</strong> (адрес стал <code>(0,5)</code>)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Ловим момент смены версий в двух окнах psql</h3>
+      <p>
+        Открой два окна <code>psql</code> к базе <code>learning_db</code> и выполни шаги по очереди — ты вживую увидишь, как в старой строке появляется номер чужой незавершённой транзакции в столбце <code>xmax</code>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 3: Живой MVCC в двух терминалах</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- [ШАГ 1 — ТЕРМИНАЛ 2] Начинаем транзакцию и меняем золото Мага (БЕЗ COMMIT!)
+BEGIN;
+SELECT pg_current_xact_id(); -- Запомни этот номер (например, 744)
+UPDATE mvcc_heroes SET gold = 999 WHERE name = 'Маг';
+
+-- [ШАГ 2 — ТЕРМИНАЛ 1] Читаем строку Мага, пока Терминал 2 ещё не закоммитил!
+SELECT ctid, xmin, xmax, name, gold
+FROM mvcc_heroes
+WHERE name = 'Маг';
+-- Обрати внимание: запрос НЕ завис, золото всё ещё 250, а xmax стал равен 744!
+
+-- [ШАГ 3 — ТЕРМИНАЛ 2] Завершаем транзакцию
+COMMIT;
+
+-- [ШАГ 4 — ТЕРМИНАЛ 1] Читаем ещё раз
+SELECT ctid, xmin, xmax, name, gold
+FROM mvcc_heroes
+WHERE name = 'Маг';</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL в Терминале 1 (Шаг 2 vs Шаг 4)</div>
+        <pre>-- Шаг 2 (пока Терминал 2 ещё не сделал COMMIT):
+ ctid  | xmin | xmax | name | gold
+-------+------+------+------+------
+ (0,2) |  742 |  744 | Маг  |  250
+(1 row)
+
+-- Шаг 4 (сразу после COMMIT в Терминале 2):
+ ctid  | xmin | xmax | name | gold
+-------+------+------+------+------
+ (0,5) |  744 |    0 | Маг  |  999
+(1 row)</pre>
+      </div>
+
+      <p>
+        Круто, правда? На шаге 2 Терминал 1 увидел <code>xmax = 744</code>, проверил: «Ага, транзакция <code>744</code> ещё не завершилась! Значит, старая версия <code>(0,2)</code> со значением <code>250</code> для меня ещё жива, а новую <code>(0,5)</code> я проигнорирую». Ни одной секунды простоя!
+      </p>
+    </section>
+
+    <!-- ==================== 4. РАЗДЕЛ 03 ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Цена многоверсионности: мёртвые строки и раздувание (Bloat)</h2>
+      <p>
+        Но у каждой суперсилы есть обратная сторона. Представь школьную тетрадь, в которой тебе запретили пользоваться ластиком: если ты ошибся в слове, ты его зачёркиваешь и пишешь исправленное слово на следующей строчке. Если ты 500 раз поправишь одно и то же предложение, полезного текста останется <strong>одна строчка</strong>, а тетрадь будет исписана целиком!
+      </p>
+      <p>
+        Точно так же происходит в PostgreSQL. Старые версии строк после <code>UPDATE</code> и <code>DELETE</code>, которые уже никому не нужны, превращаются в <strong>мёртвые кортежи (Dead Tuples)</strong>. Они лежат на диске мёртвым грузом, и таблица начинает раздуваться — инженеры называют это <strong>раздуванием таблицы (Table Bloat)</strong>. Из-за него:
+      </p>
+      <ul>
+        <li>база занимает в разы больше места на SSD, чем нужно;</li>
+        <li>запросы <code>SELECT</code> начинают тормозить, потому что серверу приходится перелистывать тысячи «зачёркнутых» страниц в поисках живых строк.</li>
+      </ul>
+
+      <h3>Наблюдаем раздувание таблицы на реальных цифрах</h3>
+      <p>
+        Давай специально устроим мини-раздувание в <code>learning_db</code>: создадим таблицу <code>bloat_lab</code> на 10 000 строк, отключим на ней автоматическую уборку (только для нашего лабораторного опыта!), обновим все строки 4 раза и измерим, во сколько раз «растолстел» файл на диске.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 4: Генерируем 40 000 мёртвых строк и измеряем Bloat</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP TABLE IF EXISTS bloat_lab;
+
+-- Отключаем autovacuum ТОЛЬКО на этой тестовой таблице для наглядности опыта
+CREATE TABLE bloat_lab (
+    id      INT PRIMARY KEY,
+    counter INT NOT NULL,
+    payload TEXT NOT NULL
+) WITH (autovacuum_enabled = false);
+
+-- Вставляем 10 000 строк
+INSERT INTO bloat_lab (id, counter, payload)
+SELECT g, 0, repeat('x', 80)
+FROM generate_series(1, 10000) AS g;
+
+-- Смотрим исходный размер таблицы
+SELECT pg_size_pretty(pg_relation_size('bloat_lab')) AS size_before;
+
+-- 4 раза обновляем все 10 000 строк (= 40 000 мёртвых версий!)
+UPDATE bloat_lab SET counter = counter + 1;
+UPDATE bloat_lab SET counter = counter + 1;
+UPDATE bloat_lab SET counter = counter + 1;
+UPDATE bloat_lab SET counter = counter + 1;
+
+-- Проверяем размер и статистику живых/мёртвых строк
+SELECT
+    pg_size_pretty(pg_relation_size('bloat_lab')) AS size_after,
+    n_live_tup,
+    n_dead_tup
+FROM pg_stat_user_tables
+WHERE relname = 'bloat_lab';</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> size_before
+-------------
+ 1280 kB
+(1 row)
+
+ size_after | n_live_tup | n_dead_tup
+------------+------------+------------
+ 6400 kB    |      10000 |      40000
+(1 row)</pre>
+      </div>
+
+      <p>
+        Посмотри на цифры: живых строк как было <strong>10 000</strong>, так и осталось <strong>10 000</strong>, но размер таблицы подскочил в <strong>5 раз</strong> — с 1.28 МБ до 6.4 МБ, потому что внутри накопилось 40 000 мёртвых копий!
+      </p>
+    </section>
+
+    <!-- ==================== 5. РАЗДЕЛ 04 ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> Уборщик VACUUM, VACUUM FULL и Autovacuum</h2>
+      <p>
+        Чтобы база не захлебнулась в собственных черновиках, в PostgreSQL работает специальный процесс-уборщик — <strong>VACUUM</strong> («пылесос»). У него есть два режима работы, которые критически важно не перепутать.
+      </p>
+      <p>
+        Представь два способа навести порядок в исписанной тетради:
+      </p>
+      <ul>
+        <li><strong>Обычный <code>VACUUM</code></strong> — аккуратный дежурный: он тихо ходит по страницам, стирает ластиком ненужные зачёркнутые строки и оставляет <strong>чистые пустые клеточки внутри той же тетради</strong> для будущих записей. Размер файла на диске обычно не уменьшается, зато новые <code>INSERT</code> и <code>UPDATE</code> будут заполнять эти пустоты, а не раздувать таблицу дальше. Главное — <strong>никто не заблокирован</strong>, все продолжают читать и писать!</li>
+        <li><strong><code>VACUUM FULL</code></strong> — генеральная перепись: он забирает тетрадь у всех, <strong>вешает замок на дверь кабинета</strong> (<code>ACCESS EXCLUSIVE LOCK</code> — никто не может даже прочитать ни строчки!), переписывает только живые строки в новую тонкую тетрадку и возвращает освободившееся место операционной системе.</li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart TB
+            A["В таблице много мёртвых строк"] --> B["Обычный VACUUM"]
+            A --> C["VACUUM FULL"]
+            B --> B1["Не блокирует SELECT / UPDATE"]
+            B1 --> B2["Помечает пустоты для новых записей<br/>Размер файла на диске прежний"]
+            C --> C1["Жёсткий замок на всю таблицу!"]
+            C1 --> C2["Переписывает таблицу заново<br/>Отдаёт место операционной системе"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Разница между обычным VACUUM (безопасен в работе) и VACUUM FULL (останавливает работу с таблицей).</figcaption>
+      </figure>
+
+      <h3>Запускаем обычный VACUUM VERBOSE на bloat_lab</h3>
+      <p>
+        Ключевое слово <code>VERBOSE</code> просит PostgreSQL рассказать подробный отчёт о том, сколько мусора он вычистил.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 5: Обычный VACUUM VERBOSE и проверка статистики</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Убираем мёртвые строки без блокировки работы таблицы
+VACUUM (VERBOSE, ANALYZE) bloat_lab;
+
+-- Смотрим, что изменилось в статистике и размере файла
+SELECT
+    pg_size_pretty(pg_relation_size('bloat_lab')) AS size_after_vacuum,
+    n_live_tup,
+    n_dead_tup,
+    last_vacuum
+FROM pg_stat_user_tables
+WHERE relname = 'bloat_lab';</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>INFO:  vacuuming "learning_db.public.bloat_lab"
+INFO:  finished vacuuming "learning_db.public.bloat_lab": index scans: 1
+tuples: 40000 removed, 10000 remain, 0 are dead but not yet removable
+VACUUM
+
+ size_after_vacuum | n_live_tup | n_dead_tup |          last_vacuum
+-------------------+------------+------------+-------------------------------
+ 6400 kB           |      10000 |          0 | 2026-11-26 09:42:11.18421+05
+(1 row)</pre>
+      </div>
+
+      <p>
+        Смотри на строчку отчёта: <code>40000 removed, 10000 remain</code>, а <code>n_dead_tup</code> стало равно <strong>0</strong>! Размер файла всё ещё <code>6400 kB</code>, но теперь внутри него есть 5 МБ чистых свободных слотов — следующие 4 обновления вообще не увеличат файл на диске! А добавка <code>ANALYZE</code> заодно обновила статистику для планировщика запросов.
+      </p>
+
+      <h3>Частая ошибка: запуск VACUUM внутри транзакции</h3>
+      <p>
+        Если ты попробуешь запустить <code>VACUUM</code> после команды <code>BEGIN;</code>, PostgreSQL сразу откажет:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Попытка запустить VACUUM внутри BEGIN ... COMMIT</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">BEGIN;
+VACUUM bloat_lab;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  VACUUM cannot run inside a transaction block</pre>
+      </div>
+
+      <p>
+        <strong>Почему так?</strong> Уборка диска — это необратимая служебная операция, которую невозможно «откатить» через <code>ROLLBACK</code>. Не забудь закрыть ошибочный блок командой <code>ROLLBACK;</code> и запускай <code>VACUUM</code> всегда как самостоятельную команду вне <code>BEGIN</code>.
+      </p>
+
+      <h3>Сжимаем файл через VACUUM FULL и проверяем Autovacuum</h3>
+      <p>
+        В учебной песочнице (или ночью во время технического окна) можно выполнить <code>VACUUM FULL</code>, чтобы вернуть 5 МБ операционной системе. А затем давай проверим, включён ли в нашем PostgreSQL автоматический уборщик <strong>Autovacuum</strong> — он сам следит за всеми таблицами и запускает обычный <code>VACUUM</code>, когда мёртвых строк становится слишком много (по умолчанию: больше <code>50 + 20%</code> от числа строк в таблице).
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 6: VACUUM FULL и проверка настроек Autovacuum</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Если осталась открытая транзакция после ошибки выше — откатываем
+ROLLBACK;
+
+-- Полностью переписываем таблицу (в проде будь осторожен: блокирует доступ!)
+VACUUM FULL bloat_lab;
+
+-- Проверяем размер на диске: файл снова стал компактным!
+SELECT pg_size_pretty(pg_relation_size('bloat_lab')) AS size_after_full;
+
+-- Проверяем настройки фонового уборщика Autovacuum
+SHOW autovacuum;
+SHOW autovacuum_vacuum_threshold;
+SHOW autovacuum_vacuum_scale_factor;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> size_after_full
+-----------------
+ 1280 kB
+(1 row)
+
+ autovacuum
+------------
+ on
+(1 row)
+
+ autovacuum_vacuum_threshold
+-----------------------------
+ 50
+(1 row)
+
+ autovacuum_vacuum_scale_factor
+--------------------------------
+ 0.2
+(1 row)</pre>
+      </div>
+
+      <p>
+        Файл мгновенно похудел с <strong>6400 kB</strong> обратно до <strong>1280 kB</strong>! И возвращаем обратно автоуборку (или просто помним, что в реальных базах <code>autovacuum</code> должен быть <strong>всегда включён</strong>).
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- В час пик на таблице
+-- с заказами на 50 ГБ:
+VACUUM FULL orders;</code></pre>
+            </div>
+            <p>Таблица <code>orders</code> полностью заблокируется на десятки минут. Никто не сможет ни оформить заказ, ни открыть личный кабинет.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Регулярный автоуборщик
+-- или ручной мягкий запуск:
+VACUUM (ANALYZE) orders;</code></pre>
+            </div>
+            <p>Обычный <code>VACUUM</code> не мешает пользователям, а для сжатия больших таблиц без простоя в проде используют утилиту <code>pg_repack</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare-grid stacked">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо: брошенная транзакция (парализует VACUUM!)</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Аналитик открыл транзакцию утром и ушёл на обед, забыв COMMIT/ROLLBACK:
+BEGIN;
+SELECT count(*) FROM orders;
+-- ...прошло 3 часа, транзакция всё ещё висит (idle in transaction)...</code></pre>
+            </div>
+            <p>Пока эта старая транзакция открыта, её снимок времени (Snapshot) всё ещё активен. <code>VACUUM</code> <strong>не имеет права удалять</strong> ни одну мёртвую строку, созданную после утра — вся база будет стремительно пухнуть!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно: закрывать транзакции и ставить таймаут</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Всегда завершай транзакцию сразу после запроса, а в настройках сервера
+-- защищайся параметром idle_in_transaction_session_timeout:
+SET idle_in_transaction_session_timeout = '30s';</code></pre>
+            </div>
+            <p>Через 30 секунд бездействия внутри открытой транзакции PostgreSQL сам принудительно прервёт забытую сессию и спасёт базу от раздувания.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Никогда не отключай Autovacuum в реальной базе!</strong> Помимо уборки мусора, он защищает PostgreSQL от страшной аварии — <strong>переполнения счётчика транзакций (Transaction ID Wraparound)</strong>. Номер <code>xmin</code> хранится как 32-битное число (примерно 4 миллиарда значений — как одометр старой машины, который после 999 999 сбрасывается на 0). Чтобы старые строки не стали «из будущего», <code>VACUUM</code> периодически «замораживает» (<code>FREEZE</code>) древние строки. Без автоуборки база однажды просто откажется принимать новые записи!
+        </div>
+      </aside>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет для больших таблиц:</strong> Порог <code>autovacuum_vacuum_scale_factor = 0.2</code> означает «убираться, когда накопилось 20% мёртвых строк». Для таблицы на 100 строк это всего 70 изменений, а вот для таблицы на 100 миллионов строк — аж <strong>20 миллионов</strong> мёртвых строк! Для горячих гигантских таблиц инженеры точечно уменьшают порог через <code>ALTER TABLE big_table SET (autovacuum_vacuum_scale_factor = 0.01);</code> (уборка при 1%).
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 6. ШПАРГАЛКА ПЕРЕД ПРАКТИКОЙ ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Шпаргалка урока перед практикой</h2>
+      <p>
+        Короткий словарик-напоминалка перед решением задач:
+      </p>
+      <ul>
+        <li><strong>MVCC</strong> — хранение нескольких версий одной строки, благодаря чему чтение (<code>SELECT</code>) и запись (<code>UPDATE</code>/<code>DELETE</code>) не блокируют друг друга.</li>
+        <li><strong><code>ctid</code>, <code>xmin</code>, <code>xmax</code></strong> — скрытые системные столбцы: физический адрес строки на диске, ID создавшей транзакции и ID удалившей/обновившей транзакции.</li>
+        <li><strong>Dead Tuples и Table Bloat</strong> — мёртвые версии строк после <code>UPDATE</code>/<code>DELETE</code> и вызванное ими раздувание размера таблицы на диске.</li>
+        <li><strong><code>VACUUM</code> vs <code>VACUUM FULL</code></strong> — обычный <code>VACUUM</code> не блокирует работу и освобождает слоты <em>внутри</em> файла для новых строк; <code>VACUUM FULL</code> отдаёт место ОС, но намертво блокирует всю таблицу.</li>
+        <li><strong><code>pg_stat_user_tables</code></strong> — главная системная таблица для мониторинга <code>n_live_tup</code>, <code>n_dead_tup</code> и времени последней уборки (<code>last_vacuum</code> / <code>last_autovacuum</code>).</li>
+      </ul>
+    </section>
+
+    <!-- ==================== 7. МИНИ-ПРАКТИКУМ ==================== -->
+    <section>
+      <h2><span class="sec-num">06</span> Мини-практикум для закрепления</h2>
+      <p>
+        Выполни 4 автономные задачи в базе <code>learning_db</code>. Каждая задача сама создаёт свою таблицу и не зависит от предыдущих заданий.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый). Проследи три «жизни» одной строки</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>task1_items (id SERIAL PRIMARY KEY, title TEXT, price INT)</code>, вставь одну строку <code>('Компас', 100)</code> и выведи её <code>ctid, xmin, xmax, price</code>. Затем дважды выполни <code>UPDATE</code> (сначала подними цену до <code>120</code>, потом до <code>150</code>) и после каждого обновления снова выведи <code>ctid, xmin, xmax, price</code>. Убедись, что адрес <code>ctid</code> и <code>xmin</code> меняются каждый раз.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 1</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS task1_items;
+
+CREATE TABLE task1_items (
+    id    SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    price INT NOT NULL
+);
+
+INSERT INTO task1_items (title, price) VALUES ('Компас', 100);
+SELECT ctid, xmin, xmax, title, price FROM task1_items;
+-- Ожидаемо: ctid = (0,1), xmax = 0
+
+UPDATE task1_items SET price = 120 WHERE title = 'Компас';
+SELECT ctid, xmin, xmax, title, price FROM task1_items;
+-- Ожидаемо: ctid = (0,2), xmin вырос на 1
+
+UPDATE task1_items SET price = 150 WHERE title = 'Компас';
+SELECT ctid, xmin, xmax, title, price FROM task1_items;
+-- Ожидаемо: ctid = (0,3), xmin снова вырос на 1</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Средний). Найди мёртвые строки и запусти мягкую уборку</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>task2_logs (id INT PRIMARY KEY, status TEXT)</code> с отключённым автоуборщиком (<code>WITH (autovacuum_enabled = false)</code>). Заполни её <code>5000</code> строками со статусом <code>'new'</code>, затем удали половину строк (где <code>id &lt;= 2500</code>). Посмотри <code>n_live_tup</code> и <code>n_dead_tup</code> в <code>pg_stat_user_tables</code>, выполни обычный <code>VACUUM VERBOSE task2_logs;</code> и проверь статистику ещё раз.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 2</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS task2_logs;
+
+CREATE TABLE task2_logs (
+    id     INT PRIMARY KEY,
+    status TEXT NOT NULL
+) WITH (autovacuum_enabled = false);
+
+INSERT INTO task2_logs (id, status)
+SELECT g, 'new' FROM generate_series(1, 5000) AS g;
+
+-- Удаляем первую половину строк (создаём 2500 мёртвых кортежей)
+DELETE FROM task2_logs WHERE id &lt;= 2500;
+
+-- Смотрим до уборки (n_dead_tup = 2500)
+SELECT relname, n_live_tup, n_dead_tup
+FROM pg_stat_user_tables
+WHERE relname = 'task2_logs';
+
+-- Мягкая уборка с отчётом и обновлением статистики
+VACUUM (VERBOSE, ANALYZE) task2_logs;
+
+-- Проверяем после уборки (n_dead_tup = 0, n_live_tup = 2500)
+SELECT relname, n_live_tup, n_dead_tup, last_vacuum
+FROM pg_stat_user_tables
+WHERE relname = 'task2_logs';</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Продвинутый). Измерь реальную экономию диска после VACUUM FULL</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>task3_archive (id INT PRIMARY KEY, body TEXT)</code> с отключённым <code>autovacuum</code>. Вставь <code>20000</code> строк (в <code>body</code> положи <code>repeat('A', 100)</code>), затем удали <strong>90% строк</strong> (оставь только те, где <code>id &gt; 18000</code>). Сравни размер таблицы через <code>pg_size_pretty(pg_relation_size('task3_archive'))</code>: 1) сразу после <code>DELETE</code>, 2) после обычного <code>VACUUM</code>, 3) после <code>VACUUM FULL</code>. В конце обнови статистику через <code>ANALYZE</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 3</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS task3_archive;
+
+CREATE TABLE task3_archive (
+    id   INT PRIMARY KEY,
+    body TEXT NOT NULL
+) WITH (autovacuum_enabled = false);
+
+INSERT INTO task3_archive (id, body)
+SELECT g, repeat('A', 100) FROM generate_series(1, 20000) AS g;
+
+-- Удаляем 18 000 строк из 20 000
+DELETE FROM task3_archive WHERE id &lt;= 18000;
+
+-- 1. Размер сразу после DELETE (около 3.1 МБ)
+SELECT pg_size_pretty(pg_relation_size('task3_archive')) AS after_delete;
+
+-- 2. Обычный VACUUM (размер файла останется почти прежним)
+VACUUM task3_archive;
+SELECT pg_size_pretty(pg_relation_size('task3_archive')) AS after_vacuum;
+
+-- 3. VACUUM FULL (размер резко упадёт до ~300 kB!)
+VACUUM FULL task3_archive;
+ANALYZE task3_archive;
+SELECT pg_size_pretty(pg_relation_size('task3_archive')) AS after_vacuum_full;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Две сессии). Поймай, как зависшая транзакция мешает VACUUM</div>
+        <p style="margin-bottom: 0;">
+          Открой <strong>два терминала</strong> <code>psql</code>. Создай таблицу <code>task4_trap (id INT PRIMARY KEY, val INT)</code> с одной строкой <code>(1, 10)</code> и отключённым <code>autovacuum</code>. В <strong>Терминале 1</strong> начни транзакцию <code>BEGIN;</code> и просто выполни <code>SELECT * FROM task4_trap;</code> (НЕ закрывай её!). В <strong>Терминале 2</strong> обнови строку 3 раза и запусти <code>VACUUM VERBOSE task4_trap;</code> — найди в отчёте фразу <code>dead but not yet removable</code>! Затем закрой транзакцию в Терминале 1 (<code>COMMIT;</code>), снова запусти <code>VACUUM VERBOSE task4_trap;</code> в Терминале 2 и убедись, что теперь мусор удалён.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задания 4 (Терминал 1 и Терминал 2)</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Подготовка (в любом терминале)
+DROP TABLE IF EXISTS task4_trap;
+CREATE TABLE task4_trap (
+    id  INT PRIMARY KEY,
+    val INT NOT NULL
+) WITH (autovacuum_enabled = false);
+INSERT INTO task4_trap VALUES (1, 10);
+
+-- [ШАГ 1 — ТЕРМИНАЛ 1] Открываем «забытую» транзакцию с активным снимком
+BEGIN;
+SELECT * FROM task4_trap;
+-- НЕ пишем COMMIT! Оставляем окно открытым.
+
+-- [ШАГ 2 — ТЕРМИНАЛ 2] Создаём 3 мёртвые версии и зовём уборщика
+UPDATE task4_trap SET val = 20 WHERE id = 1;
+UPDATE task4_trap SET val = 30 WHERE id = 1;
+UPDATE task4_trap SET val = 40 WHERE id = 1;
+VACUUM VERBOSE task4_trap;
+-- Увидишь: "0 removed, 1 remain, 3 are dead but not yet removable"!
+
+-- [ШАГ 3 — ТЕРМИНАЛ 1] Наконец закрываем зависшую транзакцию
+COMMIT;
+
+-- [ШАГ 4 — ТЕРМИНАЛ 2] Снова запускаем уборку
+VACUUM VERBOSE task4_trap;
+-- Теперь увидишь: "3 removed, 1 remain, 0 are dead but not yet removable"!</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_4/practice.html#sec-4-2"><strong>Практикум по Уроку 4.2 →</strong></a> — там 11 пошаговых заданий с ответами на скрытые столбцы <code>ctid</code>/<code>xmin</code>/<code>xmax</code>, лабораторный Table Bloat на <code>mvcc_lab</code>, <code>VACUUM</code> vs <code>VACUUM FULL</code> и эксперимент с «забытой» транзакцией.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 8. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока</span>
+      Теперь ты знаешь главный секрет скорости и надёжности PostgreSQL: механизм <strong>MVCC</strong> хранит версии строк со скрытыми метками <code>ctid</code>, <code>xmin</code> и <code>xmax</code>, позволяя читателям и писателям не мешать друг другу, а уборщик <strong>VACUUM</strong> (и автоматический <strong>Autovacuum</strong>) выметает мёртвые строки и защищает таблицы от раздувания. Но остался ещё один важный вопрос: читатели и писатели не блокируют друг друга, а что случается, когда <strong>два писателя одновременно</strong> пытаются изменить одну и ту же строку — или когда две транзакции вцепились друг в друга и ждут бесконечно? В следующем <strong>уроке 4.3</strong> мы разберём <strong>уровни изоляции транзакций</strong>, строчные блокировки (<strong>Row-level locks</strong>) и коварные взаимные блокировки (<strong>Deadlocks</strong>).
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_4_1.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">4.1 · Транзакции, ACID и аномалии параллельного доступа</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_4_3.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">4.3 · Уровни изоляции и блокировки (Row-level locks и D…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

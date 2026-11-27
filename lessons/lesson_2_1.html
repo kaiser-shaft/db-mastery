@@ -1,0 +1,1990 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 2.1: Нормализация (1НФ–3НФ), связи «многие-ко-многим» и основы миграций схемы БД</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.8rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.85rem 1rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_2/practice.html#sec-2-1">Практикум 2.1</a>
+        <a class="course-nav-btn" href="../slides/module-2.html#2.1">Слайды урока 2.1</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 2 · Проектирование и продвинутый SQL</span>
+        <span class="pill pill-neutral">Урок 2.1</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Нормализация (1НФ–3НФ), связи «многие-ко-многим» и основы миграций схемы БД</h1>
+
+      <!-- Карточка целей урока -->
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Поймёшь, почему одна гигантская таблица быстро превращается в хаос, и научишься раскладывать данные по полочкам с помощью <strong>1НФ, 2НФ и 3НФ</strong>.</li>
+          <li>Увидишь наглядно, как «разрезание» таблицы побеждает дубли и противоречия в данных.</li>
+          <li>Разберёшься, как устроена связь <strong>«многие-ко-многим» (M:N)</strong>, и соберёшь таблицу-мостик с составным <code>PRIMARY KEY</code> и внешними ключами <code>FOREIGN KEY</code>.</li>
+          <li>Научишься безопасно менять живую базу через <strong>миграции схемы БД</strong> (<code>UP</code> и <code>DOWN</code>) внутри транзакций (<code>BEGIN ... COMMIT</code>), не теряя данные клиентов.</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. РАЗДЕЛ 01 ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Зачем наводить порядок в таблицах: три главные ловушки</h2>
+      <p>
+        Представь, что ты с друзьями открыл небольшой онлайн-магазин мерча для программистов — продаёте худи, термокружки и стикерпаки. Сначала вы ведёте учёт заказов в одной школьной тетради или в одном листе Excel: в каждой строчке пишете номер заказа, имя покупателя, его телефон, город, часовой пояс города и список купленных товаров прямо через запятую.
+      </p>
+      <p>
+        Пока заказов пять штук, кажется, что всё удобно. Но как только заказов становится хотя бы сотня, начинаются три классические проблемы — инженеры называют их <strong>аномалиями данных (Data Anomalies)</strong>:
+      </p>
+      <ul>
+        <li><strong>Аномалия обновления (Update Anomaly):</strong> покупательница Алиса сменила номер телефона. Ты исправил его в новом заказе, но забыл поменять в двух старых. Теперь база сама себе противоречит: у одной Алисы два разных номера!</li>
+        <li><strong>Аномалия вставки (Insert Anomaly):</strong> вы привезли новую кепку «EXPLAIN», но не можете добавить её в таблицу — ведь её ещё никто не заказал, а в строчке обязательно должен быть клиент и номер заказа.</li>
+        <li><strong>Аномалия удаления (Delete Anomaly):</strong> Тимур отменил свой единственный заказ на термокружку. Ты удалил строчку — и вместе с заказом навсегда стёр и телефон Тимура, и информацию о самой термокружке.</li>
+      </ul>
+
+      <p>
+        Давай посмотрим на эту «свалку» вживую! Подключайся к нашей сквозной базе <code>learning_db</code> и создай «плохую» таблицу <code>bad_orders_sheet</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 1: Таблица «всё в одной куче»</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Сбрасываем таблицу, если она уже была, чтобы пример легко перезапускался
+DROP TABLE IF EXISTS bad_orders_sheet;
+
+-- Создаём одну «толстую» ненормализованную таблицу (как лист Excel)
+CREATE TABLE bad_orders_sheet (
+    order_id       INT,
+    customer_name  TEXT,
+    customer_phone TEXT,
+    city           TEXT,
+    city_timezone  TEXT,
+    items_list     TEXT,
+    total_price    NUMERIC(10, 2)
+);
+
+-- Заполняем тремя заказами — обрати внимание на телефон Алисы и список товаров!
+INSERT INTO bad_orders_sheet VALUES
+    (101, 'Алиса Ким',    '+7-701-111-22-33', 'Алматы', 'UTC+5', 'Худи SQL, Стикерпак', 15700.00),
+    (102, 'Тимур Омаров', '+7-702-444-55-66', 'Астана', 'UTC+5', 'Термокружка',          6900.00),
+    (103, 'Алиса Ким',    '+7-701-999-88-77', 'Алматы', 'UTC+5', 'Стикерпак, Кепка',     5700.00);
+
+-- Посмотрим, что получилось
+SELECT order_id, customer_name, customer_phone, city, items_list
+FROM bad_orders_sheet;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> order_id | customer_name |  customer_phone  |  city  |     items_list
+----------+---------------+------------------+--------+---------------------
+      101 | Алиса Ким     | +7-701-111-22-33 | Алматы | Худи SQL, Стикерпак
+      102 | Тимур Омаров  | +7-702-444-55-66 | Астана | Термокружка
+      103 | Алиса Ким     | +7-701-999-88-77 | Алматы | Стикерпак, Кепка
+(3 rows)</pre>
+      </div>
+
+      <p>
+        Посмотри на вывод: «Алматы» и «UTC+5» дублируются, у Алисы Ким два разных телефона, а если директор спросит: <em>«Сколько всего стикерпаков мы продали?»</em> — обычный SQL-запрос с суммой тут бессилен, потому что товары склеены в текстовую кашу.
+      </p>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Простая аналогия:</strong> <strong>Нормализация (Normalization)</strong> — это как разложить детали конструктора LEGO по отдельным прозрачным контейнерам вместо одной огромной коробки на полу. Каждый факт хранится ровно в одном месте — инженеры называют это принципом <strong>единого источника правды (Single Source of Truth)</strong>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 3. РАЗДЕЛ 02 ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Три ступени порядка: 1НФ, 2НФ и 3НФ</h2>
+      <p>
+        Чтобы не гадать на кофейной гуще, как именно резать большую таблицу на маленькие, математик Эдгар Кодд ещё в 1970-х придумал пошаговый чек-лист — <strong>нормальные формы (Normal Forms)</strong>. В 95% реальных проектов хватает первых трёх ступеней: <strong>1НФ, 2НФ и 3НФ</strong>. Каждая следующая ступень включает в себя правила всех предыдущих.
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            A["0НФ: Всё в одной таблице<br/>(списки в ячейках, дубли)"] --> B["1НФ: Атомарность<br/>(1 ячейка = 1 значение)"]
+            B --> C["2НФ: Полная зависимость<br/>(убираем хвосты составного ключа)"]
+            C --> D["3НФ: Без посредников<br/>(убираем цепочки A → B → C)"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Как таблица проходит три ступени нормализации от «свалки» к чистой схеме БД.</figcaption>
+      </figure>
+
+      <h3>Первая нормальная форма (1НФ): один карман — одна вещь</h3>
+      <p>
+        Представь школьный рюкзак, где в одном кармане вперемешку лежат ключи, флешка и ручка — пока найдёшь нужное, всё перевернёшь. <strong>Первая нормальная форма (1NF)</strong> требует двух простых вещей:
+      </p>
+      <ol>
+        <li>В каждой ячейке лежит ровно <strong>одно неделимое (атомарное) значение</strong> — никаких списков через запятую вроде <code>'Худи SQL, Стикерпак'</code>.</li>
+        <li>У каждой строки есть уникальный идентификатор (<strong>первичный ключ / <code>PRIMARY KEY</code></strong>), и в таблице нет повторяющихся колонок вроде <code>item_1, item_2, item_3</code>.</li>
+      </ol>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо (нарушение 1НФ)</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Товары в одной строке:
+SELECT *
+FROM bad_orders_sheet
+WHERE items_list
+  LIKE '%Стикерпак%';</code></pre>
+            </div>
+            <p>Нельзя посчитать количество штук, нельзя задать цену каждому товару, а поиск по <code>%...%</code> медленный и часто ошибается.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно (соблюдаем 1НФ)</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- 1 товар = 1 строка:
+SELECT order_id,
+       product_id,
+       quantity
+FROM shop_order_items
+WHERE product_id = 2;</code></pre>
+            </div>
+            <p>В каждой ячейке одно чистое значение: легко считать суммы, фильтровать и проверять наличие товара на складе.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Вторая нормальная форма (2НФ): факт зависит от ВСЕГО ключа</h3>
+      <p>
+        Представь школьный журнал, где каждая оценка определяется сразу парой значений — <strong>(ученик, предмет)</strong>. Это <strong>составной ключ (Composite Key)</strong>. Если учитель рядом с каждой оценкой приписывает номер кабинета («Математика — каб. 305»), то кабинет зависит только от <em>предмета</em>, но никак не от <em>ученика</em>! Переедет математика в 402-й кабинет — придётся переписывать весь журнал.
+      </p>
+      <p>
+        В нашем магазине та же история с позициями заказа: ключ — пара <code>(order_id, product_id)</code>. Количество штук (<code>qty</code>) зависит от всей пары. А вот название товара (<code>title</code>) зависит только от половинки ключа (<code>product_id</code>). По правилу <strong>второй нормальной формы (2NF)</strong> отрезаем каталог товаров в отдельную таблицу!
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Было (нарушение 2НФ)</div>
+          <div class="compare-body">
+            <div class="table-wrapper" style="margin: 0 0 0.75rem;">
+              <table>
+                <thead>
+                  <tr><th>order_id</th><th>prod_id</th><th>title</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>1</td><td>2</td><td>Стикерпак</td></tr>
+                  <tr><td>3</td><td>2</td><td>Стикерпак</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>Название <code>Стикерпак</code> повторяется в каждом заказе — оно зависит только от <code>prod_id</code>.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Стало (2НФ: две таблицы)</div>
+          <div class="compare-body">
+            <div class="table-wrapper" style="margin: 0 0 0.65rem;">
+              <table>
+                <thead>
+                  <tr><th>order_id</th><th>prod_id</th><th>qty</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>1</td><td>2</td><td>1</td></tr>
+                  <tr><td>3</td><td>2</td><td>1</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="table-wrapper" style="margin: 0;">
+              <table>
+                <thead>
+                  <tr><th>id</th><th>title (shop_products)</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>2</td><td>Стикерпак «Postgres»</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Третья нормальная форма (3НФ): никаких «передач через третье лицо»</h3>
+      <p>
+        Теперь посмотри на таблицу покупателей: в ней ключ простой — один столбец <code>id</code>. Но рядом лежат <code>city</code> и <code>tz</code> (часовой пояс). Замечаешь цепочку? Часовой пояс зависит от города, а город уже указан у покупателя (<code>customer_id → city → tz</code>). В инженерии это называется <strong>транзитивной зависимостью (Transitive Dependency)</strong>.
+      </p>
+      <p>
+        Если страна переведёт стрелки часов и часовой пояс города изменится, придётся обновлять тысячи строк клиентов. По правилу <strong>третьей нормальной формы (3NF)</strong> выносим города и их часовые пояса в справочник <code>cities</code>, а у покупателя оставляем только короткую ссылку <code>city_id</code>. Посмотри глазами, как аккуратно «разрезается» таблица:
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Было (нарушение 3НФ)</div>
+          <div class="compare-body">
+            <div class="table-wrapper" style="margin: 0 0 0.75rem;">
+              <table>
+                <thead>
+                  <tr><th>id</th><th>name</th><th>city</th><th>tz</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>1</td><td>Алиса</td><td>Алматы</td><td>UTC+5</td></tr>
+                  <tr><td>2</td><td>Данияр</td><td>Алматы</td><td>UTC+5</td></tr>
+                  <tr><td>3</td><td>Тимур</td><td>Астана</td><td>UTC+5</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>Колонка <code>tz</code> зависит от <code>city</code>, а не напрямую от покупателя <code>id</code>.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Стало (3НФ: убрали посредника)</div>
+          <div class="compare-body">
+            <div class="table-wrapper" style="margin: 0 0 0.65rem;">
+              <table>
+                <thead>
+                  <tr><th>id</th><th>name</th><th>city_id</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>1</td><td>Алиса</td><td>1</td></tr>
+                  <tr><td>2</td><td>Данияр</td><td>1</td></tr>
+                  <tr><td>3</td><td>Тимур</td><td>2</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="table-wrapper" style="margin: 0;">
+              <table>
+                <thead>
+                  <tr><th>id</th><th>name (cities)</th><th>tz</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>1</td><td>Алматы</td><td>UTC+5</td></tr>
+                  <tr><td>2</td><td>Астана</td><td>UTC+5</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Форма</th>
+              <th>Простое правило</th>
+              <th>Пример нарушения</th>
+              <th>Как исправляем</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1НФ</strong></td>
+              <td>Одна ячейка = одно значение, есть <code>PRIMARY KEY</code></td>
+              <td>В поле <code>items</code> лежит <code>'Худи, Кепка'</code></td>
+              <td>Выносим позиции заказа в отдельные строки таблицы <code>shop_order_items</code></td>
+            </tr>
+            <tr>
+              <td><strong>2НФ</strong></td>
+              <td>1НФ + колонки зависят от <em>всего</em> ключа, а не от его части</td>
+              <td>В таблице <code>(order_id, product_id)</code> хранится название товара</td>
+              <td>Переносим название и цену каталога в таблицу <code>shop_products</code></td>
+            </tr>
+            <tr>
+              <td><strong>3НФ</strong></td>
+              <td>2НФ + неключевые поля не зависят друг от друга</td>
+              <td>У клиента лежат и <code>city</code>, и <code>city_timezone</code></td>
+              <td>Создаём справочник <code>cities</code>, а клиенту даём внешний ключ <code>city_id</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Чтобы запомнить все три правила разом, инженеры повторяют знаменитую шутливую клятву: <em>«Каждый столбец должен зависеть от ключа, от всего ключа и ни от чего, кроме ключа!»</em>
+      </p>
+
+      <h3>Итоговая карта нашего магазина перед тем, как писать SQL</h3>
+      <p>
+        Прежде чем запускать код создания базы, посмотри на схему всех пяти таблиц целиком. Стрелки показывают, кто на кого ссылается через внешний ключ (<code>FOREIGN KEY</code>):
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            CI["cities<br/>(PK: id, name, timezone)"]
+            CU["shop_customers<br/>(PK: id, full_name, phone, FK: city_id)"]
+            OR["shop_orders<br/>(PK: id, FK: customer_id, created_at)"]
+            OI["shop_order_items<br/>(PK: order_id + product_id, qty, unit_price)"]
+            PR["shop_products<br/>(PK: id, title, price)"]
+
+            CU -->|"city_id → id"| CI
+            OR -->|"customer_id → id"| CU
+            OI -->|"order_id → id"| OR
+            OI -->|"product_id → id"| PR
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Полная ER-схема нашего магазина в 3НФ: 5 компактных таблиц вместо одной «свалки».</figcaption>
+      </figure>
+
+      <p>
+        Теперь перевод этой картинки в SQL читается на одном дыхании! Давай пересоберём магазин в <code>learning_db</code> по всем канонам <strong>3НФ</strong>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 2: Создаём чистую схему магазина в 3НФ</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Удаляем таблицы в обратном порядке (CASCADE чистит зависимые связи)
+DROP TABLE IF EXISTS product_tags, tags, shop_order_items, shop_orders, shop_products, shop_customers, cities CASCADE;
+
+-- 1. Справочник городов (убираем транзитивную зависимость — 3НФ)
+CREATE TABLE cities (
+    id       INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name     VARCHAR(100) NOT NULL UNIQUE,
+    timezone VARCHAR(20)  NOT NULL
+);
+
+-- 2. Покупатели: храним телефон ровно один раз + ссылка на город
+CREATE TABLE shop_customers (
+    id        INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    full_name VARCHAR(120) NOT NULL,
+    phone     VARCHAR(30)  NOT NULL UNIQUE,
+    city_id   INT NOT NULL REFERENCES cities(id)
+);
+
+-- 3. Каталог товаров (убираем частичную зависимость — 2НФ)
+CREATE TABLE shop_products (
+    id    INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title VARCHAR(150)   NOT NULL,
+    price NUMERIC(10, 2) NOT NULL CHECK (price &gt;= 0)
+);
+
+-- 4. Шапка заказов (кто и когда заказал)
+CREATE TABLE shop_orders (
+    id          INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    customer_id INT NOT NULL REFERENCES shop_customers(id),
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- 5. Состав заказов (атомарные строки — 1НФ, составной ключ)
+CREATE TABLE shop_order_items (
+    order_id   INT NOT NULL REFERENCES shop_orders(id) ON DELETE CASCADE,
+    product_id INT NOT NULL REFERENCES shop_products(id),
+    quantity   INT NOT NULL CHECK (quantity &gt; 0),
+    unit_price NUMERIC(10, 2) NOT NULL CHECK (unit_price &gt;= 0),
+    PRIMARY KEY (order_id, product_id)
+);
+
+-- Наполняем чистую схему данными
+INSERT INTO cities (name, timezone) VALUES
+    ('Алматы', 'UTC+5'),
+    ('Астана', 'UTC+5');
+
+INSERT INTO shop_customers (full_name, phone, city_id) VALUES
+    ('Алиса Ким',    '+7-701-999-88-77', 1),
+    ('Тимур Омаров', '+7-702-444-55-66', 2);
+
+INSERT INTO shop_products (title, price) VALUES
+    ('Худи «SQL Master»',    14500.00),
+    ('Стикерпак «Postgres»',  1200.00),
+    ('Термокружка кодера',    6900.00),
+    ('Кепка «EXPLAIN»',       4500.00);
+
+INSERT INTO shop_orders (customer_id, created_at) VALUES
+    (1, '2026-03-10 14:20:00'),
+    (2, '2026-03-11 09:15:00'),
+    (1, '2026-03-12 18:40:00');
+
+INSERT INTO shop_order_items (order_id, product_id, quantity, unit_price) VALUES
+    (1, 1, 1, 14500.00),
+    (1, 2, 1,  1200.00),
+    (2, 3, 2,  6900.00),
+    (3, 2, 1,  1200.00),
+    (3, 4, 1,  4500.00);
+
+-- Собираем читаемый чек из нормализованных таблиц через INNER JOIN
+SELECT
+    o.id        AS order_id,
+    c.full_name AS customer,
+    ci.name     AS city,
+    p.title     AS product,
+    oi.quantity,
+    oi.unit_price
+FROM shop_orders o
+JOIN shop_customers   c  ON c.id  = o.customer_id
+JOIN cities           ci ON ci.id = c.city_id
+JOIN shop_order_items oi ON oi.order_id = o.id
+JOIN shop_products    p  ON p.id  = oi.product_id
+ORDER BY o.id, p.id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> order_id |   customer   |  city  |       product        | quantity | unit_price
+----------+--------------+--------+----------------------+----------+------------
+        1 | Алиса Ким    | Алматы | Худи «SQL Master»    |        1 |   14500.00
+        1 | Алиса Ким    | Алматы | Стикерпак «Postgres» |        1 |    1200.00
+        2 | Тимур Омаров | Астана | Термокружка кодера   |        2 |    6900.00
+        3 | Алиса Ким    | Алматы | Стикерпак «Postgres» |        1 |    1200.00
+        3 | Алиса Ким    | Алматы | Кепка «EXPLAIN»      |        1 |    4500.00
+(5 rows)</pre>
+      </div>
+
+      <h3>Проверяем на деле: исчезли ли все три аномалии?</h3>
+      <p>
+        Помнишь три главные боли из начала урока? Давай прямо сейчас проверим, как наша чистая схема расправляется с ними за пару строчек SQL!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 3: Побеждаем аномалии обновления и вставки</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- 1. Нет аномалии обновления: меняем телефон Алисы ОДИН раз в таблице клиентов
+UPDATE shop_customers
+SET phone = '+7-701-555-00-00'
+WHERE id = 1;
+
+-- 2. Нет аномалии вставки: свободно добавляем новый товар без единого заказа
+INSERT INTO shop_products (title, price)
+VALUES ('Блокнот «ACID»', 2500.00);
+
+-- Проверяем заказы: во ВСЕХ заказах Алисы телефон обновился автоматически!
+SELECT o.id AS order_id, c.full_name, c.phone
+FROM shop_orders o
+JOIN shop_customers c ON c.id = o.customer_id
+ORDER BY o.id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> order_id |   full_name  |      phone
+----------+--------------+------------------
+        1 | Алиса Ким    | +7-701-555-00-00
+        2 | Тимур Омаров | +7-702-444-55-66
+        3 | Алиса Ким    | +7-701-555-00-00
+(3 rows)</pre>
+      </div>
+
+      <p>
+        А если Тимур отменит свой заказ № 2 (<code>DELETE FROM shop_orders WHERE id = 2</code>), то удалятся только шапка заказа и его позиции, а сам Тимур в <code>shop_customers</code> и термокружка в <code>shop_products</code> останутся на месте — <strong>аномалия удаления</strong> тоже побеждена!
+      </p>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хитрость из реальных магазинов:</strong> Заметил, что цена товара лежит и в <code>shop_products.price</code>, и в <code>shop_order_items.unit_price</code>? Это <strong>не</strong> ошибка нормализации! В каталоге хранится <em>текущая</em> цена товара, а в строке заказа — <em>историческая</em> цена на момент покупки. Если завтра худи подорожает до 16 000, старый чек Алисы останется честным.
+        </div>
+      </aside>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Не доводи до абсурда:</strong> Бывает «перенормализация», когда разработчики выносят в отдельные таблицы даже имена и фамилии или названия улиц. Каждый лишний <code>JOIN</code> усложняет запросы. Золотой стандарт для обычных веб-приложений — остановиться на <strong>3НФ</strong> и дробить таблицу только тогда, когда данные действительно повторяются и меняются независимо.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. РАЗДЕЛ 03 ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Связь «многие-ко-многим» (M:N) и таблица-мостик</h2>
+      <p>
+        Подумай о школьных кружках: один ученик может ходить и на робототехнику, и на шахматы. При этом в кружок робототехники ходит 15 разных учеников. Или возьмём теги в нашем магазине мерча: у «Худи SQL Master» сразу два тега — <code>#хит</code> и <code>#одежда</code>, а тег <code>#хит</code> приклеен ещё и к стикерпаку.
+      </p>
+      <p>
+        Как сохранить такую связь в базе? Если добавить колонку <code>tag_id</code> прямо в таблицу товаров <code>shop_products</code>, то у каждого товара сможет быть только <strong>один</strong> тег. Если добавить <code>product_id</code> в таблицу тегов <code>tags</code>, то каждый тег достанется только <strong>одному</strong> товару. А писать теги через запятую нам уже запретила 1НФ!
+      </p>
+      <p>
+        Выход гениально прост: поставить между двумя таблицами третью — <strong>связующую таблицу</strong>, или <strong>таблицу-мостик (Junction Table / Bridge Table)</strong>. Она превращает одну сложную связь <strong>«многие-ко-многим» (Many-to-Many, M:N)</strong> в две простые связи <strong>«один-ко-многим» (1:N)</strong>.
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            P["shop_products<br/>(PK: id, title, price)"] ---|"1 : N"| J["product_tags (мостик)<br/>(PK: product_id + tag_id)"]
+            J ---|"N : 1"| T["tags<br/>(PK: id, name)"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 3. Таблица-мостик product_tags хранит пары «ID товара + ID тега» и связывает две сущности в формате M:N.</figcaption>
+      </figure>
+
+      <p>
+        Кстати, ты уже незаметно построил одну таблицу-мостик пару минут назад! Посмотри на <code>shop_order_items</code> из Примера 2: один заказ содержит много товаров, а один товар попадает во много заказов. Разница лишь в том, что у <code>shop_order_items</code> есть дополнительные поля самой связи (<code>quantity</code>, <code>unit_price</code>), а у чистой таблицы тегов — только два ключа.
+      </p>
+
+      <p>
+        Давай добавим в нашу <code>learning_db</code> справочник <code>tags</code> и таблицу-мостик <code>product_tags</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 4: Реализуем связь M:N для тегов товаров</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Справочник уникальных тегов
+CREATE TABLE tags (
+    id   INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- Таблица-мостик: составной PRIMARY KEY запрещает вешать один и тот же тег дважды
+CREATE TABLE product_tags (
+    product_id INT NOT NULL REFERENCES shop_products(id) ON DELETE CASCADE,
+    tag_id     INT NOT NULL REFERENCES tags(id)          ON DELETE CASCADE,
+    PRIMARY KEY (product_id, tag_id)
+);
+
+-- Добавляем теги
+INSERT INTO tags (name) VALUES
+    ('хит'),      -- id = 1
+    ('новинка'),  -- id = 2
+    ('одежда'),   -- id = 3
+    ('подарок');  -- id = 4
+
+-- Привязываем теги к товарам (у блокнота №5 тегов пока нет — это пригодится в Уроке 2.2!)
+INSERT INTO product_tags (product_id, tag_id) VALUES
+    (1, 1), (1, 3),  -- Худи: хит, одежда
+    (2, 1), (2, 4),  -- Стикерпак: хит, подарок
+    (3, 2), (3, 4),  -- Термокружка: новинка, подарок
+    (4, 2), (4, 3);  -- Кепка: новинка, одежда
+
+-- Выводим все товары с их тегами
+SELECT p.title AS product, t.name AS tag
+FROM shop_products p
+JOIN product_tags pt ON pt.product_id = p.id
+JOIN tags         t  ON t.id = pt.tag_id
+ORDER BY p.id, t.name;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>       product        |   tag
+----------------------+---------
+ Худи «SQL Master»    | одежда
+ Худи «SQL Master»    | хит
+ Стикерпак «Postgres» | подарок
+ Стикерпак «Postgres» | хит
+ Термокружка кодера   | новинка
+ Термокружка кодера   | подарок
+ Кепка «EXPLAIN»      | новинка
+ Кепка «EXPLAIN»      | одежда
+(8 rows)</pre>
+      </div>
+
+      <h3>Как база сама защищает мостик от мусора</h3>
+      <p>
+        В таблице <code>product_tags</code> работают сразу два телохранителя: составной <code>PRIMARY KEY (product_id, tag_id)</code> и внешние ключи <code>REFERENCES</code>. Попробуем специально сломать оба правила — повесить тег <code>#хит</code> на худи во второй раз и привязать несуществующий тег № 999.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 5: Проверяем защиту таблицы-мостика</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Попытка 1: дубликат пары (товар 1, тег 1)
+INSERT INTO product_tags (product_id, tag_id) VALUES (1, 1);
+
+-- Попытка 2: несуществующий tag_id = 999
+INSERT INTO product_tags (product_id, tag_id) VALUES (1, 999);</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL · Попытка 1 (дубликат в составном ключе)</div>
+        <pre>ERROR:  duplicate key value violates unique constraint "product_tags_pkey"
+DETAIL:  Key (product_id, tag_id)=(1, 1) already exists.</pre>
+      </div>
+
+      <div class="error-block standalone">
+        <div class="output-label">Ошибка PostgreSQL · Попытка 2 (битая ссылка)</div>
+        <pre>ERROR:  insert or update on table "product_tags" violates foreign key constraint "product_tags_tag_id_fkey"
+DETAIL:  Key (tag_id)=(999) is not present in table "tags".</pre>
+      </div>
+
+      <p>
+        Видишь, как здорово? Тебе не нужно молиться, чтобы программист на сайте не забыл проверку в коде — сам PostgreSQL намертво пресечёт и дубликаты, и «висячие» ссылки в никуда. А благодаря <code>ON DELETE CASCADE</code>, если ты удалишь тег <code>#новинка</code>, все его строчки в <code>product_tags</code> подчистятся автоматически.
+      </p>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет по именованию:</strong> Называй таблицу-мостик склейкой двух сущностей — <code>product_tags</code>, <code>student_clubs</code>, <code>user_roles</code>. Любой коллега за секунду поймёт, что это связь M:N, даже не заглядывая в схему!
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 5. РАЗДЕЛ 04 ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> Основы миграций схемы БД: ремонт в живом доме</h2>
+      <p>
+        Когда ты делаешь учебный проект один, легко написать <code>DROP TABLE</code> и создать всё заново. Но представь, что твой магазин уже работает полгода: в базе 50 000 живых заказов и 10 000 покупателей. Сносить таблицы нельзя — ты потеряешь все деньги и историю клиентов! При этом бизнес просит добавить новую колонку, например артикул товара <code>sku</code>.
+      </p>
+      <p>
+        Это похоже на ремонт в доме, где прямо сейчас живут люди, или на систему сохранений в компьютерной игре: ты фиксируешь каждое изменение структуры базы в отдельном пронумерованном файле-шаге. Такой файл называется <strong>миграцией схемы БД (Database Schema Migration)</strong>.
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            V0["База v0<br/>(чистая схема)"] -->|"UP: 001_add_sku.up.sql"| V1["База v1<br/>(+ артикул sku)"]
+            V1 -.->|"DOWN: 001_add_sku.down.sql"| V0
+            V1 -->|"UP: 002_add_loyalty.up.sql"| V2["База v2<br/>(+ уровень лояльности)"]
+            V2 -->|"Запись в schema_migrations"| LOG["Журнал версий<br/>(проверяется ДО запуска)"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 4. Миграции умеют двигать схему вперёд (UP) и откатывать назад (DOWN), а журнал версий не даёт применить один файл дважды.</figcaption>
+      </figure>
+
+      <p>
+        Зачем нужны файлы миграций вместо того, чтобы просто «покликать мышкой» в программе или вручную набрать пару команд? Потому что твой код запускается минимум в трёх местах: у тебя на ноутбуке, у напарника по команде и на боевом сервере (production). Когда все изменения лежат в пронумерованных SQL-файлах рядом с кодом в Git, на любом компьютере база собирается в точности до запятой одинаково.
+      </p>
+
+      <h3>Классическая ловушка: добавляем <code>NOT NULL</code> в непустую таблицу</h3>
+      <p>
+        Допустим, мы хотим добавить обязательный уникальный артикул <code>sku</code> в уже заполненную таблицу <code>shop_products</code>. Что произойдёт, если сделать это «в лоб» одной командой? Давай проверим!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 6: Наивная миграция, которая падает с ошибкой</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Пытаемся сразу добавить обязательную колонку без значения по умолчанию
+ALTER TABLE shop_products
+ADD COLUMN sku VARCHAR(30) NOT NULL;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  column "sku" of relation "shop_products" contains null values</pre>
+      </div>
+
+      <p>
+        PostgreSQL абсолютно прав: в таблице уже лежат 5 товаров, и база понятия не имеет, какой артикул записать им прямо сейчас, а оставить пустоту (<code>NULL</code>) ты сам ей запретил!
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Сразу NOT NULL без BEGIN:
+ALTER TABLE shop_products
+  ADD COLUMN sku VARCHAR(30)
+  NOT NULL;</code></pre>
+            </div>
+            <p>Запрос падает на непустой таблице. А если в скрипте 5 команд без транзакции и 3-я упала — база застрянет «наполовину переделанной».</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">BEGIN;
+ALTER TABLE shop_products
+  ADD COLUMN sku VARCHAR(30);
+UPDATE shop_products
+  SET sku = 'MERCH-' || id;
+ALTER TABLE shop_products
+  ALTER COLUMN sku
+  SET NOT NULL;
+COMMIT;</code></pre>
+            </div>
+            <p><strong>Три безопасных шага в транзакции:</strong> 1) добавить nullable-колонку, 2) заполнить старые строки (<code>backfill</code>), 3) затянуть гайки (<code>NOT NULL</code>, <code>UNIQUE</code>).</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Пишем настоящую транзакционную миграцию в <code>learning_db</code></h3>
+      <p>
+        Одно из суперсвойств PostgreSQL — <strong>транзакционный DDL</strong>: если внутри <code>BEGIN; ... COMMIT;</code> на десятой строчке случится ошибка, откатятся даже команды <code>CREATE TABLE</code> и <code>ALTER TABLE</code>! База останется целой и невредимой, как будто ничего не запускали.
+      </p>
+      <p>
+        Создадим сначала служебную таблицу <code>schema_migrations</code> (журнал применённых версий), а затем выполним безопасную <strong>UP-миграцию</strong> <code>001_add_product_sku.up.sql</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 7: Журнал версий + безопасная UP-миграция 001</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Шаг 0: создаём журнал применённых миграций (один раз на всю базу)
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version    VARCHAR(100) PRIMARY KEY,
+    applied_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- === Миграция 001_add_product_sku.up.sql ===
+BEGIN;
+
+-- 1. Добавляем колонку пока БЕЗ ограничения NOT NULL
+ALTER TABLE shop_products
+    ADD COLUMN sku VARCHAR(30);
+
+-- 2. Заполняем существующие строки (backfill): MERCH-0001, MERCH-0002...
+UPDATE shop_products
+SET sku = 'MERCH-' || LPAD(id::TEXT, 4, '0')
+WHERE sku IS NULL;
+
+-- 3. Теперь, когда пустых ячеек нет, включаем NOT NULL и уникальность
+ALTER TABLE shop_products
+    ALTER COLUMN sku SET NOT NULL,
+    ADD CONSTRAINT shop_products_sku_unique UNIQUE (sku);
+
+-- 4. Отмечаем в журнале, что миграция 001 успешно применена
+INSERT INTO schema_migrations (version)
+VALUES ('001_add_product_sku');
+
+COMMIT;
+
+-- Проверяем обновлённый каталог товаров и журнал миграций
+SELECT id, title, sku, price FROM shop_products ORDER BY id;
+SELECT * FROM schema_migrations;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id |        title         |    sku     |  price
+----+----------------------+------------+----------
+  1 | Худи «SQL Master»    | MERCH-0001 | 14500.00
+  2 | Стикерпак «Postgres» | MERCH-0002 |  1200.00
+  3 | Термокружка кодера   | MERCH-0003 |  6900.00
+  4 | Кепка «EXPLAIN»      | MERCH-0004 |  4500.00
+  5 | Блокнот «ACID»       | MERCH-0005 |  2500.00
+(5 rows)
+
+       version       |         applied_at
+---------------------+----------------------------
+ 001_add_product_sku | 2026-03-15 12:10:04.218491
+(1 row)</pre>
+      </div>
+
+      <h3>Два главных вопроса: повторный запуск и откат (DOWN-миграция)</h3>
+      <p>
+        У внимательного инженера сразу появляются два вопроса:
+      </p>
+      <ul>
+        <li><strong>Что будет, если случайно запустить файл 001 второй раз?</strong> В нашей транзакции PostgreSQL сразу увидит, что колонка <code>sku</code> уже существует (а в конце ещё и ключ <code>'001_add_product_sku'</code> в <code>schema_migrations</code> уже занят), выдаст ошибку и аккуратно откатит всю транзакцию — база не сломается. А настоящие инструменты миграций (<strong>Flyway</strong>, <strong>Goose</strong>, <strong>Alembic</strong>) вообще сначала заглядывают в <code>schema_migrations</code> и просто <strong>пропускают</strong> все файлы, которые там уже отмечены.</li>
+        <li><strong>Как вернуть всё обратно, если передумал?</strong> Для этого рядом с файлом <code>.up.sql</code> хранят парный файл отката <code>.down.sql</code>, который отменяет изменения в строго обратном порядке:</li>
+      </ul>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример файла отката 001_add_product_sku.down.sql (для справки)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Не запускай сейчас, если хочешь оставить колонку sku в learning_db!
+BEGIN;
+
+-- Удаляем ограничение и колонку в обратном порядке
+ALTER TABLE shop_products
+    DROP CONSTRAINT IF EXISTS shop_products_sku_unique,
+    DROP COLUMN IF EXISTS sku;
+
+-- Убираем отметку из журнала версий
+DELETE FROM schema_migrations
+WHERE version = '001_add_product_sku';
+
+COMMIT;</code></pre>
+      </div>
+
+      <p>
+        А если сохранить UP-миграцию в файл <code>migrations/001_add_product_sku.up.sql</code> рядом с твоим <code>docker-compose.yaml</code>, то применить её к контейнеру PostgreSQL из терминала можно одной аккуратной командой:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash · Применение файла миграции в Docker</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># Флаг ON_ERROR_STOP=1 заставит psql немедленно остановиться при любой ошибке
+docker exec -i course_pg_primary psql -U student -d learning_db \
+  -v ON_ERROR_STOP=1 &lt; migrations/001_add_product_sku.up.sql</code></pre>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Золотое правило миграций:</strong> Никогда не редактируй файл миграции, который уже применился на сервере или у коллег! Если допустил опечатку или передумал — создавай <strong>новую</strong> миграцию <code>002_...up.sql</code>. И будь предельно осторожен с <code>DROP COLUMN</code> в <code>DOWN</code>-миграциях на живом проекте: удалить колонку легко, а вот вернуть стёртые данные можно только из резервной копии (бэкапа).
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 6. ШПАРГАЛКА ПЕРЕД ПРАКТИКОЙ ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Шпаргалка перед практикой</h2>
+      <p>
+        Прежде чем писать <code>CREATE TABLE</code> в задачах ниже, задай своей будущей таблице <strong>три быстрых вопроса</strong>:
+      </p>
+      <ol>
+        <li><strong>Есть ли в ячейке список через запятую или колонки <code>item_1, item_2</code>?</strong> → Если да, выноси в отдельные строки (<strong>1НФ</strong>).</li>
+        <li><strong>У таблицы составной ключ из двух ID, но какая-то колонка описывает только один из них?</strong> → Если да, переноси её в собственный справочник (<strong>2НФ</strong>).</li>
+        <li><strong>Зависит ли колонка Б от колонки А, хотя ни А, ни Б не являются ключом?</strong> → Если да, выноси пару (А, Б) в отдельную таблицу-справочник (<strong>3НФ</strong>).</li>
+      </ol>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Термин</th>
+              <th>Короткий перевод на человеческий</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Атомарность (1НФ)</strong></td>
+              <td>В одной ячейке лежит одно неделимое значение, а не список.</td>
+            </tr>
+            <tr>
+              <td><strong>Составной ключ</strong></td>
+              <td>Первичный ключ из двух и более колонок сразу, например <code>PRIMARY KEY (order_id, product_id)</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Транзитивная зависимость</strong></td>
+              <td>Цепочка через посредника: <code>клиент → город → часовой пояс</code> (убираем в 3НФ).</td>
+            </tr>
+            <tr>
+              <td><strong>Таблица-мостик (M:N)</strong></td>
+              <td>Промежуточная таблица, хранящая пары внешних ключей для связи «многие-ко-многим».</td>
+            </tr>
+            <tr>
+              <td><strong>Backfill</strong></td>
+              <td>Заполнение пустых значений в уже существующих строках перед включением <code>NOT NULL</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>UP / DOWN миграция</strong></td>
+              <td>Пара SQL-файлов: первый двигает схему вперёд, второй умеет аккуратно откатить шаг назад.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== 7. МИНИ-ПРАКТИКУМ ==================== -->
+    <section>
+      <h2><span class="sec-num">06</span> Мини-практикум для закрепления</h2>
+      <p>
+        Запусти свою базу <code>learning_db</code> (через <code>docker compose up -d</code>) и попробуй решить 4 задачи разной сложности. Каждая задача полностью автономна — не подглядывай в спойлер, пока не проверишь свой вариант в <code>psql</code>!
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовое). Наводим порядок в школьной библиотеке (1НФ–3НФ)</div>
+        <p style="margin-bottom: 0;">
+          В библиотеке хранят записи в одной «плохой» таблице: <code>(loan_id, student_name, class_name, homeroom_teacher, books_list)</code>, где в <code>books_list</code> через запятую записаны взятые книги, а у каждого класса свой классный руководитель (<code>homeroom_teacher</code>). Спроектируй и создай в <code>learning_db</code> чистую схему в <strong>3НФ</strong> из 5 таблиц с первичными и внешними ключами.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS loan_books, loans, books, school_students, school_classes CASCADE;
+
+-- 3НФ: классный руководитель зависит от класса, а не от конкретного ученика
+CREATE TABLE school_classes (
+    id               INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name             VARCHAR(10)  NOT NULL UNIQUE, -- например, '9А'
+    homeroom_teacher VARCHAR(120) NOT NULL
+);
+
+CREATE TABLE school_students (
+    id        INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    full_name VARCHAR(120) NOT NULL,
+    class_id  INT NOT NULL REFERENCES school_classes(id)
+);
+
+-- 2НФ: справочник книг хранится отдельно от фактов выдачи
+CREATE TABLE books (
+    id     INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title  VARCHAR(200) NOT NULL,
+    author VARCHAR(120) NOT NULL
+);
+
+CREATE TABLE loans (
+    id         INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    student_id INT  NOT NULL REFERENCES school_students(id),
+    loan_date  DATE NOT NULL DEFAULT CURRENT_DATE
+);
+
+-- 1НФ + M:N: каждая книга в выдаче — отдельная строка (таблица-мостик)
+CREATE TABLE loan_books (
+    loan_id INT NOT NULL REFERENCES loans(id) ON DELETE CASCADE,
+    book_id INT NOT NULL REFERENCES books(id),
+    PRIMARY KEY (loan_id, book_id)
+);</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Среднее). Школьные кружки и таблица-мостик (M:N)</div>
+        <p style="margin-bottom: 0;">
+          Создай три таблицы для системы школьных кружков: <code>club_students</code> (<code>id</code>, <code>full_name</code>), <code>clubs</code> (<code>id</code>, <code>title</code>) и таблицу-мостик <code>student_clubs</code>. Добавь в мостик колонку <code>joined_at DATE DEFAULT CURRENT_DATE</code> и запрети записывать одного ученика в один и тот же кружок дважды. Добавь 2 учеников, 3 кружка, запиши учеников в несколько кружков и выведи список пар «ученик — кружок — дата записи».
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS student_clubs, clubs, club_students CASCADE;
+
+CREATE TABLE club_students (
+    id        INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    full_name VARCHAR(120) NOT NULL
+);
+
+CREATE TABLE clubs (
+    id    INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- Таблица-мостик с дополнительным полем joined_at и защитой от дублей
+CREATE TABLE student_clubs (
+    student_id INT  NOT NULL REFERENCES club_students(id) ON DELETE CASCADE,
+    club_id    INT  NOT NULL REFERENCES clubs(id)         ON DELETE CASCADE,
+    joined_at  DATE NOT NULL DEFAULT CURRENT_DATE,
+    PRIMARY KEY (student_id, club_id)
+);
+
+INSERT INTO club_students (full_name) VALUES
+    ('Данияр Беков'),
+    ('София Ли');
+
+INSERT INTO clubs (title) VALUES
+    ('Робототехника'),
+    ('Шахматы'),
+    ('Геймдев');
+
+INSERT INTO student_clubs (student_id, club_id) VALUES
+    (1, 1), (1, 3),
+    (2, 1), (2, 2);
+
+SELECT s.full_name, c.title AS club, sc.joined_at
+FROM club_students s
+JOIN student_clubs sc ON sc.student_id = s.id
+JOIN clubs         c  ON c.id = sc.club_id
+ORDER BY s.full_name, c.title;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Среднее+). Безопасная миграция 002 с заполнением старых строк</div>
+        <p style="margin-bottom: 0;">
+          Напиши транзакционную миграцию <code>002_add_customer_loyalty</code> для таблицы <code>shop_customers</code>: добавь колонку <code>loyalty_level VARCHAR(20)</code>, заполни всем текущим покупателям значение <code>'bronze'</code>, установи ограничение <code>NOT NULL</code>, значение по умолчанию <code>'bronze'</code> и проверку <code>CHECK (loyalty_level IN ('bronze', 'silver', 'gold'))</code>. Запиши факт выполнения в <code>schema_migrations</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">BEGIN;
+
+-- 1. Добавляем колонку без NOT NULL
+ALTER TABLE shop_customers
+    ADD COLUMN loyalty_level VARCHAR(20);
+
+-- 2. Заполняем старые строки (backfill)
+UPDATE shop_customers
+SET loyalty_level = 'bronze'
+WHERE loyalty_level IS NULL;
+
+-- 3. Включаем NOT NULL, DEFAULT и проверку допустимых уровней
+ALTER TABLE shop_customers
+    ALTER COLUMN loyalty_level SET DEFAULT 'bronze',
+    ALTER COLUMN loyalty_level SET NOT NULL,
+    ADD CONSTRAINT shop_customers_loyalty_check
+        CHECK (loyalty_level IN ('bronze', 'silver', 'gold'));
+
+-- 4. Фиксируем миграцию в журнале
+INSERT INTO schema_migrations (version)
+VALUES ('002_add_customer_loyalty');
+
+COMMIT;
+
+-- Проверка результата
+SELECT id, full_name, loyalty_level FROM shop_customers;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Продвинутое). Разбираем «грязную» строку в 1НФ прямо в SQL</div>
+        <p style="margin-bottom: 0;">
+          Помнишь таблицу <code>bad_orders_sheet</code> из Примера 1, где в <code>items_list</code> товары склеены через запятую (<code>'Худи SQL, Стикерпак'</code>)? Напиши <code>SELECT</code>-запрос, который превратит её в вид <strong>1НФ</strong> — чтобы каждый товар оказался в отдельной строке рядом со своим <code>order_id</code> и <code>customer_name</code>.<br />
+          <em>Подсказка:</em> в PostgreSQL для разрезания текста по разделителю в отдельные строки отлично работает связка <code>TRIM(unnest(string_to_array(items_list, ',')))</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Разрезаем строку по запятой в массив, разворачиваем в строки и убираем пробелы по краям
+SELECT
+    order_id,
+    customer_name,
+    TRIM(unnest(string_to_array(items_list, ','))) AS item_name
+FROM bad_orders_sheet
+ORDER BY order_id, item_name;</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_2/practice.html#sec-2-1"><strong>Практикум по Уроку 2.1 →</strong></a> — там ещё 9 пошаговых заданий с ответами от разминки по схеме 3НФ и связей M:N до безопасных UP/DOWN-миграций.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 8. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока и что дальше</span>
+      Теперь ты умеешь наводить в базе идеальный порядок: <strong>1НФ–3НФ</strong> избавляют таблицы от дублей и аномалий, <strong>таблица-мостик</strong> с составным ключом элегантно решает связь <strong>«многие-ко-многим»</strong>, а <strong>транзакционные UP/DOWN миграции</strong> позволяют безопасно развивать живую схему без потери данных. Но раз данные теперь аккуратно разложены по разным таблицам, возникает новый вопрос: как найти наш новенький «Блокнот ACID», у которого пока нет ни одного тега и ни одного заказа, разделить чеки на категории и посчитать выручку по городам? В следующем <strong>Уроке 2.2</strong> мы разберём <code>LEFT JOIN</code>, <code>UNION</code>, условную логику <code>CASE WHEN</code> и группировки <code>GROUP BY / HAVING</code> — и наша чистая схема заработает на полную мощность!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_1_4.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">1.4 · Изменение и удаление данных (UPDATE, DELETE) и пе…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_2_2.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">2.2 · Внешние объединения (LEFT JOIN), объединение выбо…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          try {
+            await navigator.clipboard.writeText(codeEl.innerText);
+            const originalText = btn.textContent;
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

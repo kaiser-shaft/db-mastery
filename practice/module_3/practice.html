@@ -1,0 +1,3101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Практикум · Модуль 3: Внутреннее устройство PostgreSQL: диск, память, индексы и WAL</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --accent-border: #bfdbfe;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --purple-bg: #f5f3ff;
+      --purple-border: #ddd6fe;
+      --purple-text: #6d28d9;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      padding: 2.25rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .lecture {
+      max-width: 880px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.75rem 3.25rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== НАВИГАЦИЯ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    /* ==================== ШАПКА ==================== */
+    .lecture-header {
+      padding-bottom: 1.85rem;
+      margin-bottom: 2.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary { background: var(--accent-soft); color: var(--accent); }
+    .pill-tip { background: var(--tip-bg); color: var(--tip-text); }
+    .pill-neutral { background: #f1f5f9; color: var(--muted); }
+
+    h1 {
+      margin: 0 0 0.75rem;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    .hero-sub {
+      margin: 0 0 1.4rem;
+      color: var(--muted);
+      font-size: 0.97rem;
+    }
+
+    /* Прогресс-бар и фильтры */
+    .practice-toolbar {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem 1.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .progress-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.88rem;
+    }
+
+    .progress-label {
+      font-weight: 600;
+      color: var(--text-body);
+    }
+
+    .progress-label strong {
+      font-family: "JetBrains Mono", monospace;
+      color: var(--tip-border);
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #16a34a);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+    }
+
+    .filter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .filter-btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-body);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.3rem 0.7rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .reset-btn {
+      appearance: none;
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.76rem;
+      font-weight: 500;
+      padding: 0.26rem 0.62rem;
+      border-radius: 7px;
+      cursor: pointer;
+      display: none;
+    }
+
+    .reset-btn.visible { display: inline-block; }
+    .reset-btn:hover { border-color: var(--err-border); color: var(--err-border); }
+
+    /* Оглавление */
+    .toc-box {
+      margin-top: 1.15rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li { border-bottom: 1px solid #f1f5f9; }
+    .toc-list li:last-child { border-bottom: none; }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.36rem 0.5rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover { background: var(--surface-soft); color: var(--accent); }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.85rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 2.75rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type { margin-top: 0; }
+    section.hidden { display: none; }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.38rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 1.75rem 0 0.75rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p { margin: 0 0 1rem; }
+    ul, ol { margin: 0 0 1.2rem; padding-left: 1.4rem; }
+    li { margin-bottom: 0.45rem; }
+
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.14em 0.4em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* ==================== БЛОКИ КОДА ==================== */
+    .code-block {
+      margin: 1rem 0 1.25rem;
+      border-radius: 11px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.45rem 0.95rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.74rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.74rem;
+      font-weight: 500;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover { background: #21262d; border-color: #8b949e; color: #ffffff; }
+    .copy-btn.copied { border-color: #238636; color: #3fb950; }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1rem 1.2rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.86rem;
+      line-height: 1.58;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    /* ==================== ВЫНОСКИ И ТАБЛИЦЫ ==================== */
+    .callout {
+      display: flex;
+      gap: 0.85rem;
+      margin: 1.25rem 0;
+      padding: 1rem 1.2rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.94rem;
+      line-height: 1.6;
+    }
+
+    .callout-icon { flex-shrink: 0; width: 20px; height: 20px; margin-top: 0.18rem; color: var(--accent); }
+    .callout-body strong { color: #1e40af; }
+
+    .callout.warn { background: var(--warn-bg); border-left-color: var(--warn-border); }
+    .callout.warn .callout-icon { color: var(--warn-border); }
+    .callout.warn .callout-body strong { color: var(--warn-text); }
+
+    .callout.tip { background: var(--tip-bg); border-left-color: var(--tip-border); }
+    .callout.tip .callout-icon { color: var(--tip-border); }
+    .callout.tip .callout-body strong { color: var(--tip-text); }
+
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1rem 0 1.4rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.72rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-soft);
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    /* ==================== ER-ДИАГРАММА И ПРЕДПРОСМОТР ДАННЫХ ==================== */
+    .schema-box {
+      margin: 1rem 0 1.25rem;
+      padding: 1.15rem 1.15rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .er-scroll {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .er-svg {
+      display: block;
+      width: 100%;
+      min-width: 680px;
+      height: auto;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .er-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem 1rem;
+      margin-top: 0.9rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .er-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .er-tag {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.08rem 0.38rem;
+      border-radius: 5px;
+      line-height: 1.3;
+    }
+
+    .er-tag-pk   { background: #dbeafe; color: #1d4ed8; }
+    .er-tag-fk   { background: #fef3c7; color: #b45309; }
+    .er-tag-uk   { background: #f3e8ff; color: #7e22ce; }
+    .er-tag-null { background: #fee2e2; color: #b91c1c; }
+
+    .quirks-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.65rem;
+      margin-top: 0.9rem;
+    }
+
+    .quirk-chip {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.62rem 0.82rem;
+      font-size: 0.84rem;
+      line-height: 1.48;
+      color: var(--text-body);
+    }
+
+    .quirk-chip strong {
+      color: var(--text);
+    }
+
+    details.data-preview {
+      margin: 0.95rem 0 0;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    details.data-preview summary {
+      cursor: pointer;
+      padding: 0.78rem 1.05rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: #ffffff;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    details.data-preview summary::-webkit-details-marker { display: none; }
+
+    details.data-preview summary::after {
+      content: "Развернуть ▾";
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    details.data-preview[open] summary {
+      border-bottom: 1px solid var(--border);
+      background: var(--accent-soft);
+    }
+
+    details.data-preview[open] summary::after {
+      content: "Свернуть ▴";
+      color: var(--accent);
+    }
+
+    .preview-body {
+      padding: 1rem 1.1rem 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .preview-table-title {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .preview-table-title span {
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .preview-body .table-wrapper {
+      margin: 0;
+      border-radius: 9px;
+    }
+
+    .preview-body table {
+      font-size: 0.81rem;
+      line-height: 1.4;
+    }
+
+    .preview-body th,
+    .preview-body td {
+      padding: 0.44rem 0.65rem;
+      white-space: nowrap;
+    }
+
+    .null-pill {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.05rem 0.38rem;
+      border-radius: 4px;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .status-pill {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.73rem;
+      font-weight: 600;
+      padding: 0.05rem 0.4rem;
+      border-radius: 5px;
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    @media (max-width: 720px) {
+      .quirks-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ==================== КАРТОЧКИ ЗАДАНИЙ ==================== */
+    .task-card {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.15rem 1.35rem;
+      margin: 0.95rem 0;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .task-card.done {
+      background: #f8fdf9;
+      border-color: #bbf7d0;
+    }
+
+    .task-card.hidden { display: none; }
+
+    .task-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .task-title-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      min-width: 0;
+    }
+
+    .task-check {
+      appearance: none;
+      width: 19px;
+      height: 19px;
+      margin-top: 0.22rem;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-strong);
+      background: #ffffff;
+      cursor: pointer;
+      display: grid;
+      place-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .task-check:hover { border-color: var(--accent); }
+    .task-check:checked { background: var(--tip-border); border-color: var(--tip-border); }
+    .task-check:checked::after {
+      content: "✓";
+      color: #ffffff;
+      font-size: 0.76rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .task-card.done .task-title { color: var(--tip-text); }
+
+    .task-num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      padding: 0.08rem 0.45rem;
+      border-radius: 6px;
+      margin-right: 0.45rem;
+    }
+
+    .task-card.done .task-num {
+      background: var(--tip-bg);
+      border-color: #bbf7d0;
+      color: var(--tip-text);
+    }
+
+    .lvl-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.16rem 0.55rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .lvl-easy   { background: var(--tip-bg);    color: var(--tip-text);    border: 1px solid #bbf7d0; }
+    .lvl-base   { background: var(--accent-soft); color: var(--accent);    border: 1px solid var(--accent-border); }
+    .lvl-mid    { background: var(--warn-bg);   color: var(--warn-text);   border: 1px solid #fde68a; }
+    .lvl-boss   { background: var(--purple-bg); color: var(--purple-text); border: 1px solid var(--purple-border); }
+
+    .task-desc {
+      margin: 0 0 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    .task-desc:last-of-type { margin-bottom: 0; }
+
+    .task-hint {
+      margin: 0.45rem 0 0;
+      font-size: 0.87rem;
+      color: var(--muted);
+    }
+
+    details.solution {
+      margin-top: 0.8rem;
+      border-top: 1px dashed var(--border-strong);
+      padding-top: 0.65rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover { text-decoration: underline; }
+    details.solution .code-block { margin: 0.7rem 0 0; }
+
+    .solution-note {
+      margin: 0.55rem 0 0;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    .file-link-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.42rem 0.8rem;
+      border-radius: 9px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.84rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .file-link-bar:hover {
+      background: #dbeafe;
+      border-color: var(--accent);
+    }
+
+    .empty-filter {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+      border: 1px dashed var(--border-strong);
+      border-radius: 12px;
+      color: var(--muted);
+      margin-top: 1.5rem;
+    }
+
+    .empty-filter.visible { display: block; }
+
+    @media (max-width: 680px) {
+      body { padding: 1rem 0.7rem 3rem; font-size: 15px; }
+      .lecture { padding: 1.5rem 1.2rem; border-radius: 12px; }
+      h1 { font-size: 1.55rem; }
+      h2 { font-size: 1.2rem; }
+      .task-head { flex-direction: column; gap: 0.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../../docker_guide.html">Гид по Docker</a>
+      </div>
+    </nav>
+
+    <!-- ==================== ШАПКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Практикум · Модуль 3</span>
+        <span class="pill pill-tip">44 задания · От разминки к инженерии</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · learning_db</span>
+      </div>
+
+      <h1>Практические задания: Внутреннее устройство PostgreSQL</h1>
+      <p class="hero-sub">
+        Тренажёр по Урокам 3.1–3.4: заглядываем в 8-килобайтные страницы <code>Heap</code> и кэш <code>Shared Buffers</code>, строим и чиним индексы (<code>B-Tree</code>, составные, покрывающие, частичные, <code>GIN</code>, <code>BRIN</code>), читаем планы <code>EXPLAIN (ANALYZE, BUFFERS)</code> и проводим настоящий краш-тест журнала предзаписи <code>WAL</code>.
+      </p>
+
+      <div class="practice-toolbar">
+        <div>
+          <div class="progress-head">
+            <span class="progress-label">Выполнено заданий: <strong id="progress-text">0 / 44 (0%)</strong></span>
+            <button type="button" class="reset-btn" id="reset-progress">Сбросить прогресс</button>
+          </div>
+          <div class="progress-bar" style="margin-top: 0.45rem;">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="toolbar-actions">
+          <div class="filter-pills" role="group" aria-label="Фильтр заданий">
+            <button type="button" class="filter-btn active" data-filter="all">Все (44)</button>
+            <button type="button" class="filter-btn" data-filter="todo">Невыполненные</button>
+            <button type="button" class="filter-btn" data-filter="3_1">Урок 3.1</button>
+            <button type="button" class="filter-btn" data-filter="3_2">Урок 3.2</button>
+            <button type="button" class="filter-btn" data-filter="3_3">Урок 3.3</button>
+            <button type="button" class="filter-btn" data-filter="3_4">Урок 3.4</button>
+          </div>
+        </div>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание практикума"></nav>
+    </header>
+
+    <!-- ==================== 00. ПОДГОТОВКА И INIT.SQL ==================== -->
+    <section id="sec-init" data-section-lesson="init">
+      <h2><span class="sec-num">00</span> Подготовка стенда и базы данных: как и где использовать init.sql</h2>
+      <p>
+        Для честных замеров страниц, индексов и планов запросов таблиц на 10 строк мало — PostgreSQL просто прочитает 1 страницу целиком. Поэтому рядом с практикумом лежит готовый скрипт <a class="file-link-bar" href="init.sql">📄 practice/module_3/init.sql</a>. За пару секунд он создаёт 5 таблиц в <code>learning_db</code>: мини-таблицу <code>m3_backpack</code> (5 строк, 1 страница) для опытов с <code>ctid</code>, а также объёмные таблицы маркетплейса и телеметрии (<code>m3_customers</code>, <code>m3_products</code>, <code>m3_orders</code> на 100 000 строк и <code>m3_sensor_logs</code> на 200 000 строк).
+      </p>
+
+      <div class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Когда запускать <code>init.sql</code>:</strong>
+          <ul style="margin: 0.4rem 0 0; padding-left: 1.25rem;">
+            <li><strong>Для всех уроков Модуля 3 (3.1–3.4):</strong> нужен только базовый контейнер <code>course_pg_primary</code> (профиль Docker по умолчанию — никаких дополнительных профилей включать не нужно).</li>
+            <li><strong>Загрузи <code>init.sql</code> один раз перед стартом</strong> — все задания Уроков 3.1–3.4 опираются на таблицы с префиксом <code>m3_</code>.</li>
+            <li><strong>Для чистого сброса:</strong> скрипт полностью идемпотентен — запускай его повторно в любой момент, чтобы удалить созданные вручную индексы и тестовые таблицы и вернуть чистые <code>Seq Scan</code> (например, перед Уроком 3.3 или после краш-теста в Уроке 3.4).</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Шаг 1. Убедись, что базовый Docker-контейнер PostgreSQL запущен</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · Запуск базового контейнера (из корневой папки курса)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker compose up -d</code></pre>
+      </div>
+
+      <h3>Шаг 2. Загрузи <code>init.sql</code> в базу <code>learning_db</code> (выбери удобный способ)</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · Linux / macOS / Git Bash (из корневой папки курса)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker exec -i course_pg_primary psql -U student -d learning_db &lt; practice/module_3/init.sql</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">PowerShell · Windows (из корневой папки курса)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-powershell">Get-Content practice/module_3/init.sql -Raw | docker exec -i course_pg_primary psql -U student -d learning_db</code></pre>
+      </div>
+
+      <p>
+        <strong>Через графический клиент (DBeaver / DataGrip / Adminer):</strong> подключись к базе <code>learning_db</code> (<code>localhost:5432</code>, логин <code>student</code>, пароль <code>student_pass</code>), открой файл <code>practice/module_3/init.sql</code> и выполни скрипт целиком. В конце ты увидишь сводку строк: <code>m3_backpack: 5</code>, <code>m3_customers: 1000</code>, <code>m3_products: 200</code>, <code>m3_orders: 100000</code>, <code>m3_sensor_logs: 200000</code>.
+      </p>
+
+      <h3>Шаг 3. Открой консоль <code>psql</code> для решения заданий</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · Вход в интерактивный терминал psql</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+      </div>
+
+      <h3>Схема базы данных из <code>init.sql</code> (ER-диаграмма)</h3>
+      <div class="schema-box">
+        <div class="er-scroll">
+          <svg class="er-svg" viewBox="0 0 854 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ER-диаграмма базы данных Модуля 3: m3_customers, m3_products, m3_backpack, m3_orders, m3_sensor_logs">
+            <defs>
+              <filter id="cardShadow" x="-4%" y="-4%" width="108%" height="112%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.06" />
+              </filter>
+              <marker id="arrowMany" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+                <path d="M 1 1 L 10 6 L 1 11 M 10 6 L 1 6" fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </marker>
+              <marker id="tickOne" viewBox="0 0 10 12" refX="4" refY="6" markerWidth="8" markerHeight="10" orient="auto">
+                <path d="M 4 1 L 4 11" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round" />
+              </marker>
+            </defs>
+
+            <!-- ==================== СВЯЗИ (1 : N, ON DELETE RESTRICT) ==================== -->
+            <!-- 1. m3_customers.id (363, 62) -> m3_orders.customer_id (457, 110) -->
+            <path d="M 366 62 L 402 62 L 402 110 L 454 110" fill="none" stroke="#64748b" stroke-width="1.8" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <rect x="379" y="42" width="46" height="17" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+            <text x="402" y="54" text-anchor="middle" font-size="10.5" font-weight="700" fill="#334155">1 : N</text>
+            <text x="402" y="124" text-anchor="middle" font-size="9.5" fill="#64748b">RESTRICT</text>
+
+            <!-- 2. m3_products.id (363, 270) -> m3_orders.product_id (457, 134) -->
+            <path d="M 366 270 L 424 270 L 424 134 L 454 134" fill="none" stroke="#64748b" stroke-width="1.8" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <rect x="401" y="194" width="46" height="17" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+            <text x="424" y="206" text-anchor="middle" font-size="10.5" font-weight="700" fill="#334155">1 : N</text>
+            <text x="424" y="224" text-anchor="middle" font-size="9.5" fill="#64748b">RESTRICT</text>
+
+            <!-- ==================== ТАБЛИЦА 1: m3_customers ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="18" width="345" height="188" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" />
+              <path d="M 18 28 Q 18 18 28 18 L 353 18 Q 363 18 363 28 L 363 50 L 18 50 Z" fill="#eff6ff" />
+              <line x1="18" y1="50" x2="363" y2="50" stroke="#bfdbfe" stroke-width="1" />
+              <text x="32" y="39" font-size="13.5" font-weight="700" fill="#1e3a8a" font-family="JetBrains Mono, monospace">m3_customers</text>
+              <rect x="275" y="25" width="76" height="18" rx="9" fill="#dbeafe" />
+              <text x="313" y="37.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1d4ed8">1 000 строк</text>
+
+              <!-- id -->
+              <rect x="30" y="55" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="42" y="66" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="62" y="66" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="351" y="66" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <!-- full_name -->
+              <line x1="28" y1="75" x2="353" y2="75" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="90" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">full_name</text>
+              <text x="351" y="90" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- email -->
+              <line x1="28" y1="99" x2="353" y2="99" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="30" y="103" width="24" height="15" rx="4" fill="#f3e8ff" />
+              <text x="42" y="114" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="62" y="114" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">email</text>
+              <text x="351" y="114" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT (UserN@Shop.KZ)</text>
+
+              <!-- city -->
+              <line x1="28" y1="123" x2="353" y2="123" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="138" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">city</text>
+              <text x="351" y="138" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT (5 городов)</text>
+
+              <!-- phone -->
+              <line x1="28" y1="147" x2="353" y2="147" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="162" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">phone</text>
+              <rect x="275" y="151" width="36" height="15" rx="4" fill="#fee2e2" />
+              <text x="293" y="162" text-anchor="middle" font-size="9" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono, monospace">NULL</text>
+              <text x="351" y="162" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- tier -->
+              <line x1="28" y1="171" x2="353" y2="171" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="186" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">tier</text>
+              <text x="351" y="186" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT (standard/pro/vip)</text>
+            </g>
+
+            <!-- ==================== ТАБЛИЦА 2: m3_products ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="226" width="345" height="212" rx="10" fill="#ffffff" stroke="#86efac" stroke-width="1.5" />
+              <path d="M 18 236 Q 18 226 28 226 L 353 226 Q 363 226 363 236 L 363 258 L 18 258 Z" fill="#f0fdf4" />
+              <line x1="18" y1="258" x2="363" y2="258" stroke="#bbf7d0" stroke-width="1" />
+              <text x="32" y="247" font-size="13.5" font-weight="700" fill="#14532d" font-family="JetBrains Mono, monospace">m3_products</text>
+              <rect x="284" y="233" width="67" height="18" rx="9" fill="#dcfce7" />
+              <text x="317.5" y="245.5" text-anchor="middle" font-size="10" font-weight="600" fill="#166534">200 строк</text>
+
+              <!-- id -->
+              <rect x="30" y="263" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="42" y="274" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="62" y="274" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="351" y="274" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <!-- sku -->
+              <line x1="28" y1="283" x2="353" y2="283" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="30" y="287" width="24" height="15" rx="4" fill="#f3e8ff" />
+              <text x="42" y="298" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="62" y="298" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">sku</text>
+              <text x="351" y="298" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- title -->
+              <line x1="28" y1="307" x2="353" y2="307" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="322" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">title</text>
+              <text x="351" y="322" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- category -->
+              <line x1="28" y1="331" x2="353" y2="331" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="346" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">category</text>
+              <text x="351" y="346" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT (4 категории)</text>
+
+              <!-- price -->
+              <line x1="28" y1="355" x2="353" y2="355" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="370" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">price</text>
+              <text x="351" y="370" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">NUMERIC(10,2) &gt; 0</text>
+
+              <!-- tags -->
+              <line x1="28" y1="379" x2="353" y2="379" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="394" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">tags</text>
+              <text x="351" y="394" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT[] (массив)</text>
+
+              <!-- specs -->
+              <line x1="28" y1="403" x2="353" y2="403" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="418" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">specs</text>
+              <text x="351" y="418" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">JSONB</text>
+            </g>
+
+            <!-- ==================== ТАБЛИЦА 3: m3_backpack ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="458" width="345" height="164" rx="10" fill="#ffffff" stroke="#fcd34d" stroke-width="1.5" />
+              <path d="M 18 468 Q 18 458 28 458 L 353 458 Q 363 458 363 468 L 363 490 L 18 490 Z" fill="#fffbeb" />
+              <line x1="18" y1="490" x2="363" y2="490" stroke="#fde68a" stroke-width="1" />
+              <text x="32" y="479" font-size="13.5" font-weight="700" fill="#78350f" font-family="JetBrains Mono, monospace">m3_backpack</text>
+              <rect x="255" y="465" width="96" height="18" rx="9" fill="#fef3c7" />
+              <text x="303" y="477.5" text-anchor="middle" font-size="10" font-weight="600" fill="#92400e">5 строк · 1 стр.</text>
+
+              <!-- id -->
+              <rect x="30" y="495" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="42" y="506" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="62" y="506" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="351" y="506" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <!-- item -->
+              <line x1="28" y1="515" x2="353" y2="515" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="530" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">item</text>
+              <text x="351" y="530" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- category -->
+              <line x1="28" y1="539" x2="353" y2="539" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="554" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">category</text>
+              <text x="351" y="554" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <!-- price -->
+              <line x1="28" y1="563" x2="353" y2="563" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="578" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">price</text>
+              <text x="351" y="578" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT &gt; 0</text>
+
+              <!-- note -->
+              <line x1="28" y1="587" x2="353" y2="587" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="602" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">note</text>
+              <rect x="275" y="591" width="36" height="15" rx="4" fill="#fee2e2" />
+              <text x="293" y="602" text-anchor="middle" font-size="9" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono, monospace">NULL</text>
+              <text x="351" y="602" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+            </g>
+
+            <!-- ==================== ТАБЛИЦА 4: m3_orders ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="457" y="18" width="379" height="212" rx="10" fill="#ffffff" stroke="#c4b5fd" stroke-width="1.5" />
+              <path d="M 457 28 Q 457 18 467 18 L 826 18 Q 836 18 836 28 L 836 50 L 457 50 Z" fill="#f5f3ff" />
+              <line x1="457" y1="50" x2="836" y2="50" stroke="#ddd6fe" stroke-width="1" />
+              <text x="471" y="39" font-size="13.5" font-weight="700" fill="#4c1d95" font-family="JetBrains Mono, monospace">m3_orders</text>
+              <rect x="733" y="25" width="91" height="18" rx="9" fill="#ede9fe" />
+              <text x="778.5" y="37.5" text-anchor="middle" font-size="10" font-weight="600" fill="#6d28d9">100 000 строк</text>
+
+              <!-- id -->
+              <rect x="469" y="55" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="481" y="66" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="501" y="66" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="824" y="66" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <!-- order_code -->
+              <line x1="467" y1="75" x2="826" y2="75" stroke="#f1f5f9" stroke-width="1" />
+              <text x="501" y="90" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">order_code</text>
+              <text x="824" y="90" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT (без индекса)</text>
+
+              <!-- customer_id -->
+              <line x1="467" y1="99" x2="826" y2="99" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="469" y="103" width="24" height="15" rx="4" fill="#fef3c7" />
+              <text x="481" y="114" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="501" y="114" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">customer_id</text>
+              <text x="824" y="114" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT → m3_customers</text>
+
+              <!-- product_id -->
+              <line x1="467" y1="123" x2="826" y2="123" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="469" y="127" width="24" height="15" rx="4" fill="#fef3c7" />
+              <text x="481" y="138" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="501" y="138" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">product_id</text>
+              <text x="824" y="138" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT → m3_products</text>
+
+              <!-- status -->
+              <line x1="467" y1="147" x2="826" y2="147" stroke="#f1f5f9" stroke-width="1" />
+              <text x="501" y="162" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">status</text>
+              <text x="824" y="162" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT (paid 85% / pend 5%)</text>
+
+              <!-- amount -->
+              <line x1="467" y1="171" x2="826" y2="171" stroke="#f1f5f9" stroke-width="1" />
+              <text x="501" y="186" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">amount</text>
+              <text x="824" y="186" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">NUMERIC(10,2) &gt; 0</text>
+
+              <!-- created_at -->
+              <line x1="467" y1="195" x2="826" y2="195" stroke="#f1f5f9" stroke-width="1" />
+              <text x="501" y="210" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">created_at</text>
+              <text x="824" y="210" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TIMESTAMPTZ</text>
+            </g>
+
+            <!-- ==================== ТАБЛИЦА 5: m3_sensor_logs ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="457" y="250" width="379" height="212" rx="10" fill="#ffffff" stroke="#7dd3fc" stroke-width="1.5" />
+              <path d="M 457 260 Q 457 250 467 250 L 826 250 Q 836 250 836 260 L 836 282 L 457 282 Z" fill="#f0f9ff" />
+              <line x1="457" y1="282" x2="836" y2="282" stroke="#bae6fd" stroke-width="1" />
+              <text x="471" y="271" font-size="13.5" font-weight="700" fill="#0c4a6e" font-family="JetBrains Mono, monospace">m3_sensor_logs</text>
+              <rect x="733" y="257" width="91" height="18" rx="9" fill="#e0f2fe" />
+              <text x="778.5" y="269.5" text-anchor="middle" font-size="10" font-weight="600" fill="#0369a1">200 000 строк</text>
+
+              <!-- id -->
+              <rect x="469" y="287" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="481" y="298" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="501" y="298" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="824" y="298" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">BIGINT</text>
+
+              <!-- sensor_id -->
+              <line x1="467" y1="307" x2="826" y2="307" stroke="#f1f5f9" stroke-width="1" />
+              <text x="501" y="322" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">sensor_id</text>
+              <text x="824" y="322" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT (1..50)</text>
+
+              <!-- severity -->
+              <line x1="467" y1="331" x2="826" y2="331" stroke="#f1f5f9" stroke-width="1" />
+              <text x="501" y="346" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">severity</text>
+              <text x="824" y="346" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT (critical 2%)</text>
+
+              <!-- temp_c -->
+              <line x1="467" y1="355" x2="826" y2="355" stroke="#f1f5f9" stroke-width="1" />
+              <text x="501" y="370" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">temp_c</text>
+              <text x="824" y="370" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">NUMERIC(5,2)</text>
+
+              <!-- tags -->
+              <line x1="467" y1="379" x2="826" y2="379" stroke="#f1f5f9" stroke-width="1" />
+              <text x="501" y="394" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">tags</text>
+              <text x="824" y="394" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT[] (для GIN)</text>
+
+              <!-- payload -->
+              <line x1="467" y1="403" x2="826" y2="403" stroke="#f1f5f9" stroke-width="1" />
+              <text x="501" y="418" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">payload</text>
+              <text x="824" y="418" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">JSONB (для GIN)</text>
+
+              <!-- logged_at -->
+              <line x1="467" y1="427" x2="826" y2="427" stroke="#f1f5f9" stroke-width="1" />
+              <text x="501" y="442" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">logged_at</text>
+              <text x="824" y="442" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TIMESTAMPTZ (BRIN)</text>
+            </g>
+
+            <!-- ==================== БЛОК: ВНУТРЕННИЕ МЕХАНИЗМЫ PG 16 ==================== -->
+            <g filter="url(#cardShadow)">
+              <rect x="457" y="482" width="379" height="140" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 3" />
+              <path d="M 457 492 Q 457 482 467 482 L 826 482 Q 836 482 836 492 L 836 514 L 457 514 Z" fill="#f1f5f9" />
+              <line x1="457" y1="514" x2="836" y2="514" stroke="#cbd5e1" stroke-width="1" />
+              <text x="471" y="503" font-size="13" font-weight="700" fill="#334155" font-family="JetBrains Mono, monospace">PostgreSQL 16 · Слои движка</text>
+              <rect x="742" y="489" width="82" height="18" rx="9" fill="#e2e8f0" />
+              <text x="783" y="501.5" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">learning_db</text>
+
+              <text x="471" y="534" font-size="11.5" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">Heap / ctid</text>
+              <text x="824" y="534" text-anchor="end" font-size="11" fill="#64748b">страницы 8 КБ (8192 Б), VACUUM</text>
+
+              <line x1="467" y1="543" x2="826" y2="543" stroke="#f1f5f9" stroke-width="1" />
+              <text x="471" y="558" font-size="11.5" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">Shared Buffers</text>
+              <text x="824" y="558" text-anchor="end" font-size="11" fill="#64748b">RAM-кэш (hit / read), pg_buffercache</text>
+
+              <line x1="467" y1="567" x2="826" y2="567" stroke="#f1f5f9" stroke-width="1" />
+              <text x="471" y="582" font-size="11.5" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">Индексы + План</text>
+              <text x="824" y="582" text-anchor="end" font-size="11" fill="#64748b">B-Tree, INCLUDE, Partial, GIN, BRIN</text>
+
+              <line x1="467" y1="591" x2="826" y2="591" stroke="#f1f5f9" stroke-width="1" />
+              <text x="471" y="606" font-size="11.5" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">WAL (pg_wal)</text>
+              <text x="824" y="606" text-anchor="end" font-size="11" fill="#64748b">сегменты 16 МБ, LSN, CHECKPOINT, FPI</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="er-legend">
+          <span class="er-legend-item"><span class="er-tag er-tag-pk">PK</span> Первичный ключ (B-Tree индекс создаётся автоматически)</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-fk">FK</span> Внешний ключ (индекс по умолчанию НЕ создаётся!)</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-uk">UK</span> Уникальное (UNIQUE)</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-null">NULL</span> Может быть пустым</span>
+        </div>
+
+        <div class="quirks-grid">
+          <div class="quirk-chip">
+            <strong>Чистый старт без индексов:</strong> в <code>m3_orders</code> (100 000 строк) нет индексов на <code>order_code</code>, <code>customer_id</code>, <code>product_id</code>, <code>amount</code> и <code>created_at</code> — ты сам поймаешь <code>Seq Scan</code> и увидишь ускорение в 100+ раз.
+          </div>
+          <div class="quirk-chip">
+            <strong>Смешанный регистр и перекос статусов:</strong> в <code>m3_customers</code> адреса вида <code>User42@Shop.KZ</code> (ловушка <code>LOWER()</code>), а в <code>m3_orders</code> 85% <code>paid</code>, 10% <code>cancelled</code> и всего 5% <code>pending</code> (идеально для Partial Index).
+          </div>
+          <div class="quirk-chip">
+            <strong>Хронологические логи для BRIN и GIN:</strong> в <code>m3_sensor_logs</code> (200 000 строк) время <code>logged_at</code> строго растёт, <code>severity = 'critical'</code> — 2%, а редкий тег <code>'wal'</code> в <code>tags</code> и <code>"zone": "dc-1"</code> в <code>payload</code> встречаются в 400 строках.
+          </div>
+          <div class="quirk-chip">
+            <strong>Мини-полигон <code>m3_backpack</code>:</strong> всего 5 строк на одной 8 КБ странице — удобно глазами отслеживать «переезд» <code>ctid</code> с <code>(0,1)</code> на <code>(0,6)</code> и проверять <code>IS DISTINCT FROM</code> с <code>NULL</code>.
+          </div>
+        </div>
+
+        <details class="data-preview">
+          <summary>Заглянуть в данные таблиц (что загрузил init.sql)</summary>
+          <div class="preview-body">
+
+            <div>
+              <div class="preview-table-title">m3_backpack <span>· все 5 строк (1 страница 8 КБ)</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>id</th><th>item</th><th>category</th><th>price</th><th>note</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>Железный меч</td><td>weapon</td><td>500</td><td>Базовый предмет</td></tr>
+                    <tr><td>2</td><td>Деревянный щит</td><td>armor</td><td>300</td><td>Для новичка</td></tr>
+                    <tr><td>3</td><td>Зелье здоровья</td><td>potion</td><td>50</td><td>Восстанавливает HP</td></tr>
+                    <tr><td>4</td><td>Факел разведчика</td><td>tool</td><td>120</td><td><span class="null-pill">NULL</span></td></tr>
+                    <tr><td>5</td><td>Свиток телепорта</td><td>magic</td><td>900</td><td>Одноразовый</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <div class="preview-table-title">m3_customers <span>· 1 000 строк (показаны характерные записи)</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>id</th><th>full_name</th><th>email</th><th>city</th><th>phone</th><th>tier</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>Клиент #1</td><td>User1@Shop.KZ</td><td>Алматы</td><td>+7-701-0000001</td><td><span class="status-pill">standard</span></td></tr>
+                    <tr><td>2</td><td>Клиент #2</td><td>User2@Shop.KZ</td><td>Астана</td><td>+7-701-0000002</td><td><span class="status-pill">standard</span></td></tr>
+                    <tr><td>3</td><td>Клиент #3</td><td>User3@Shop.KZ</td><td>Костанай</td><td>+7-701-0000003</td><td><span class="status-pill">standard</span></td></tr>
+                    <tr><td>5</td><td>Клиент #5</td><td>User5@Shop.KZ</td><td>Караганда</td><td>+7-701-0000005</td><td><span class="status-pill">pro</span></td></tr>
+                    <tr><td>10</td><td>Клиент #10</td><td>User10@Shop.KZ</td><td>Караганда</td><td><span class="null-pill">NULL</span></td><td><span class="status-pill">pro</span></td></tr>
+                    <tr><td>20</td><td>Клиент #20</td><td>User20@Shop.KZ</td><td>Караганда</td><td><span class="null-pill">NULL</span></td><td><span class="status-pill">vip</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <div class="preview-table-title">m3_products <span>· 200 строк (показаны характерные записи)</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>id</th><th>sku</th><th>title</th><th>category</th><th>price</th><th>tags</th><th>specs</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>SKU-0001</td><td>Товар #1</td><td>electronics</td><td>537.00</td><td>{gadget,tech,hit}</td><td>{"brand":"Nord","in_stock":true,"warranty_m":24}</td></tr>
+                    <tr><td>2</td><td>SKU-0002</td><td>Товар #2</td><td>books</td><td>574.00</td><td>{book,sql}</td><td>{"brand":"KeyPro","in_stock":true,"warranty_m":12}</td></tr>
+                    <tr><td>20</td><td>SKU-0020</td><td>Товар #20</td><td>games</td><td>1240.00</td><td>{game,fun}</td><td>{"brand":"Pixel","in_stock":false,"warranty_m":12}</td></tr>
+                    <tr><td>25</td><td>SKU-0025</td><td>Товар #25</td><td>electronics</td><td>1425.00</td><td>{postgresql,hit,wal}</td><td>{"brand":"Nord","in_stock":false,"warranty_m":24}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <div class="preview-table-title">m3_orders <span>· 100 000 строк (2026-01-01 .. 2026-05-19, показаны характерные записи)</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>id</th><th>order_code</th><th>customer_id</th><th>product_id</th><th>status</th><th>amount</th><th>created_at</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>ORD-000001</td><td>38</td><td>14</td><td><span class="status-pill">cancelled</span></td><td>519.00</td><td>2026-01-01 00:02</td></tr>
+                    <tr><td>2</td><td>ORD-000002</td><td>75</td><td>27</td><td><span class="status-pill">paid</span></td><td>538.00</td><td>2026-01-01 00:04</td></tr>
+                    <tr><td>3</td><td>ORD-000003</td><td>112</td><td>40</td><td><span class="status-pill">paid</span></td><td>557.00</td><td>2026-01-01 00:06</td></tr>
+                    <tr><td>20</td><td>ORD-000020</td><td>741</td><td>61</td><td><span class="status-pill">pending</span></td><td>880.00</td><td>2026-01-01 00:40</td></tr>
+                    <tr><td>77777</td><td>ORD-077777</td><td>750</td><td>102</td><td><span class="status-pill">paid</span></td><td>38263.00</td><td>2026-04-19 00:34</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <div class="preview-table-title">m3_sensor_logs <span>· 200 000 строк (2026-01-01 .. 2026-01-24, показаны характерные записи)</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>id</th><th>sensor_id</th><th>severity</th><th>temp_c</th><th>tags</th><th>payload</th><th>logged_at</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>1</td><td><span class="status-pill">info</span></td><td>18.13</td><td>{sensor,ok}</td><td>{"zone":"dc-3","critical":false}</td><td>2026-01-01 00:00:10</td></tr>
+                    <tr><td>10</td><td>10</td><td><span class="status-pill">warn</span></td><td>19.30</td><td>{cpu,metrics}</td><td>{"zone":"dc-2","critical":false}</td><td>2026-01-01 00:01:40</td></tr>
+                    <tr><td>50</td><td>50</td><td><span class="status-pill">critical</span></td><td>24.50</td><td>{cpu,metrics}</td><td>{"zone":"dc-2","critical":true}</td><td>2026-01-01 00:08:20</td></tr>
+                    <tr><td>500</td><td>50</td><td><span class="status-pill">critical</span></td><td>23.00</td><td>{wal,disk,alert}</td><td>{"zone":"dc-1","critical":true}</td><td>2026-01-01 01:23:20</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== УРОК 3.1 ==================== -->
+    <section id="sec-3-1" data-section-lesson="3_1">
+      <h2><span class="sec-num">3.1</span> Физическая архитектура PostgreSQL: страницы (8 КБ), Heap и Shared Buffers</h2>
+      <p>
+        Разбираем, как таблицы хранятся на диске в 8-килобайтных блоках, куда «переезжает» строка при <code>UPDATE</code> (<code>ctid</code>), как работают мёртвые кортежи и <code>VACUUM</code>, и как увидеть реальный кэш оперативной памяти <code>Shared Buffers</code>.
+      </p>
+
+      <h3>Уровень 1 · Разминка (на 1–2 минуты)</h3>
+
+      <div class="task-card" data-task-id="3_1_1" data-lesson="3_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.1.1" />
+            <div class="task-title"><span class="task-num">3.1.1</span> Узнай размер одной страницы (блока)</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выведи текущее значение системного параметра <code>block_size</code> в PostgreSQL.
+        </p>
+        <p class="task-hint">Подсказка: используй короткую команду <code>SHOW</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SHOW block_size;</code></pre>
+          </div>
+          <p class="solution-note">Ожидаемый результат: <code>8192</code> байта (ровно 8 КБ) — минимальная порция чтения с диска.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_1_2" data-lesson="3_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.1.2" />
+            <div class="task-title"><span class="task-num">3.1.2</span> Проверь размер Shared Buffers</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Узнай, сколько оперативной памяти выделено под общий буферный кэш <code>shared_buffers</code> в нашем Docker-контейнере.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SHOW shared_buffers;</code></pre>
+          </div>
+          <p class="solution-note">В образе <code>postgres:16</code> по умолчанию стоит <code>128MB</code> — это 16 384 слота по 8 КБ.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_1_3" data-lesson="3_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.1.3" />
+            <div class="task-title"><span class="task-num">3.1.3</span> Увидеть физический адрес строки <code>ctid</code></div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выведи скрытую системную колонку <code>ctid</code>, а также <code>id</code>, <code>item</code> и <code>price</code> для всех строк таблицы <code>m3_backpack</code>.
+        </p>
+        <p class="task-hint">Подсказка: <code>ctid</code> не показывается в <code>SELECT *</code> — её нужно явно указать в списке колонок.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT ctid, id, item, price
+FROM m3_backpack;</code></pre>
+          </div>
+          <p class="solution-note">Все 5 предметов лежат на странице <code>0</code>: слоты от <code>(0,1)</code> до <code>(0,5)</code>.</p>
+        </details>
+      </div>
+
+      <h3>Уровень 2 · Базовая работа со страницами и Heap</h3>
+
+      <div class="task-card" data-task-id="3_1_4" data-lesson="3_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.1.4" />
+            <div class="task-title"><span class="task-num">3.1.4</span> Найди файл таблицы <code>m3_orders</code> и посчитай страницы</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Одним <code>SELECT</code> выведи для таблицы <code>m3_orders</code>: путь к физическому файлу (<code>AS file_path</code>), размер в байтах (<code>AS size_bytes</code>), читаемый размер (<code>AS size_pretty</code>) и количество 8-килобайтных страниц (<code>AS pages_count</code>).
+        </p>
+        <p class="task-hint">Подсказка: используй функции <code>pg_relation_filepath()</code>, <code>pg_relation_size()</code>, <code>pg_size_pretty()</code> и деление на <code>8192</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    pg_relation_filepath('m3_orders') AS file_path,
+    pg_relation_size('m3_orders') AS size_bytes,
+    pg_size_pretty(pg_relation_size('m3_orders')) AS size_pretty,
+    pg_relation_size('m3_orders') / 8192 AS pages_count;</code></pre>
+          </div>
+          <p class="solution-note">Для 100 000 заказов <code>m3_orders</code> занимает около 9–10 МБ (~1 150 страниц по 8 КБ).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_1_5" data-lesson="3_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.1.5" />
+            <div class="task-title"><span class="task-num">3.1.5</span> Рейтинг всех 5 таблиц модуля по размеру Heap</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Выведи из системного каталога <code>pg_class</code> все наши таблицы с именем, начинающимся на <code>'m3_'</code> (<code>relkind = 'r'</code>): имя таблицы (<code>AS table_name</code>), читаемый размер самой таблицы (<code>AS heap_size</code>), полный размер вместе с индексами (<code>AS total_size</code>) и число страниц Heap (<code>AS heap_pages</code>). Отсортируй от самой тяжёлой к самой лёгкой.
+        </p>
+        <p class="task-hint">Подсказка: для размера вместе с индексами есть функция <code>pg_total_relation_size(oid)</code>, а для одного Heap — <code>pg_relation_size(oid)</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    relname AS table_name,
+    pg_size_pretty(pg_relation_size(oid)) AS heap_size,
+    pg_size_pretty(pg_total_relation_size(oid)) AS total_size,
+    pg_relation_size(oid) / 8192 AS heap_pages
+FROM pg_class
+WHERE relnamespace = 'public'::regnamespace
+  AND relkind = 'r'
+  AND relname LIKE 'm3\_%'
+ORDER BY pg_relation_size(oid) DESC;</code></pre>
+          </div>
+          <p class="solution-note">Символ <code>_</code> в <code>LIKE</code> экранируется как <code>\_</code>, чтобы не совпадать с любым символом. Обрати внимание, что <code>m3_backpack</code> занимает ровно 1 страницу (8 192 байта).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_1_6" data-lesson="3_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.1.6" />
+            <div class="task-title"><span class="task-num">3.1.6</span> Поймай «переезд» строки при <code>UPDATE</code></div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          В таблице <code>m3_backpack</code> измени <code>price</code> у «Железного меча» (<code>id = 1</code>) на <code>650</code> и удали «Зелье здоровья» (<code>id = 3</code>). Затем выведи <code>ctid</code>, <code>id</code>, <code>item</code>, <code>price</code> без <code>ORDER BY</code> и посмотри, куда переместилась строка <code>id = 1</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">UPDATE m3_backpack
+SET price = 650
+WHERE id = 1;
+
+DELETE FROM m3_backpack
+WHERE id = 3;
+
+SELECT ctid, id, item, price
+FROM m3_backpack;</code></pre>
+          </div>
+          <p class="solution-note">«Железный меч» переехал с адреса <code>(0,1)</code> на новый слот <code>(0,6)</code> и оказался в конце вывода, а слоты <code>(0,1)</code> и <code>(0,3)</code> стали мёртвыми кортежами.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_1_7" data-lesson="3_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.1.7" />
+            <div class="task-title"><span class="task-num">3.1.7</span> Безопасный <code>UPDATE</code> без лишних мёртвых строк</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Напиши запрос, который в таблице <code>m3_backpack</code> устанавливает <code>note = 'Проверено'</code> только для тех строк, у которых <code>note</code> сейчас <strong>отличается</strong> от <code>'Проверено'</code> (включая строку <code>id = 4</code>, где <code>note IS NULL</code>!). Запусти запрос <strong>дважды</strong> подряд и убедись, что второй запуск обновил <code>0</code> строк и не изменил <code>ctid</code>.
+        </p>
+        <p class="task-hint">Подсказка: обычное <code>note &lt;&gt; 'Проверено'</code> пропустит <code>NULL</code>! Используй оператор <code>IS DISTINCT FROM</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- Первый запуск обновит все оставшиеся строки, включая NULL
+UPDATE m3_backpack
+SET note = 'Проверено'
+WHERE note IS DISTINCT FROM 'Проверено';
+
+-- Второй запуск вернёт UPDATE 0 — ни одного лишнего мёртвого кортежа!
+UPDATE m3_backpack
+SET note = 'Проверено'
+WHERE note IS DISTINCT FROM 'Проверено';
+
+SELECT ctid, id, item, note
+FROM m3_backpack;</code></pre>
+          </div>
+          <p class="solution-note"><code>IS DISTINCT FROM</code> корректно работает с <code>NULL</code> и защищает таблицы от раздувания при повторных пакетных обновлениях.</p>
+        </details>
+      </div>
+
+      <h3>Уровень 3 · Эксперименты с VACUUM и Shared Buffers</h3>
+
+      <div class="task-card" data-task-id="3_1_8" data-lesson="3_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.1.8" />
+            <div class="task-title"><span class="task-num">3.1.8</span> Раздувание Heap (<code>n_dead_tup</code>) и уборка <code>VACUUM</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Эксперимент</span>
+        </div>
+        <p class="task-desc">
+          В таблице <code>m3_orders</code> увеличь <code>amount</code> на <code>10</code> для первых 15 000 заказов (<code>id &lt;= 15000</code>). Посмотри в <code>pg_stat_user_tables</code> колонки <code>relname AS table_name</code>, <code>n_live_tup</code>, <code>n_dead_tup</code> и число страниц <code>pages_count</code>. Затем выполни <code>VACUUM m3_orders;</code> и снова проверь те же показатели.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- 1. Создаём 15 000 новых версий строк
+UPDATE m3_orders
+SET amount = amount + 10
+WHERE id &lt;= 15000;
+
+-- 2. Проверяем число мёртвых строк и рост страниц
+SELECT
+    relname AS table_name,
+    n_live_tup,
+    n_dead_tup,
+    pg_size_pretty(pg_relation_size('m3_orders')) AS heap_size,
+    pg_relation_size('m3_orders') / 8192 AS pages_count
+FROM pg_stat_user_tables
+WHERE relname = 'm3_orders';
+
+-- 3. Запускаем уборщика VACUUM и перепроверяем
+VACUUM m3_orders;
+
+SELECT
+    relname AS table_name,
+    n_live_tup,
+    n_dead_tup,
+    pg_size_pretty(pg_relation_size('m3_orders')) AS heap_size,
+    pg_relation_size('m3_orders') / 8192 AS pages_count
+FROM pg_stat_user_tables
+WHERE relname = 'm3_orders';</code></pre>
+          </div>
+          <p class="solution-note">После <code>VACUUM</code> счётчик <code>n_dead_tup</code> станет <code>0</code>, но <code>pages_count</code> останется прежним: обычный <code>VACUUM</code> помечает место внутри страниц как свободное для новых записей, не урезая файл ОС.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_1_9" data-lesson="3_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.1.9" />
+            <div class="task-title"><span class="task-num">3.1.9</span> Холодное vs горячее чтение: ловим <code>shared read</code> и <code>shared hit</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Эксперимент</span>
+        </div>
+        <p class="task-desc">
+          Очисти <code>Shared Buffers</code> перезапуском контейнера <code>pg_primary</code> (во втором окне терминала или перед входом в <code>psql</code>), а затем <strong>дважды подряд</strong> выполни <code>EXPLAIN (ANALYZE, BUFFERS)</code> для подсчёта заказов в <code>m3_orders</code> с <code>amount &gt; 25000</code>. Сравни строчку <code>Buffers:</code> и <code>Execution Time</code> в первом и втором запуске.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">BASH · Окно 2 (сброс Shared Buffers)</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-bash"># Окно 2 (терминал хоста): перезапускаем контейнер PostgreSQL
+docker compose restart pg_primary</code></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · Окно 1 (подключись в psql и выполни 2 раза подряд)</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- Окно 1: 1-й запуск («холодный» Shared Buffers → увидим shared read=...)
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM m3_orders
+WHERE amount &gt; 25000;
+
+-- Окно 1: 2-й запуск («горячий» кэш → увидим 100% shared hit=...)
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM m3_orders
+WHERE amount &gt; 25000;</code></pre>
+          </div>
+          <p class="solution-note">Во втором запуске число страниц <code>shared hit</code> совпадёт с прошлым <code>shared read</code>, а время выполнения уменьшится в разы — все блоки уже лежат в RAM.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_1_10" data-lesson="3_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.1.10" />
+            <div class="task-title"><span class="task-num">3.1.10</span> Рентген оперативной памяти через <code>pg_buffercache</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Активируй расширение <code>pg_buffercache</code> в текущей базе <code>learning_db</code>. Затем напиши запрос к <code>pg_buffercache</code> и <code>pg_class</code>, который для таблиц схемы <code>public</code> (<code>relkind = 'r'</code>) выведет: имя таблицы (<code>AS table_name</code>), число занятых 8 КБ слотов (<code>AS buffers_count</code>), объём в памяти (<code>AS cached_size</code>) и число «грязных» страниц (<code>AS dirty_buffers</code>). Отсортируй по <code>buffers_count DESC</code>.
+        </p>
+        <p class="task-hint">Подсказка: соединяй по <code>b.relfilenode = pg_relation_filenode(c.oid)</code> и фильтруй по <code>b.reldatabase</code> текущей БД.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">CREATE EXTENSION IF NOT EXISTS pg_buffercache;
+
+SELECT
+    c.relname AS table_name,
+    count(*) AS buffers_count,
+    pg_size_pretty(count(*) * 8192) AS cached_size,
+    count(*) FILTER (WHERE b.isdirty) AS dirty_buffers
+FROM pg_buffercache AS b
+JOIN pg_class AS c
+  ON b.relfilenode = pg_relation_filenode(c.oid)
+WHERE b.reldatabase = (
+    SELECT oid FROM pg_database WHERE datname = current_database()
+)
+  AND c.relnamespace = 'public'::regnamespace
+  AND c.relkind = 'r'
+GROUP BY c.relname
+ORDER BY buffers_count DESC;</code></pre>
+          </div>
+          <p class="solution-note">Если перед этим запросом обновить пару строк в <code>m3_backpack</code>, в колонке <code>dirty_buffers</code> сразу появится ненулевое значение — страница изменена в RAM и ждёт сброса на диск.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_1_11" data-lesson="3_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.1.11" />
+            <div class="task-title"><span class="task-num">3.1.11</span> Какие параметры памяти требуют рестарта сервера?</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Выведи из системного представления <code>pg_settings</code> колонки <code>name</code>, <code>setting</code>, <code>unit</code> и <code>context</code> для четырёх параметров памяти: <code>'block_size'</code>, <code>'shared_buffers'</code>, <code>'work_mem'</code> и <code>'effective_cache_size'</code>. Отсортируй по <code>name</code> и определи, какой из них можно менять командой <code>SET</code> прямо в текущей сессии.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT name, setting, unit, context
+FROM pg_settings
+WHERE name IN (
+    'block_size',
+    'shared_buffers',
+    'work_mem',
+    'effective_cache_size'
+)
+ORDER BY name;</code></pre>
+          </div>
+          <p class="solution-note"><code>block_size</code> — <code>internal</code> (задаётся при сборке), <code>shared_buffers</code> — <code>postmaster</code> (нужен рестарт сервера), а <code>work_mem</code> и <code>effective_cache_size</code> — <code>user</code> (можно менять в сессии через <code>SET</code>).</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== УРОК 3.2 ==================== -->
+    <section id="sec-3-2" data-section-lesson="3_2">
+      <h2><span class="sec-num">3.2</span> Индексы: B-Tree, составные индексы, ловушки, GIN и BRIN</h2>
+      <p>
+        Тренируемся ускорять запросы в сотни раз: строим <code>B-Tree</code>, проверяем правило левого префикса и порядок колонок, ловим 5 ловушек, пробуем покрывающие (<code>INCLUDE</code>), функциональные, частичные, <code>GIN</code> и сверхкомпактные <code>BRIN</code> индексы.
+      </p>
+
+      <h3>Уровень 1 · Разминка (первые шаги с B-Tree)</h3>
+
+      <div class="task-card" data-task-id="3_2_1" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.1" />
+            <div class="task-title"><span class="task-num">3.2.1</span> Посмотри существующие индексы таблицы <code>m3_orders</code></div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выведи из системного представления <code>pg_indexes</code> колонки <code>indexname</code> и <code>indexdef</code> для таблицы <code>'m3_orders'</code>. Убедись, что на старте на ней есть только первичный ключ.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT indexname, indexdef
+FROM pg_indexes
+WHERE tablename = 'm3_orders';</code></pre>
+          </div>
+          <p class="solution-note">Внешние ключи (<code>customer_id</code>, <code>product_id</code>) в PostgreSQL НЕ создают индексы автоматически — их нужно добавлять вручную.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_2_2" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.2" />
+            <div class="task-title"><span class="task-num">3.2.2</span> Поиск одного заказа БЕЗ индекса</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выполни <code>EXPLAIN ANALYZE</code> для поиска колонок <code>id</code>, <code>customer_id</code>, <code>amount</code> из таблицы <code>m3_orders</code> по условию <code>order_code = 'ORD-077777'</code>. Запомни тип сканирования и <code>Execution Time</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">EXPLAIN ANALYZE
+SELECT id, customer_id, amount
+FROM m3_orders
+WHERE order_code = 'ORD-077777';</code></pre>
+          </div>
+          <p class="solution-note">Без индекса PostgreSQL делает <code>Seq Scan</code>, проверяет и выбрасывает <code>99 999</code> строк ради одной нужной.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_2_3" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.3" />
+            <div class="task-title"><span class="task-num">3.2.3</span> Создай первый B-Tree индекс и ускорь поиск в 100+ раз</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Создай B-Tree индекс <code>idx_m3_orders_code</code> на колонке <code>order_code</code> таблицы <code>m3_orders</code> и повтори <code>EXPLAIN ANALYZE</code> из задания 3.2.2.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_orders_code;
+CREATE INDEX idx_m3_orders_code ON m3_orders (order_code);
+
+EXPLAIN ANALYZE
+SELECT id, customer_id, amount
+FROM m3_orders
+WHERE order_code = 'ORD-077777';</code></pre>
+          </div>
+          <p class="solution-note">Теперь в плане <code>Index Scan using idx_m3_orders_code</code>, а время падает с десятков миллисекунд до <code>&lt; 0.1 ms</code>.</p>
+        </details>
+      </div>
+
+      <h3>Уровень 2 · Составные, покрывающие и функциональные индексы</h3>
+
+      <div class="task-card" data-task-id="3_2_4" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.4" />
+            <div class="task-title"><span class="task-num">3.2.4</span> Правило левого префикса и порядок «равенство → диапазон»</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Создай составной индекс <code>idx_m3_orders_cust_amount</code> на таблице <code>m3_orders</code> по колонкам <code>(customer_id, amount)</code>. Проверь через <code>EXPLAIN ANALYZE</code> два запроса:
+          1) <code>WHERE customer_id = 42 AND amount &gt; 30000</code> (оба поля);
+          2) <code>WHERE amount &gt; 44500</code> (только вторая колонка). Убедись, что во втором случае индекс не используется!
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_orders_cust_amount;
+CREATE INDEX idx_m3_orders_cust_amount
+    ON m3_orders (customer_id, amount);
+
+-- 1. Левая колонка есть → Index Scan / Bitmap Index Scan
+EXPLAIN ANALYZE
+SELECT id, amount
+FROM m3_orders
+WHERE customer_id = 42
+  AND amount &gt; 30000;
+
+-- 2. Левой колонки нет → Seq Scan!
+EXPLAIN ANALYZE
+SELECT id, amount
+FROM m3_orders
+WHERE amount &gt; 44500;</code></pre>
+          </div>
+          <p class="solution-note">Составной индекс <code>(a, b)</code> отсортирован сначала по <code>a</code>, поэтому без <code>a</code> в <code>WHERE</code> дерево не позволяет быстро найти диапазон по <code>b</code>.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_2_5" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.5" />
+            <div class="task-title"><span class="task-num">3.2.5</span> Покрывающий индекс с <code>INCLUDE</code></div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Создай покрывающий индекс <code>idx_m3_orders_cust_inc_amount</code> на <code>m3_orders (customer_id) INCLUDE (amount)</code>, обнови карту видимости командой <code>VACUUM ANALYZE m3_orders;</code> и проверь через <code>EXPLAIN (ANALYZE, BUFFERS)</code> запрос подсчёта суммы <code>sum(amount) AS total_spent</code> для <code>customer_id = 42</code>.
+        </p>
+        <p class="task-hint">Подсказка: ищи в плане строчки <code>Index Only Scan</code> и <code>Heap Fetches: 0</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_orders_cust_inc_amount;
+CREATE INDEX idx_m3_orders_cust_inc_amount
+    ON m3_orders (customer_id) INCLUDE (amount);
+
+VACUUM ANALYZE m3_orders;
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT sum(amount) AS total_spent
+FROM m3_orders
+WHERE customer_id = 42;</code></pre>
+          </div>
+          <p class="solution-note">Все нужные значения <code>amount</code> лежат прямо в листьях индекса, поэтому PostgreSQL читает всего 3–4 страницы и вообще не обращается к Heap.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_2_6" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.6" />
+            <div class="task-title"><span class="task-num">3.2.6</span> Ловушка <code>LOWER(email)</code> и функциональный индекс</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          В таблице <code>m3_customers</code> на колонке <code>email</code> уже есть индекс <code>UNIQUE</code>, но адреса записаны в смешанном регистре (<code>'User42@Shop.KZ'</code>). Проверь план поиска <code>WHERE LOWER(email) = 'user42@shop.kz'</code> (увидишь <code>Seq Scan</code>), затем создай функциональный индекс <code>idx_m3_customers_lower_email</code> на выражении <code>(LOWER(email))</code> и убедись, что появился <code>Index Scan</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- 1. Обычный UNIQUE-индекс на email не спасает при LOWER(email)
+EXPLAIN ANALYZE
+SELECT id, full_name, email
+FROM m3_customers
+WHERE LOWER(email) = 'user42@shop.kz';
+
+-- 2. Создаём функциональный (Expression) индекс
+DROP INDEX IF EXISTS idx_m3_customers_lower_email;
+CREATE INDEX idx_m3_customers_lower_email
+    ON m3_customers (LOWER(email));
+
+ANALYZE m3_customers;
+
+-- 3. Теперь планировщик выбирает Index Scan
+EXPLAIN ANALYZE
+SELECT id, full_name, email
+FROM m3_customers
+WHERE LOWER(email) = 'user42@shop.kz';</code></pre>
+          </div>
+          <p class="solution-note">Выражение в <code>WHERE</code> должно точно совпадать с выражением внутри скобок <code>CREATE INDEX</code>.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_2_7" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.7" />
+            <div class="task-title"><span class="task-num">3.2.7</span> Ловушка формулы вокруг колонки: очисти условие <code>WHERE</code></div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Создай индекс <code>idx_m3_orders_amount</code> на <code>m3_orders (amount)</code>. Сравни через <code>EXPLAIN (ANALYZE, BUFFERS)</code> «плохой» запрос <code>WHERE amount * 1.2 &gt; 54000</code> и исправленный запрос, где математика перенесена в правую часть (<code>54000 / 1.2 = 45000</code>).
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_orders_amount;
+CREATE INDEX idx_m3_orders_amount ON m3_orders (amount);
+
+-- Плохо: формула на колонке ломает индекс (Seq Scan)
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, order_code, amount
+FROM m3_orders
+WHERE amount * 1.2 &gt; 54000;
+
+-- Правильно: колонка «чистая» → срабатывает индекс!
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, order_code, amount
+FROM m3_orders
+WHERE amount &gt; 45000;</code></pre>
+          </div>
+          <p class="solution-note">Любая арифметика на самой колонке (<code>amount * 1.2</code>, <code>amount + 100</code>) делает обычный B-Tree невидимым для планировщика.</p>
+        </details>
+      </div>
+
+      <h3>Уровень 3 · Partial Index, GIN и BRIN</h3>
+
+      <div class="task-card" data-task-id="3_2_8" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.8" />
+            <div class="task-title"><span class="task-num">3.2.8</span> Частичный индекс (Partial Index) для редкого статуса <code>'pending'</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          В <code>m3_orders</code> статус <code>'pending'</code> имеют всего 5% строк (5 000 из 100 000). Создай два индекса: полный <code>idx_m3_orders_status_full ON m3_orders (status)</code> и частичный <code>idx_m3_orders_pending_only ON m3_orders (created_at) WHERE status = 'pending'</code>. Сравни их размер (<code>AS full_size</code>, <code>AS partial_size</code>) и проверь план выборки 10 заказов со статусом <code>'pending'</code> начиная с <code>'2026-05-01 00:00:00+05'</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_orders_status_full;
+DROP INDEX IF EXISTS idx_m3_orders_pending_only;
+
+CREATE INDEX idx_m3_orders_status_full
+    ON m3_orders (status);
+
+CREATE INDEX idx_m3_orders_pending_only
+    ON m3_orders (created_at)
+    WHERE status = 'pending';
+
+-- Сравниваем вес на диске
+SELECT
+    pg_size_pretty(pg_relation_size('idx_m3_orders_status_full'))  AS full_size,
+    pg_size_pretty(pg_relation_size('idx_m3_orders_pending_only')) AS partial_size;
+
+-- Проверяем использование частичного индекса
+EXPLAIN ANALYZE
+SELECT id, order_code, created_at
+FROM m3_orders
+WHERE status = 'pending'
+  AND created_at &gt;= '2026-05-01 00:00:00+05'
+LIMIT 10;</code></pre>
+          </div>
+          <p class="solution-note">Частичный индекс хранит только 5% строк, занимает в разы меньше памяти и не тормозит вставку обычных <code>'paid'</code>-заказов.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_2_9" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.9" />
+            <div class="task-title"><span class="task-num">3.2.9</span> GIN-индекс на массив тегов <code>TEXT[]</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          В таблице <code>m3_sensor_logs</code> (200 000 строк) найди через <code>EXPLAIN ANALYZE</code> все записи, у которых массив <code>tags</code> содержит тег <code>'wal'</code> (оператор <code>@&gt;</code>). Затем создай GIN-индекс <code>idx_m3_logs_tags_gin</code> на колонке <code>tags</code> и повтори замер.
+        </p>
+        <p class="task-hint">Подсказка: для массива используется синтаксис <code>WHERE tags @&gt; ARRAY['wal']</code> и метод <code>USING gin (tags)</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- 1. Замер ДО создания GIN (Seq Scan по 200 000 строкам)
+EXPLAIN ANALYZE
+SELECT id, sensor_id, tags
+FROM m3_sensor_logs
+WHERE tags @&gt; ARRAY['wal'];
+
+-- 2. Создаём обратный индекс GIN
+DROP INDEX IF EXISTS idx_m3_logs_tags_gin;
+CREATE INDEX idx_m3_logs_tags_gin
+    ON m3_sensor_logs USING gin (tags);
+
+-- 3. Замер ПОСЛЕ (Bitmap Index Scan по idx_m3_logs_tags_gin)
+EXPLAIN ANALYZE
+SELECT id, sensor_id, tags
+FROM m3_sensor_logs
+WHERE tags @&gt; ARRAY['wal'];</code></pre>
+          </div>
+          <p class="solution-note">В таблице ровно 400 строк с тегом <code>'wal'</code> — GIN находит их мгновенно, без перебора 199 600 лишних записей.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_2_10" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.10" />
+            <div class="task-title"><span class="task-num">3.2.10</span> GIN-индекс на <code>JSONB</code> и пересечение <code>BitmapAnd</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Создай второй GIN-индекс <code>idx_m3_logs_payload_gin</code> на колонке <code>payload</code> (<code>JSONB</code>) таблицы <code>m3_sensor_logs</code>. Затем проверь через <code>EXPLAIN ANALYZE</code> поиск записей, где одновременно <code>tags @&gt; ARRAY['wal']</code> и <code>payload @&gt; '{"zone": "dc-1"}'::jsonb</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_logs_payload_gin;
+CREATE INDEX idx_m3_logs_payload_gin
+    ON m3_sensor_logs USING gin (payload);
+
+EXPLAIN ANALYZE
+SELECT id, sensor_id, tags, payload
+FROM m3_sensor_logs
+WHERE tags @&gt; ARRAY['wal']
+  AND payload @&gt; '{"zone": "dc-1"}'::jsonb;</code></pre>
+          </div>
+          <p class="solution-note">PostgreSQL умеет комбинировать два GIN-индекса через узел <code>BitmapAnd</code> (или брать один самый селективный GIN и дофильтровывать вторым условием).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_2_11" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.11" />
+            <div class="task-title"><span class="task-num">3.2.11</span> Битва размеров: <code>BRIN</code> против <code>B-Tree</code> на 200 000 логах</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Эксперимент</span>
+        </div>
+        <p class="task-desc">
+          В таблице <code>m3_sensor_logs</code> строки вставлены строго по возрастанию <code>logged_at</code>. Создай два индекса на <code>logged_at</code>: <code>idx_m3_logs_time_btree</code> (<code>USING btree</code>) и <code>idx_m3_logs_time_brin</code> (<code>USING brin</code>). Выведи размеры таблицы и обоих индексов (<code>AS table_size</code>, <code>AS btree_size</code>, <code>AS brin_size</code>). Затем удали <code>B-Tree</code> и проверь работу <code>BRIN</code> через <code>EXPLAIN ANALYZE</code> на часовом окне <code>'2026-01-10 12:00:00+05'</code> .. <code>'2026-01-10 13:00:00+05'</code> (выведи <code>COUNT(*)</code> и <code>ROUND(AVG(temp_c), 2) AS avg_temp</code>).
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_logs_time_btree;
+DROP INDEX IF EXISTS idx_m3_logs_time_brin;
+
+CREATE INDEX idx_m3_logs_time_btree ON m3_sensor_logs USING btree (logged_at);
+CREATE INDEX idx_m3_logs_time_brin  ON m3_sensor_logs USING brin  (logged_at);
+
+-- Сравниваем вес таблицы и двух индексов
+SELECT
+    pg_size_pretty(pg_relation_size('m3_sensor_logs'))         AS table_size,
+    pg_size_pretty(pg_relation_size('idx_m3_logs_time_btree')) AS btree_size,
+    pg_size_pretty(pg_relation_size('idx_m3_logs_time_brin'))  AS brin_size;
+
+-- Удаляем B-Tree, чтобы увидеть работу именно BRIN
+DROP INDEX idx_m3_logs_time_btree;
+
+EXPLAIN ANALYZE
+SELECT
+    COUNT(*) AS events_cnt,
+    ROUND(AVG(temp_c), 2) AS avg_temp
+FROM m3_sensor_logs
+WHERE logged_at &gt;= '2026-01-10 12:00:00+05'
+  AND logged_at &lt;  '2026-01-10 13:00:00+05';</code></pre>
+          </div>
+          <p class="solution-note"><code>B-Tree</code> весит ~4.4 МБ, а <code>BRIN</code> — всего ~24–48 КБ (в ~100–180 раз меньше!), при этом отбрасывает ~95% лишних блоков Heap.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_2_12" data-lesson="3_2">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.2.12" />
+            <div class="task-title"><span class="task-num">3.2.12</span> Молниеносный поиск редких критических аварий (Partial Index на логах)</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          В <code>m3_sensor_logs</code> только 2% записей имеют <code>severity = 'critical'</code>. Создай частичный индекс <code>idx_m3_logs_critical</code> по колонке <code>logged_at</code> с условием <code>WHERE severity = 'critical'</code> и проверь через <code>EXPLAIN (ANALYZE, BUFFERS)</code> выборку 10 последних критических аварий (<code>ORDER BY logged_at DESC LIMIT 10</code>).
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_logs_critical;
+CREATE INDEX idx_m3_logs_critical
+    ON m3_sensor_logs (logged_at)
+    WHERE severity = 'critical';
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, sensor_id, temp_c, logged_at
+FROM m3_sensor_logs
+WHERE severity = 'critical'
+ORDER BY logged_at DESC
+LIMIT 10;</code></pre>
+          </div>
+          <p class="solution-note">B-Tree умеет читаться с конца (<code>Index Scan Backward</code>): PostgreSQL мгновенно заберёт 10 самых свежих аварий вообще без узла <code>Sort</code>!</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== УРОК 3.3 ==================== -->
+    <section id="sec-3-3" data-section-lesson="3_3">
+      <h2><span class="sec-num">3.3</span> Чтение планов выполнения запросов: EXPLAIN и EXPLAIN ANALYZE</h2>
+      <p>
+        Учимся читать дерево плана снизу вверх, отличать прогноз <code>EXPLAIN</code> от реальных замеров <code>EXPLAIN (ANALYZE, BUFFERS)</code>, разбираться в 4 типах сканирования, 3 алгоритмах <code>JOIN</code>, сортировке на диске и безопасном профилировании <code>UPDATE/DELETE</code>.
+      </p>
+
+      <div class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет перед Уроком 3.3:</strong> если ты только что прошёл Урок 3.2 и навешал много индексов на <code>m3_orders</code>, можешь перезапустить <code>init.sql</code> — тогда в задачах 3.3.2, 3.3.4 и 3.3.8 ты увидишь «чистую» картину без лишних индексов.
+        </div>
+      </div>
+
+      <h3>Уровень 1 · Разминка (читаем первые планы)</h3>
+
+      <div class="task-card" data-task-id="3_3_1" data-lesson="3_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.3.1" />
+            <div class="task-title"><span class="task-num">3.3.1</span> Прогноз без запуска: чистый <code>EXPLAIN</code></div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Посмотри <strong>только прогноз</strong> планировщика (без реального выполнения) для выборки всех клиентов из таблицы <code>m3_customers</code> из города <code>'Костанай'</code>. Найди в выводе оценку <code>cost</code> и ожидаемое число строк <code>rows</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">EXPLAIN
+SELECT id, full_name, email
+FROM m3_customers
+WHERE city = 'Костанай';</code></pre>
+          </div>
+          <p class="solution-note">В <code>m3_customers</code> ровно 5 городов поровну, поэтому планировщик прогнозирует <code>rows=200</code> (20% таблицы) и выбирает <code>Seq Scan</code>.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_3_2" data-lesson="3_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.3.2" />
+            <div class="task-title"><span class="task-num">3.3.2</span> Первый рентген с <code>EXPLAIN (ANALYZE, BUFFERS)</code></div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выполни <code>EXPLAIN (ANALYZE, BUFFERS)</code> для выборки <code>id</code>, <code>status</code>, <code>amount</code> из <code>m3_orders</code> по условию <code>status = 'cancelled'</code>. Посмотри, сколько строк отброшено в <code>Rows Removed by Filter</code> и сколько 8 КБ страниц прочитано в <code>Buffers</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, status, amount
+FROM m3_orders
+WHERE status = 'cancelled';</code></pre>
+          </div>
+          <p class="solution-note">Отменённых заказов ровно 10 000 (10%), поэтому <code>Rows Removed by Filter: 90000</code>.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_3_3" data-lesson="3_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.3.3" />
+            <div class="task-title"><span class="task-num">3.3.3</span> Точечный <code>Index Scan</code> по первичному ключу</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выполни <code>EXPLAIN (ANALYZE, BUFFERS)</code> для поиска одного заказа <code>id = 50000</code> в таблице <code>m3_orders</code>. Сравни количество страниц <code>Buffers</code> с заданием 3.3.2!
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, order_code, customer_id, amount
+FROM m3_orders
+WHERE id = 50000;</code></pre>
+          </div>
+          <p class="solution-note">Всего <strong>4 страницы</strong> (3 уровня дерева <code>m3_orders_pkey</code> + 1 страница Heap) вместо более тысячи страниц при <code>Seq Scan</code>!</p>
+        </details>
+      </div>
+
+      <h3>Уровень 2 · Типы сканирования и ловушки EXPLAIN</h3>
+
+      <div class="task-card" data-task-id="3_3_4" data-lesson="3_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.3.4" />
+            <div class="task-title"><span class="task-num">3.3.4</span> Поймай связку <code>Bitmap Index Scan</code> + <code>Bitmap Heap Scan</code></div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Создай обычный B-Tree индекс <code>idx_m3_orders_customer_id</code> на <code>m3_orders (customer_id)</code> (если он ещё не создан) и выполни <code>EXPLAIN (ANALYZE, BUFFERS)</code> для получения колонок <code>id</code>, <code>order_code</code>, <code>status</code>, <code>amount</code>, <code>created_at</code> по <code>customer_id = 42</code>. Найди в плане строчку <code>Heap Blocks: exact=...</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_orders_customer_id;
+CREATE INDEX idx_m3_orders_customer_id
+    ON m3_orders (customer_id);
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, order_code, status, amount, created_at
+FROM m3_orders
+WHERE customer_id = 42;</code></pre>
+          </div>
+          <p class="solution-note">100 заказов клиента №42 разбросаны по разным страницам Heap, поэтому PostgreSQL сначала собирает их битовую карту в индексе (<code>Bitmap Index Scan</code>), а затем упорядоченно читает блоки таблицы (<code>Bitmap Heap Scan</code>).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_3_5" data-lesson="3_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.3.5" />
+            <div class="task-title"><span class="task-num">3.3.5</span> Добейся <code>Index Only Scan</code> с <code>Heap Fetches: 0</code></div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Для отчёта по товару часто выполняется запрос: <code>SELECT count(*) AS orders_cnt, round(avg(amount), 2) AS avg_amount FROM m3_orders WHERE product_id = 15;</code>. Создай покрывающий индекс <code>idx_m3_orders_prod_inc_amt</code>, обнови карту видимости и докажи через <code>EXPLAIN (ANALYZE, BUFFERS)</code>, что запрос работает через <code>Index Only Scan</code> с <code>Heap Fetches: 0</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_orders_prod_inc_amt;
+CREATE INDEX idx_m3_orders_prod_inc_amt
+    ON m3_orders (product_id) INCLUDE (amount);
+
+-- Обновляем Visibility Map, чтобы Heap Fetches стал равен 0
+VACUUM ANALYZE m3_orders;
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT
+    count(*) AS orders_cnt,
+    round(avg(amount), 2) AS avg_amount
+FROM m3_orders
+WHERE product_id = 15;</code></pre>
+          </div>
+          <p class="solution-note">Без <code>VACUUM</code> планировщик всё равно заглянет в Heap, чтобы проверить видимость строк (MVCC), и <code>Heap Fetches</code> будет больше нуля.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_3_6" data-lesson="3_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.3.6" />
+            <div class="task-title"><span class="task-num">3.3.6</span> Сравни в плане <code>date_trunc()</code> и честный диапазон дат</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Создай индекс <code>idx_m3_orders_created_at</code> на <code>m3_orders (created_at)</code> и сделай <code>VACUUM ANALYZE m3_orders;</code>. Сравни через <code>EXPLAIN (ANALYZE, BUFFERS)</code> подсчёт заказов за январь 2026 двумя способами:
+          1) через <code>date_trunc('month', created_at AT TIME ZONE '+05') = TIMESTAMP '2026-01-01'</code>;
+          2) через диапазон <code>created_at &gt;= TIMESTAMPTZ '2026-01-01 00:00:00+05' AND created_at &lt; TIMESTAMPTZ '2026-02-01 00:00:00+05'</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_orders_created_at;
+CREATE INDEX idx_m3_orders_created_at ON m3_orders (created_at);
+VACUUM ANALYZE m3_orders;
+
+-- Вариант 1 (ловушка): функция на колонке → Seq Scan + ошибка прогноза rows!
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM m3_orders
+WHERE date_trunc('month', created_at AT TIME ZONE '+05') = TIMESTAMP '2026-01-01';
+
+-- Вариант 2 (правильно): Index Only Scan + точный прогноз rows!
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM m3_orders
+WHERE created_at &gt;= TIMESTAMPTZ '2026-01-01 00:00:00+05'
+  AND created_at &lt;  TIMESTAMPTZ '2026-02-01 00:00:00+05';</code></pre>
+          </div>
+          <p class="solution-note">Во втором варианте срабатывает <code>Index Only Scan</code>, читается в разы меньше страниц <code>Buffers</code>, а прогноз <code>rows</code> почти идеально совпадает с реальным числом (~22 319 заказов).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_3_7" data-lesson="3_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.3.7" />
+            <div class="task-title"><span class="task-num">3.3.7</span> Безопасный <code>EXPLAIN ANALYZE</code> для <code>UPDATE</code> (без изменения данных)</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Проверь реальный план повышения цены на 10% (<code>price = round(price * 1.10, 2)</code>) для всех товаров категории <code>'electronics'</code> в <code>m3_products</code> с помощью <code>EXPLAIN (ANALYZE, BUFFERS)</code>, но так, чтобы реальные цены в базе <strong>не изменились</strong>. Докажи это, сравнив <code>sum(price)</code> до и после.
+        </p>
+        <p class="task-hint">Подсказка: оберни <code>EXPLAIN (ANALYZE, BUFFERS) UPDATE ...</code> в транзакцию <code>BEGIN; ... ROLLBACK;</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- 1. Фиксируем сумму цен ДО
+SELECT sum(price) AS price_before
+FROM m3_products
+WHERE category = 'electronics';
+
+-- 2. Профилируем UPDATE безопасно с откатом
+BEGIN;
+
+EXPLAIN (ANALYZE, BUFFERS)
+UPDATE m3_products
+SET price = round(price * 1.10, 2)
+WHERE category = 'electronics';
+
+ROLLBACK;
+
+-- 3. Убеждаемся, что сумма цен не изменилась
+SELECT sum(price) AS price_after
+FROM m3_products
+WHERE category = 'electronics';</code></pre>
+          </div>
+          <p class="solution-note"><code>EXPLAIN ANALYZE</code> реально исполняет <code>INSERT/UPDATE/DELETE</code> — никогда не запускай его на боевых данных без <code>BEGIN ... ROLLBACK</code>!</p>
+        </details>
+      </div>
+
+      <h3>Уровень 3 · Дерево плана, JOIN-ы и расследование тормозов</h3>
+
+      <div class="task-card" data-task-id="3_3_8" data-lesson="3_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.3.8" />
+            <div class="task-title"><span class="task-num">3.3.8</span> Прочитай 3-табличный план: <code>Hash Join</code> + <code>top-N heapsort</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Временно удали индекс <code>idx_m3_orders_amount</code> (если создавал его в Уроке 3.2). Выполни <code>EXPLAIN (ANALYZE, BUFFERS)</code> для запроса: соедини <code>m3_orders o</code>, <code>m3_customers c</code> и <code>m3_products p</code>, найди <strong>5 самых дорогих заказов</strong> (<code>o.id AS order_id</code>, <code>c.full_name</code>, <code>p.title</code>, <code>o.amount</code>) категории <code>'electronics'</code> от клиентов из города <code>'Костанай'</code> с суммой <code>o.amount &gt; 40000</code> (<code>ORDER BY o.amount DESC LIMIT 5</code>). Определи снизу вверх, какой узел съел больше всего <code>Buffers</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_orders_amount;
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT
+    o.id AS order_id,
+    c.full_name,
+    p.title,
+    o.amount
+FROM m3_orders AS o
+JOIN m3_customers AS c ON c.id = o.customer_id
+JOIN m3_products  AS p ON p.id = o.product_id
+WHERE c.city = 'Костанай'
+  AND p.category = 'electronics'
+  AND o.amount &gt; 40000
+ORDER BY o.amount DESC
+LIMIT 5;</code></pre>
+          </div>
+          <p class="solution-note">Главный пожиратель времени и страниц — <code>Seq Scan on m3_orders</code> (~1 150 страниц). На самом верху ты увидишь оптимизацию <code>Sort Method: top-N heapsort</code> — база держит в памяти только пятёрку лидеров.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_3_9" data-lesson="3_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.3.9" />
+            <div class="task-title"><span class="task-num">3.3.9</span> Ускорь 3-табличный запрос: <code>Index Scan Backward</code> + <code>Nested Loop</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Эксперимент</span>
+        </div>
+        <p class="task-desc">
+          Добавь индекс <code>idx_m3_orders_amount ON m3_orders (amount)</code> и повтори точно такой же запрос из задания 3.3.8. Посмотри, как планировщик полностью сменил стратегию: узел <code>Sort</code> исчез, а вместо <code>Hash Join</code> появился <code>Nested Loop</code> поверх <code>Index Scan Backward</code>!
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">CREATE INDEX idx_m3_orders_amount ON m3_orders (amount);
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT
+    o.id AS order_id,
+    c.full_name,
+    p.title,
+    o.amount
+FROM m3_orders AS o
+JOIN m3_customers AS c ON c.id = o.customer_id
+JOIN m3_products  AS p ON p.id = o.product_id
+WHERE c.city = 'Костанай'
+  AND p.category = 'electronics'
+  AND o.amount &gt; 40000
+ORDER BY o.amount DESC
+LIMIT 5;</code></pre>
+          </div>
+          <p class="solution-note"><code>Index Scan Backward</code> идёт с конца дерева от самых больших сумм, а <code>LIMIT 5</code> обрывает весь конвейер, как только нашлись 5 подходящих строк — вместо 1 150 страниц читается ~100–150!</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_3_10" data-lesson="3_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.3.10" />
+            <div class="task-title"><span class="task-num">3.3.10</span> Поймай красный флаг <code>Sort Method: external merge Disk</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Эксперимент</span>
+        </div>
+        <p class="task-desc">
+          Внутри транзакции сожми память сортировки командой <code>SET LOCAL work_mem = '64kB';</code> и запусти <code>EXPLAIN (ANALYZE, BUFFERS)</code> для сортировки всех 100 000 заказов <code>m3_orders</code> по <code>order_code DESC</code> (выводя <code>id, order_code, amount</code>). Увидишь <code>external merge Disk</code> и <code>temp read/written</code>! Затем сделай то же с <code>SET LOCAL work_mem = '32MB';</code> и сравни план.
+        </p>
+        <p class="task-hint">Подсказка: используй <code>ORDER BY order_code DESC</code> (и удали <code>idx_m3_orders_code</code>, если он есть, чтобы заставить базу реально сортировать).</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP INDEX IF EXISTS idx_m3_orders_code;
+
+-- 1. Тесная память (64 kB): сортировка вываливается на диск!
+BEGIN;
+SET LOCAL work_mem = '64kB';
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, order_code, amount
+FROM m3_orders
+ORDER BY order_code DESC;
+ROLLBACK;
+
+-- 2. Просторная память (32 MB): быстрая сортировка quicksort в RAM!
+BEGIN;
+SET LOCAL work_mem = '32MB';
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, order_code, amount
+FROM m3_orders
+ORDER BY order_code DESC;
+ROLLBACK;</code></pre>
+          </div>
+          <p class="solution-note">Во втором запуске <code>external merge Disk</code> сменится на <code>quicksort Memory</code>, а временные файлы <code>temp read/written</code> полностью исчезнут.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_3_11" data-lesson="3_3">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.3.11" />
+            <div class="task-title"><span class="task-num">3.3.11</span> Загляни в «мозг» планировщика: системный каталог <code>pg_stats</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Посмотри, откуда планировщик знает распределение значений в <code>m3_orders</code>: выведи из <code>pg_stats</code> колонки <code>attname</code>, <code>n_distinct</code>, <code>most_common_vals</code> и <code>most_common_freqs</code> для таблицы <code>'m3_orders'</code> по колонкам <code>'status'</code> и <code>'customer_id'</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    attname,
+    n_distinct,
+    most_common_vals,
+    most_common_freqs
+FROM pg_stats
+WHERE tablename = 'm3_orders'
+  AND attname IN ('status', 'customer_id');</code></pre>
+          </div>
+          <p class="solution-note">Для <code>status</code> планировщик точно знает доли <code>{paid,cancelled,pending}</code> ≈ <code>{0.85, 0.10, 0.05}</code> — именно по этим цифрам он решает, брать индекс или <code>Seq Scan</code>.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== УРОК 3.4 ==================== -->
+    <section id="sec-3-4" data-section-lesson="3_4">
+      <h2><span class="sec-num">3.4</span> Журнал предзаписи (WAL) и восстановление после сбоев (Crash Recovery)</h2>
+      <p>
+        Изучаем «чёрный ящик» PostgreSQL: измеряем позицию <code>LSN</code> и вес записей в <code>pg_wal</code>, проверяем <code>CHECKPOINT</code> и <code>Full Page Images</code>, сравниваем обычные и <code>UNLOGGED</code>-таблицы, проводим краш-тест с <code>SIGKILL</code> и решаем финальную задачу модуля.
+      </p>
+
+      <h3>Уровень 1 · Разминка (LSN, pg_stat_wal и настройки надёжности)</h3>
+
+      <div class="task-card" data-task-id="3_4_1" data-lesson="3_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.4.1" />
+            <div class="task-title"><span class="task-num">3.4.1</span> Текущий <code>LSN</code> и имя активного файла в <code>pg_wal/</code></div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Одним <code>SELECT</code> выведи текущую позицию в журнале предзаписи (<code>AS current_lsn</code>) и имя активного 16-мегабайтного WAL-сегмента (<code>AS active_wal_file</code>).
+        </p>
+        <p class="task-hint">Подсказка: функции <code>pg_current_wal_lsn()</code> и <code>pg_walfile_name(...)</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    pg_current_wal_lsn() AS current_lsn,
+    pg_walfile_name(pg_current_wal_lsn()) AS active_wal_file;</code></pre>
+          </div>
+          <p class="solution-note">Имя файла всегда состоит из 24 шестнадцатеричных символов (например, <code>000000010000000000000004</code>) — это реальный файл на диске в папке <code>pg_wal/</code>.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_4_2" data-lesson="3_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.4.2" />
+            <div class="task-title"><span class="task-num">3.4.2</span> Бортовой компьютер WAL: статистика <code>pg_stat_wal</code></div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выведи из системного представления <code>pg_stat_wal</code>: число записей <code>wal_records</code>, число полных снимков страниц <code>wal_fpi AS full_page_images</code>, общий объём записанного WAL в читаемом виде (<code>AS total_wal_written</code>) и счётчик <code>wal_buffers_full</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT
+    wal_records,
+    wal_fpi AS full_page_images,
+    pg_size_pretty(wal_bytes) AS total_wal_written,
+    wal_buffers_full
+FROM pg_stat_wal;</code></pre>
+          </div>
+          <p class="solution-note">Если в боевой системе быстро растёт <code>wal_buffers_full</code>, значит, буфер WAL в памяти слишком тесный и его стоит увеличить.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_4_3" data-lesson="3_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.4.3" />
+            <div class="task-title"><span class="task-num">3.4.3</span> Аудит настроек надёжности и контрольных точек</div>
+          </div>
+          <span class="lvl-badge lvl-easy">Очень легко</span>
+        </div>
+        <p class="task-desc">
+          Выведи из <code>pg_settings</code> колонки <code>name</code>, <code>setting</code>, <code>unit</code> и <code>context</code> для параметров: <code>'wal_level'</code>, <code>'fsync'</code>, <code>'full_page_writes'</code>, <code>'synchronous_commit'</code>, <code>'checkpoint_timeout'</code>, <code>'max_wal_size'</code> и <code>'checkpoint_completion_target'</code>. Отсортируй по <code>name</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">SELECT name, setting, unit, context
+FROM pg_settings
+WHERE name IN (
+    'wal_level',
+    'fsync',
+    'full_page_writes',
+    'synchronous_commit',
+    'checkpoint_timeout',
+    'max_wal_size',
+    'checkpoint_completion_target'
+)
+ORDER BY name;</code></pre>
+          </div>
+          <p class="solution-note">В нашем контейнере стоит <code>wal_level = logical</code> (из <code>docker-compose.yaml</code> для будущего Модуля 5), а <code>fsync</code> и <code>full_page_writes</code> включены (<code>on</code>).</p>
+        </details>
+      </div>
+
+      <h3>Уровень 2 · Контрольные точки, замеры LSN и UNLOGGED-таблицы</h3>
+
+      <div class="task-card" data-task-id="3_4_4" data-lesson="3_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.4.4" />
+            <div class="task-title"><span class="task-num">3.4.4</span> Ручной <code>CHECKPOINT</code> и чтение <code>pg_control</code></div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Посмотри <code>checkpoint_lsn</code>, <code>redo_lsn</code>, <code>redo_wal_file</code> и <code>checkpoint_time</code> с помощью функции <code>pg_control_checkpoint()</code>. Затем выполни команду <code>CHECKPOINT;</code> и снова прочитай <code>pg_control_checkpoint()</code> — убедись, что <code>redo_lsn</code> и время обновились!
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- До чекпоинта
+SELECT checkpoint_lsn, redo_lsn, redo_wal_file, checkpoint_time
+FROM pg_control_checkpoint();
+
+-- Принудительно сбрасываем грязные страницы на диск
+CHECKPOINT;
+
+-- После чекпоинта: новый redo_lsn и свежее checkpoint_time
+SELECT checkpoint_lsn, redo_lsn, redo_wal_file, checkpoint_time
+FROM pg_control_checkpoint();</code></pre>
+          </div>
+          <p class="solution-note">Именно с отметки <code>redo_lsn</code> PostgreSQL начинает чтение журнала, если произойдёт внезапный сбой питания.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_4_5" data-lesson="3_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.4.5" />
+            <div class="task-title"><span class="task-num">3.4.5</span> Измерь «след» в WAL от вставки 10 000 строк</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Создай таблицу <code>m3_wal_lab (id SERIAL PRIMARY KEY, order_code TEXT NOT NULL, amount NUMERIC(10, 2) NOT NULL)</code>. Одним запросом с CTE вставь 10 000 строк и выведи: число вставленных строк (<code>AS rows_inserted</code>), LSN до вставки (<code>AS lsn_start</code>), LSN после (<code>AS lsn_end</code>) и объём сгенерированного WAL в читаемом виде (<code>AS wal_generated</code>).
+        </p>
+        <p class="task-hint">Подсказка: разницу двух позиций LSN в байтах считает функция <code>pg_wal_lsn_diff(lsn_end, lsn_start)</code>.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS m3_wal_lab;
+
+CREATE TABLE m3_wal_lab (
+    id         SERIAL PRIMARY KEY,
+    order_code TEXT NOT NULL,
+    amount     NUMERIC(10, 2) NOT NULL
+);
+
+WITH lsn_before AS (
+    SELECT pg_current_wal_lsn() AS pos
+),
+ins AS (
+    INSERT INTO m3_wal_lab (order_code, amount)
+    SELECT 'WAL-' || g, (500 + (g * 13 % 9000))::NUMERIC(10, 2)
+    FROM generate_series(1, 10000) AS g
+    RETURNING id
+)
+SELECT
+    count(*) AS rows_inserted,
+    (SELECT pos FROM lsn_before) AS lsn_start,
+    pg_current_wal_lsn() AS lsn_end,
+    pg_size_pretty(
+        pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM lsn_before))
+    ) AS wal_generated
+FROM ins;</code></pre>
+          </div>
+          <p class="solution-note">Вставка 10 000 строк вместе с обновлением индекса <code>PRIMARY KEY</code> генерирует примерно 1.2–1.4 МБ записей WAL.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_4_6" data-lesson="3_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.4.6" />
+            <div class="task-title"><span class="task-num">3.4.6</span> Битва таблиц: Обычная vs <code>UNLOGGED</code></div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Создай две одинаковые таблицы <code>m3_logged_bench (id INT, payload TEXT)</code> (обычную) и <code>m3_unlogged_bench (id INT, payload TEXT)</code> (<code>UNLOGGED</code>). Вставь в каждую по 25 000 строк (<code>g, repeat('x', 80)</code>) и замерь объём WAL (<code>AS table_type</code>, <code>AS wal_bytes</code>, <code>AS wal_pretty</code>) для обеих таблиц.
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS m3_logged_bench, m3_unlogged_bench;
+
+CREATE TABLE m3_logged_bench (id INT, payload TEXT);
+CREATE UNLOGGED TABLE m3_unlogged_bench (id INT, payload TEXT);
+
+-- 1. Обычная таблица (~3 МБ в WAL)
+WITH s AS (SELECT pg_current_wal_lsn() AS pos),
+ins AS (
+    INSERT INTO m3_logged_bench
+    SELECT g, repeat('x', 80) FROM generate_series(1, 25000) AS g
+)
+SELECT
+    'Обычная таблица' AS table_type,
+    pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s)) AS wal_bytes,
+    pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s))) AS wal_pretty;
+
+-- 2. UNLOGGED-таблица (0 байт в WAL!)
+WITH s AS (SELECT pg_current_wal_lsn() AS pos),
+ins AS (
+    INSERT INTO m3_unlogged_bench
+    SELECT g, repeat('x', 80) FROM generate_series(1, 25000) AS g
+)
+SELECT
+    'UNLOGGED-таблица' AS table_type,
+    pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s)) AS wal_bytes,
+    pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s))) AS wal_pretty;</code></pre>
+          </div>
+          <p class="solution-note">Не удаляй <code>m3_unlogged_bench</code> — в задании 3.4.9 мы увидим, что с ней произойдёт после внезапного <code>SIGKILL</code>!</p>
+        </details>
+      </div>
+
+      <h3>Уровень 3 · FPI, Краш-тест SIGKILL и Финал модуля</h3>
+
+      <div class="task-card" data-task-id="3_4_7" data-lesson="3_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.4.7" />
+            <div class="task-title"><span class="task-num">3.4.7</span> Поймай Full Page Image (<code>FPI</code>) после <code>CHECKPOINT</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Эксперимент</span>
+        </div>
+        <p class="task-desc">
+          Создай таблицу <code>m3_fpi_lab (id INT PRIMARY KEY, val TEXT)</code> и вставь одну строку <code>(1, 'v1')</code>. Выполни <code>CHECKPOINT;</code>, затем сделай <strong>первый</strong> <code>UPDATE</code> (<code>val = 'v2'</code>) и замерь <code>wal_bytes</code> через <code>pg_wal_lsn_diff()</code>. Сразу после этого (без чекпоинта) сделай <strong>второй</strong> <code>UPDATE</code> (<code>val = 'v3'</code>) и снова замерь <code>wal_bytes</code>. Сравни два числа!
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS m3_fpi_lab;
+CREATE TABLE m3_fpi_lab (id INT PRIMARY KEY, val TEXT);
+INSERT INTO m3_fpi_lab VALUES (1, 'v1');
+
+-- Контрольная точка: следующая правка страницы заставит PG записать полный снимок!
+CHECKPOINT;
+
+-- 1-й UPDATE сразу после CHECKPOINT (попадёт FPI ~ несколько КБ)
+WITH s AS (SELECT pg_current_wal_lsn() AS pos),
+u AS (UPDATE m3_fpi_lab SET val = 'v2' WHERE id = 1)
+SELECT
+    '1-й UPDATE после CHECKPOINT (с FPI)' AS step,
+    pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s)) AS wal_bytes;
+
+-- 2-й UPDATE той же страницы (только маленькая дельта ~100–200 байт)
+WITH s AS (SELECT pg_current_wal_lsn() AS pos),
+u AS (UPDATE m3_fpi_lab SET val = 'v3' WHERE id = 1)
+SELECT
+    '2-й UPDATE без CHECKPOINT (без FPI)' AS step,
+    pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT pos FROM s)) AS wal_bytes;</code></pre>
+          </div>
+          <p class="solution-note">Из-за <code>full_page_writes = on</code> первое изменение страницы после <code>CHECKPOINT</code> кладёт в WAL её полный снимок (защита от разорванной страницы при сбое питания), а повторная правка — лишь компактную дельту.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_4_8" data-lesson="3_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.4.8" />
+            <div class="task-title"><span class="task-num">3.4.8</span> Безопасный тюнинг <code>SET LOCAL synchronous_commit = off</code></div>
+          </div>
+          <span class="lvl-badge lvl-mid">Среднее</span>
+        </div>
+        <p class="task-desc">
+          Открой транзакцию <code>BEGIN;</code>, включи в ней <strong>локально</strong> <code>SET LOCAL synchronous_commit = off;</code>, проверь значение через <code>SHOW synchronous_commit;</code>, вставь одну запись в <code>m3_wal_lab</code> (<code>'ASYNC-CLICK-1', 100.00</code>) и сделай <code>COMMIT;</code>. После <code>COMMIT;</code> снова проверь <code>SHOW synchronous_commit;</code> — убедись, что глобальная настройка осталась <code>on</code>!
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">BEGIN;
+SET LOCAL synchronous_commit = off;
+SHOW synchronous_commit; -- вернёт off только внутри этой транзакции
+
+INSERT INTO m3_wal_lab (order_code, amount)
+VALUES ('ASYNC-CLICK-1', 100.00);
+COMMIT;
+
+-- После COMMIT настройка автоматически вернулась в безопасное состояние 'on'
+SHOW synchronous_commit;</code></pre>
+          </div>
+          <p class="solution-note">В отличие от смертельно опасного <code>fsync = off</code>, асинхронный коммит никогда не повреждает базу — он лишь не ждёт подтверждения диска для конкретной некритичной транзакции.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_4_9" data-lesson="3_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.4.9" />
+            <div class="task-title"><span class="task-num">3.4.9</span> Живой краш-тест <code>SIGKILL</code> в двух окнах терминала!</div>
+          </div>
+          <span class="lvl-badge lvl-mid">Эксперимент · 2 окна</span>
+        </div>
+        <p class="task-desc">
+          Проверим Crash Recovery на практике! Убедись, что таблицы <code>m3_wal_lab</code> и <code>m3_unlogged_bench</code> существуют (из заданий 3.4.5 и 3.4.6).
+          В <strong>Окне 1 (<code>psql</code>)</strong> вставь подтверждённую строку <code>'CRASH-OK-101'</code>, затем начни <code>BEGIN;</code> и вставь <code>'CRASH-LOST-999'</code> <strong>без</strong> <code>COMMIT</code>.
+          В <strong>Окне 2 (терминал)</strong> жёстко убей контейнер командой <code>docker compose kill -s SIGKILL pg_primary</code>, запусти его снова и прочитай логи <code>automatic recovery in progress</code>.
+          Наконец, переподключись в <strong>Окне 1</strong> и проверь: 1) какая из двух строк выжила в <code>m3_wal_lab</code>; 2) сколько строк осталось в <code>m3_unlogged_bench</code>!
+        </p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · Окно 1 (Шаг 1: подготовка до аварии)</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- Окно 1: удаляем старые маркеры, если повторяешь опыт
+DELETE FROM m3_wal_lab
+WHERE order_code IN ('CRASH-OK-101', 'CRASH-LOST-999');
+
+-- 1. Подтверждённый заказ (COMMIT сразу уходит в pg_wal!)
+INSERT INTO m3_wal_lab (order_code, amount)
+VALUES ('CRASH-OK-101', 99999.00);
+
+-- 2. Незавершённая транзакция (НЕ делаем COMMIT!)
+BEGIN;
+INSERT INTO m3_wal_lab (order_code, amount)
+VALUES ('CRASH-LOST-999', 77777.00);
+-- Оставь Окно 1 открытым и перейди в Окно 2!</code></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">BASH · Окно 2 (Шаг 2: выдёргиваем вилку SIGKILL и смотрим логи)</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-bash"># Окно 2: жёсткое отключение без штатного завершения
+docker compose kill -s SIGKILL pg_primary
+
+# Включаем сервер обратно
+docker compose up -d pg_primary
+
+# Смотрим отчёт Crash Recovery в логах контейнера
+sleep 2
+docker logs --tail=20 course_pg_primary</code></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · Окно 1 (Шаг 3: переподключись в psql и проверь итоги)</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- Окно 1: проверяем выжившие строки (будет ТОЛЬКО CRASH-OK-101!)
+SELECT order_code, amount
+FROM m3_wal_lab
+WHERE order_code LIKE 'CRASH-%';
+
+-- А UNLOGGED-таблица после аварии автоматически очистилась до 0!
+SELECT count(*) AS unlogged_rows_after_crash
+FROM m3_unlogged_bench;</code></pre>
+          </div>
+          <p class="solution-note">Подтверждённый <code>CRASH-OK-101</code> пережил аварию благодаря WAL, незавершённый <code>CRASH-LOST-999</code> исчез, а <code>m3_unlogged_bench</code> обнулилась (<code>0</code> строк).</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="3_4_10" data-lesson="3_4">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 3.4.10" />
+            <div class="task-title"><span class="task-num">3.4.10</span> Финал модуля: полная диагностика отчёта (Buffers + Partial Index + WAL)</div>
+          </div>
+          <span class="lvl-badge lvl-boss">Финал модуля</span>
+        </div>
+        <p class="task-desc">
+          Собери все знания Модуля 3 в одной боевой задаче! Менеджменту нужен отчёт: <strong>топ-10 самых дорогих заказов в статусе <code>'pending'</code> от VIP-клиентов (<code>c.tier = 'vip'</code>)</strong> с колонками <code>o.id AS order_id</code>, <code>o.order_code</code>, <code>c.full_name</code>, <code>p.title</code>, <code>o.amount</code>, отсортированный по <code>o.amount DESC LIMIT 10</code>.
+        </p>
+        <ol class="task-desc">
+          <li>Сбрось лишние индексы на <code>m3_orders</code> (или перезапусти <code>init.sql</code>) и сделай замер <code>EXPLAIN (ANALYZE, BUFFERS)</code> <strong>ДО</strong> оптимизации.</li>
+          <li>Зафиксируй текущий <code>LSN</code>, создай идеальный <strong>частичный индекс</strong> <code>idx_m3_boss_pending_amount</code> на <code>m3_orders (amount DESC) WHERE status = 'pending'</code> и посчитай через <code>pg_wal_lsn_diff()</code>, сколько WAL ушло на построение этого индекса.</li>
+          <li>Выполни <code>VACUUM ANALYZE m3_orders;</code>, повтори <code>EXPLAIN (ANALYZE, BUFFERS)</code> <strong>ПОСЛЕ</strong> оптимизации и сравни число прочитанных страниц <code>Buffers</code> и время выполнения!</li>
+        </ol>
+        <p class="task-hint">Подсказка: в <code>psql</code> удобно запомнить LSN до создания индекса в переменную (или сравнить два <code>SELECT pg_current_wal_lsn();</code>), а сам частичный индекс позволит <code>Index Scan</code> пойти прямо по дорогим <code>pending</code>-заказам без сортировки!</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · Эталонное решение финала модуля</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- 1. Замер ДО оптимизации (если нужно — предварительно удали старые доп. индексы на m3_orders)
+DROP INDEX IF EXISTS idx_m3_orders_amount, idx_m3_boss_pending_amount;
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT
+    o.id AS order_id,
+    o.order_code,
+    c.full_name,
+    p.title,
+    o.amount
+FROM m3_orders AS o
+JOIN m3_customers AS c ON c.id = o.customer_id
+JOIN m3_products  AS p ON p.id = o.product_id
+WHERE o.status = 'pending'
+  AND c.tier = 'vip'
+ORDER BY o.amount DESC
+LIMIT 10;
+
+-- 2. Запоминаем LSN, создаём частичный индекс под сортировку и замеряем WAL
+CREATE TEMP TABLE _wal_mark (lsn pg_lsn);
+INSERT INTO _wal_mark VALUES (pg_current_wal_lsn());
+
+CREATE INDEX idx_m3_boss_pending_amount
+    ON m3_orders (amount DESC)
+    WHERE status = 'pending';
+
+SELECT
+    pg_size_pretty(pg_relation_size('idx_m3_boss_pending_amount')) AS index_size,
+    pg_size_pretty(
+        pg_wal_lsn_diff(pg_current_wal_lsn(), (SELECT lsn FROM _wal_mark))
+    ) AS wal_for_index;
+
+DROP TABLE _wal_mark;
+
+-- 3. Обновляем статистику и делаем финальный замер ПОСЛЕ
+VACUUM ANALYZE m3_orders;
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT
+    o.id AS order_id,
+    o.order_code,
+    c.full_name,
+    p.title,
+    o.amount
+FROM m3_orders AS o
+JOIN m3_customers AS c ON c.id = o.customer_id
+JOIN m3_products  AS p ON p.id = o.product_id
+WHERE o.status = 'pending'
+  AND c.tier = 'vip'
+ORDER BY o.amount DESC
+LIMIT 10;</code></pre>
+          </div>
+          <p class="solution-note">Крошечный частичный индекс (~128 КБ, ~150 КБ WAL на создание) убирает <code>Seq Scan</code> и <code>Sort</code>: PostgreSQL идёт по <code>idx_m3_boss_pending_amount</code> в порядке убывания суммы, проверяет <code>tier = 'vip'</code> через <code>Nested Loop</code> по <code>m3_customers_pkey</code> и останавливается, как только набирает 10 заказов!</p>
+        </details>
+      </div>
+    </section>
+
+    <div class="empty-filter" id="empty-filter">
+      Все задания по выбранному фильтру уже выполнены! Отличная работа 🎉
+    </div>
+
+  </article>
+
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Автоматическое оглавление из <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = Array.from(document.querySelectorAll('article.lecture > section'));
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${clone.textContent.trim()}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Разделы практикума</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 3. Копирование кода (с fallback для file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (_) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => { btn.textContent = originalText; }, 1800);
+          }
+        });
+      });
+
+      // 4. Прогресс и фильтрация заданий
+      const STORAGE_KEY = 'db_course_practice_m3_v1';
+      const cards = Array.from(document.querySelectorAll('.task-card[data-task-id]'));
+      const progressText = document.getElementById('progress-text');
+      const progressFill = document.getElementById('progress-fill');
+      const resetBtn = document.getElementById('reset-progress');
+      const filterBtns = Array.from(document.querySelectorAll('.filter-btn'));
+      const emptyFilter = document.getElementById('empty-filter');
+      let currentFilter = 'all';
+
+      function loadDone() {
+        try {
+          return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+        } catch (_) {
+          return new Set();
+        }
+      }
+
+      function saveDone(set) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(set)));
+        } catch (_) {}
+      }
+
+      const doneSet = loadDone();
+
+      function applyFilter() {
+        let visibleCards = 0;
+
+        cards.forEach((card) => {
+          const id = card.dataset.taskId;
+          const lesson = card.dataset.lesson;
+          const isDone = doneSet.has(id);
+          let show = true;
+
+          if (currentFilter === 'todo') show = !isDone;
+          else if (currentFilter !== 'all') show = lesson === currentFilter;
+
+          card.classList.toggle('hidden', !show);
+          if (show) visibleCards++;
+        });
+
+        sections.forEach((sec) => {
+          const secLesson = sec.dataset.sectionLesson;
+          if (secLesson === 'init') {
+            sec.classList.toggle('hidden', currentFilter !== 'all' && currentFilter !== 'todo');
+            return;
+          }
+          const secCards = Array.from(sec.querySelectorAll('.task-card'));
+          const anyVisible = secCards.some((c) => !c.classList.contains('hidden'));
+          sec.classList.toggle('hidden', !anyVisible);
+        });
+
+        emptyFilter.classList.toggle('visible', visibleCards === 0);
+      }
+
+      function syncUI() {
+        let doneCount = 0;
+        cards.forEach((card) => {
+          const id = card.dataset.taskId;
+          const cb = card.querySelector('.task-check');
+          const isDone = doneSet.has(id);
+          cb.checked = isDone;
+          card.classList.toggle('done', isDone);
+          if (isDone) doneCount++;
+        });
+
+        const total = cards.length;
+        const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+        progressText.textContent = `${doneCount} / ${total} (${pct}%)`;
+        progressFill.style.width = `${pct}%`;
+        resetBtn.classList.toggle('visible', doneCount > 0);
+        applyFilter();
+      }
+
+      cards.forEach((card) => {
+        const cb = card.querySelector('.task-check');
+        cb.addEventListener('change', () => {
+          const id = card.dataset.taskId;
+          if (cb.checked) doneSet.add(id);
+          else doneSet.delete(id);
+          saveDone(doneSet);
+          syncUI();
+        });
+      });
+
+      filterBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          currentFilter = btn.dataset.filter;
+          filterBtns.forEach((b) => b.classList.toggle('active', b === btn));
+          applyFilter();
+        });
+      });
+
+      resetBtn.addEventListener('click', () => {
+        doneSet.clear();
+        saveDone(doneSet);
+        syncUI();
+      });
+
+      syncUI();
+    });
+  </script>
+</body>
+</html>

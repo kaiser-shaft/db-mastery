@@ -1,0 +1,3532 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Практикум · Модуль 4: Транзакции, MVCC, блокировки и дуэль с MySQL/InnoDB</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --accent-border: #bfdbfe;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --purple-bg: #f5f3ff;
+      --purple-border: #ddd6fe;
+      --purple-text: #6d28d9;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --cyan-bg: #ecfeff;
+      --cyan-border: #a5f3fc;
+      --cyan-text: #155e75;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      padding: 2.25rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .lecture {
+      max-width: 920px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.75rem 3rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== НАВИГАЦИЯ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    /* ==================== ШАПКА ==================== */
+    .lecture-header {
+      padding-bottom: 1.85rem;
+      margin-bottom: 2.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary { background: var(--accent-soft); color: var(--accent); }
+    .pill-tip { background: var(--tip-bg); color: var(--tip-text); }
+    .pill-warn { background: var(--warn-bg); color: var(--warn-text); }
+    .pill-neutral { background: #f1f5f9; color: var(--muted); }
+
+    h1 {
+      margin: 0 0 0.75rem;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    .hero-sub {
+      margin: 0 0 1.4rem;
+      color: var(--muted);
+      font-size: 0.97rem;
+    }
+
+    /* Прогресс-бар и фильтры */
+    .practice-toolbar {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem 1.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .progress-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.88rem;
+    }
+
+    .progress-label { font-weight: 600; color: var(--text-body); }
+    .progress-label strong { font-family: "JetBrains Mono", monospace; color: var(--tip-border); }
+
+    .progress-bar {
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #16a34a);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .filter-row-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-right: 0.2rem;
+    }
+
+    .filter-btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-body);
+      font-family: inherit;
+      font-size: 0.79rem;
+      font-weight: 600;
+      padding: 0.28rem 0.68rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+
+    .reset-btn {
+      appearance: none;
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.76rem;
+      font-weight: 500;
+      padding: 0.26rem 0.62rem;
+      border-radius: 7px;
+      cursor: pointer;
+      display: none;
+    }
+
+    .reset-btn.visible { display: inline-block; }
+    .reset-btn:hover { border-color: var(--err-border); color: var(--err-border); }
+
+    /* Легенда форматов */
+    .format-legend {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.55rem;
+      margin-top: 1.05rem;
+    }
+
+    .format-chip {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: var(--muted);
+    }
+
+    .format-chip strong {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--text);
+      margin-bottom: 0.15rem;
+    }
+
+    /* Оглавление */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li { border-bottom: 1px solid #f1f5f9; }
+    .toc-list li:last-child { border-bottom: none; }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.36rem 0.5rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover { background: var(--surface-soft); color: var(--accent); }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.85rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 2.75rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type { margin-top: 0; }
+    section.hidden { display: none; }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 1.65rem 0 0.75rem;
+      font-size: 1.04rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p { margin: 0 0 1rem; }
+    ul, ol { margin: 0 0 1.15rem; padding-left: 1.4rem; }
+    li { margin-bottom: 0.4rem; }
+
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.14em 0.4em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* ==================== БЛОКИ КОДА ==================== */
+    .code-block {
+      margin: 0.85rem 0 1.1rem;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-block.bug-code {
+      border-color: #f87171;
+      box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.12);
+    }
+
+    .code-block.bug-code .code-header {
+      background: #2b1417;
+      border-bottom-color: #5c2128;
+      color: #fca5a5;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.42rem 0.85rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.73rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 0.18rem 0.55rem;
+      border-radius: 6px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover { background: #21262d; border-color: #8b949e; color: #ffffff; }
+    .copy-btn.copied { border-color: #238636; color: #3fb950; }
+
+    .code-block pre {
+      margin: 0;
+      padding: 0.9rem 1.05rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.83rem;
+      line-height: 1.54;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    /* ==================== ВЫНОСКИ И ТАБЛИЦЫ ==================== */
+    .callout {
+      display: flex;
+      gap: 0.85rem;
+      margin: 1.15rem 0;
+      padding: 0.95rem 1.15rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.93rem;
+      line-height: 1.6;
+    }
+
+    .callout-icon { flex-shrink: 0; width: 20px; height: 20px; margin-top: 0.18rem; color: var(--accent); }
+    .callout-body strong { color: #1e40af; }
+
+    .callout.warn { background: var(--warn-bg); border-left-color: var(--warn-border); }
+    .callout.warn .callout-icon { color: var(--warn-border); }
+    .callout.warn .callout-body strong { color: var(--warn-text); }
+
+    .callout.tip { background: var(--tip-bg); border-left-color: var(--tip-border); }
+    .callout.tip .callout-icon { color: var(--tip-border); }
+    .callout.tip .callout-body strong { color: var(--tip-text); }
+
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0 1.2rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-soft);
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    /* ==================== ER-ДИАГРАММА И ПРЕДПРОСМОТР ==================== */
+    .schema-box {
+      margin: 1rem 0 1.25rem;
+      padding: 1.15rem 1.15rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .er-scroll { width: 100%; overflow-x: auto; }
+    .er-svg {
+      display: block;
+      width: 100%;
+      min-width: 700px;
+      height: auto;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .er-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem 1rem;
+      margin-top: 0.9rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .er-legend-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+
+    .er-tag {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.08rem 0.38rem;
+      border-radius: 5px;
+      line-height: 1.3;
+    }
+
+    .er-tag-pk   { background: #dbeafe; color: #1d4ed8; }
+    .er-tag-fk   { background: #fef3c7; color: #b45309; }
+    .er-tag-uk   { background: #f3e8ff; color: #7e22ce; }
+    .er-tag-idx  { background: #dcfce7; color: #15803d; }
+    .er-tag-null { background: #fee2e2; color: #b91c1c; }
+
+    .quirks-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.65rem;
+      margin-top: 0.9rem;
+    }
+
+    .quirk-chip {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.62rem 0.82rem;
+      font-size: 0.84rem;
+      line-height: 1.48;
+      color: var(--text-body);
+    }
+
+    .quirk-chip strong { color: var(--text); }
+
+    details.data-preview {
+      margin: 0.95rem 0 0;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    details.data-preview summary {
+      cursor: pointer;
+      padding: 0.78rem 1.05rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: #ffffff;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    details.data-preview summary::-webkit-details-marker { display: none; }
+    details.data-preview summary::after { content: "Развернуть ▾"; font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+    details.data-preview[open] summary { border-bottom: 1px solid var(--border); background: var(--accent-soft); }
+    details.data-preview[open] summary::after { content: "Свернуть ▴"; color: var(--accent); }
+
+    .preview-body {
+      padding: 1rem 1.1rem 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.05rem;
+    }
+
+    .preview-table-title {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .preview-table-title span {
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .preview-body .table-wrapper { margin: 0; border-radius: 9px; }
+    .preview-body table { font-size: 0.81rem; line-height: 1.4; }
+    .preview-body th, .preview-body td { padding: 0.44rem 0.65rem; white-space: nowrap; }
+
+    .null-pill {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.05rem 0.38rem;
+      border-radius: 4px;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .status-pill {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.73rem;
+      font-weight: 600;
+      padding: 0.05rem 0.4rem;
+      border-radius: 5px;
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    /* ==================== КАРТОЧКИ ЗАДАНИЙ (НОВЫЙ ШАБЛОН М4) ==================== */
+    .task-card {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.1rem 0;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .task-card.done {
+      background: #f8fdf9;
+      border-color: #bbf7d0;
+    }
+
+    .task-card.hidden { display: none; }
+
+    .task-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .task-title-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      min-width: 0;
+    }
+
+    .task-check {
+      appearance: none;
+      width: 19px;
+      height: 19px;
+      margin-top: 0.22rem;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-strong);
+      background: #ffffff;
+      cursor: pointer;
+      display: grid;
+      place-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .task-check:hover { border-color: var(--accent); }
+    .task-check:checked { background: var(--tip-border); border-color: var(--tip-border); }
+    .task-check:checked::after {
+      content: "✓";
+      color: #ffffff;
+      font-size: 0.76rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.4;
+      font-size: 1.01rem;
+    }
+
+    .task-card.done .task-title { color: var(--tip-text); }
+
+    .task-num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      padding: 0.08rem 0.45rem;
+      border-radius: 6px;
+      margin-right: 0.45rem;
+    }
+
+    .task-card.done .task-num {
+      background: var(--tip-bg);
+      border-color: #bbf7d0;
+      color: var(--tip-text);
+    }
+
+    .task-badges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.35rem;
+      flex-shrink: 0;
+    }
+
+    .env-badge,
+    .lvl-badge {
+      font-size: 0.71rem;
+      font-weight: 700;
+      padding: 0.16rem 0.55rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .env-pg1  { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+    .env-pg2  { background: var(--cyan-bg); color: var(--cyan-text); border: 1px solid var(--cyan-border); }
+    .env-pg3  { background: var(--purple-bg); color: var(--purple-text); border: 1px solid var(--purple-border); }
+    .env-duel { background: linear-gradient(90deg, #eff6ff 0%, #fffbeb 100%); color: #1e293b; border: 1px solid #cbd5e1; }
+
+    .lvl-base { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); }
+    .lvl-exp  { background: var(--warn-bg); color: var(--warn-text); border: 1px solid #fde68a; }
+    .lvl-bug  { background: var(--err-bg); color: var(--err-text); border: 1px solid #fecaca; }
+    .lvl-lab  { background: var(--tip-bg); color: var(--tip-text); border: 1px solid #bbf7d0; }
+    .lvl-boss { background: var(--purple-bg); color: var(--purple-text); border: 1px solid var(--purple-border); }
+
+    /* Плашка предусловия / сброса состояния */
+    .state-bar {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      margin: 0.15rem 0 0.7rem;
+      padding: 0.28rem 0.65rem;
+      border-radius: 8px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      font-size: 0.8rem;
+      color: var(--warn-text);
+    }
+
+    .state-bar strong { font-weight: 700; }
+
+    .task-desc {
+      margin: 0 0 0.55rem;
+      font-size: 0.95rem;
+    }
+
+    .task-hint {
+      margin: 0.45rem 0 0;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    /* Блок «Что наблюдать / Проверь себя» */
+    .observe-box {
+      margin: 0.75rem 0 0.2rem;
+      padding: 0.72rem 0.95rem;
+      background: #ffffff;
+      border: 1px solid var(--accent-border);
+      border-left: 3.5px solid var(--accent);
+      border-radius: 10px;
+      font-size: 0.87rem;
+      line-height: 1.55;
+    }
+
+    .observe-title {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+      margin-bottom: 0.3rem;
+    }
+
+    .observe-box ul {
+      margin: 0;
+      padding-left: 1.2rem;
+    }
+
+    .observe-box li {
+      margin-bottom: 0.22rem;
+    }
+
+    .observe-box li:last-child { margin-bottom: 0; }
+
+    /* Раскрывающееся решение */
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border-strong);
+      padding-top: 0.7rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover { text-decoration: underline; }
+    details.solution > .code-block { margin: 0.75rem 0 0; }
+
+    .solution-note {
+      margin: 0.65rem 0 0;
+      padding: 0.65rem 0.85rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      font-size: 0.86rem;
+      color: var(--text-body);
+    }
+
+    .solution-note strong { color: var(--text); }
+
+    /* ==================== 2-ОКОННЫЙ ТАЙМЛАЙН ==================== */
+    .tl-wrap {
+      margin-top: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .tl-head {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.7rem;
+    }
+
+    .tl-col-head {
+      padding: 0.42rem 0.75rem;
+      border-radius: 8px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.77rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .tl-col-head.win1 { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .tl-col-head.win2 { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+
+    .tl-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.7rem;
+      align-items: stretch;
+    }
+
+    .tl-cell {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tl-cell .code-block {
+      margin: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tl-cell .code-block pre {
+      flex: 1;
+      padding: 0.72rem 0.85rem;
+    }
+
+    .tl-cell .code-block pre code {
+      font-size: 0.79rem;
+      line-height: 1.48;
+    }
+
+    .tl-wait {
+      height: 100%;
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0.65rem 0.75rem;
+      border-radius: 10px;
+      border: 1.5px dashed var(--border-strong);
+      background: #ffffff;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .tl-wait.blocked {
+      border-color: #f59e0b;
+      background: #fffbeb;
+      color: var(--warn-text);
+      font-weight: 600;
+    }
+
+    .step-pill {
+      display: inline-block;
+      padding: 0.08rem 0.42rem;
+      border-radius: 5px;
+      font-size: 0.69rem;
+      font-weight: 700;
+      margin-right: 0.35rem;
+    }
+
+    .step-w1 { background: #1d4ed8; color: #ffffff; }
+    .step-w2 { background: #b45309; color: #ffffff; }
+    .step-w3 { background: #7c3aed; color: #ffffff; }
+
+    /* Вертикальный протокол (для 3 окон и 3-шаговой лабы) */
+    .step-flow {
+      margin-top: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .step-flow .code-block { margin: 0; }
+
+    /* ==================== ДУЭЛЬ СУБД (PG vs MySQL) ==================== */
+    .duel-grid {
+      margin-top: 0.8rem;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem;
+    }
+
+    .duel-col {
+      min-width: 0;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .duel-col.duel-pg { border: 1.5px solid #93c5fd; }
+    .duel-col.duel-mysql { border: 1.5px solid #fcd34d; }
+
+    .duel-col-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.4rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 8px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.77rem;
+      font-weight: 700;
+    }
+
+    .duel-pg .duel-col-head { background: #eff6ff; color: #1e3a8a; }
+    .duel-mysql .duel-col-head { background: #fffbeb; color: #92400e; }
+
+    .duel-col .code-block { margin: 0; }
+    .duel-col .code-block pre { padding: 0.72rem 0.85rem; }
+    .duel-col .code-block pre code { font-size: 0.79rem; line-height: 1.48; }
+
+    .duel-result {
+      font-size: 0.81rem;
+      padding: 0.45rem 0.65rem;
+      border-radius: 8px;
+      line-height: 1.45;
+    }
+
+    .duel-pg .duel-result { background: #f8fafc; color: #1e3a8a; border: 1px solid #dbeafe; }
+    .duel-mysql .duel-result { background: #fffbeb; color: #78350f; border: 1px solid #fde68a; }
+
+    /* Ссылки-плашки на init-файлы */
+    .file-link-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.32rem 0.68rem;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.81rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .file-link-bar:hover { background: #dbeafe; border-color: var(--accent); }
+
+    .empty-filter {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+      border: 1px dashed var(--border-strong);
+      border-radius: 12px;
+      color: var(--muted);
+      margin-top: 1.5rem;
+    }
+
+    .empty-filter.visible { display: block; }
+
+    @media (max-width: 760px) {
+      .format-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .quirks-grid { grid-template-columns: 1fr; }
+      .tl-head { display: none; }
+      .tl-row { grid-template-columns: 1fr; gap: 0.45rem; }
+      .tl-wait.mobile-hide { display: none; }
+      .duel-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 1rem 0.7rem 3rem; font-size: 15px; }
+      .lecture { padding: 1.5rem 1.15rem; border-radius: 12px; }
+      h1 { font-size: 1.55rem; }
+      h2 { font-size: 1.2rem; }
+      .task-head { flex-direction: column; gap: 0.45rem; }
+      .task-badges { justify-content: flex-start; }
+      .format-legend { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../../docker_guide.html">Гид по Docker</a>
+      </div>
+    </nav>
+
+    <!-- ==================== ШАПКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Практикум · Модуль 4</span>
+        <span class="pill pill-tip">24 инженерных задания · 4 формата</span>
+        <span class="pill pill-warn">Docker: --profile mod4 (для 4.4)</span>
+        <span class="pill pill-neutral">PostgreSQL 16 + MySQL 8.4 (InnoDB)</span>
+      </div>
+
+      <h1>Лабораторный практикум: Транзакции, MVCC, блокировки и дуэль PG vs MySQL</h1>
+      <p class="hero-sub">
+        Вместо однотипного списка запросов — реальные <strong>2-оконные эксперименты по таймлайну</strong>, <strong>код-ревью багов из продакшена</strong>, 3-шаговая лаборатория <strong>Table Bloat / VACUUM</strong> и живая <strong>дуэль PostgreSQL 16 против MySQL 8.4 (InnoDB)</strong>.
+      </p>
+
+      <div class="practice-toolbar">
+        <div>
+          <div class="progress-head">
+            <span class="progress-label">Выполнено заданий: <strong id="progress-text">0 / 24 (0%)</strong></span>
+            <button type="button" class="reset-btn" id="reset-progress">Сбросить прогресс</button>
+          </div>
+          <div class="progress-bar" style="margin-top: 0.45rem;">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="toolbar-actions">
+          <div class="filter-row" role="group" aria-label="Фильтр по урокам">
+            <span class="filter-row-label">Урок:</span>
+            <button type="button" class="filter-btn active" data-filter="all">Все (24)</button>
+            <button type="button" class="filter-btn" data-filter="todo">Невыполненные</button>
+            <button type="button" class="filter-btn" data-filter="4_1">4.1 ACID</button>
+            <button type="button" class="filter-btn" data-filter="4_2">4.2 MVCC</button>
+            <button type="button" class="filter-btn" data-filter="4_3">4.3 Блокировки</button>
+            <button type="button" class="filter-btn" data-filter="4_4">4.4 PG vs MySQL</button>
+          </div>
+          <div class="filter-row" role="group" aria-label="Фильтр по формату">
+            <span class="filter-row-label">Формат:</span>
+            <button type="button" class="filter-btn" data-filter="tag:multiwin">2–3 окна</button>
+            <button type="button" class="filter-btn" data-filter="tag:bugfix">Баг-фикс</button>
+            <button type="button" class="filter-btn" data-filter="tag:duel">Дуэль PG vs MySQL</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="format-legend">
+        <div class="format-chip">
+          <strong>Практика · 1 окно</strong>
+          Пишешь транзакцию или диагностику по бизнес-правилу.
+        </div>
+        <div class="format-chip">
+          <strong>Эксперимент · 2–3 окна</strong>
+          Пошаговый таймлайн с отдельной кнопкой копирования на каждый шаг.
+        </div>
+        <div class="format-chip">
+          <strong>Баг-фикс</strong>
+          Дан сломанный код из продакшена — найди аномалию и почини.
+        </div>
+        <div class="format-chip">
+          <strong>Дуэль PG vs MySQL</strong>
+          Выполняем один и тот же сценарий бок о бок в двух СУБД.
+        </div>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание практикума"></nav>
+    </header>
+
+    <!-- ==================== 00. ПОДГОТОВКА СТЕНДА И ЧЕК-ЛИСТ ==================== -->
+    <section id="sec-init" data-section-lesson="init">
+      <h2><span class="sec-num">00</span> Подготовка стенда, схема БД и чек-лист перед стартом</h2>
+      <p>
+        Для практики подготовлены два идемпотентных скрипта наполнения базы <code>learning_db</code>:
+        <a class="file-link-bar" href="init.sql">📄 practice/module_4/init.sql</a> (<strong>PostgreSQL 16</strong> — все уроки 4.1–4.4) и
+        <a class="file-link-bar" href="init_mysql.sql">📄 practice/module_4/init_mysql.sql</a> (<strong>MySQL 8.4 / InnoDB</strong> — дуэли в Уроке 4.4).
+      </p>
+
+      <div class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Как работать со стендом:</strong>
+          <ul style="margin: 0.35rem 0 0; padding-left: 1.25rem;">
+            <li><strong>Уроки 4.1–4.3:</strong> достаточно базового контейнера <code>course_pg_primary</code> (<code>docker compose up -d</code>) и файла <code>init.sql</code>.</li>
+            <li><strong>Урок 4.4:</strong> подними <code>docker compose --profile mod4 up -d</code> (добавит <code>course_mysql_innodb</code> на порту <code>3306</code>) и загрузи <code>init_mysql.sql</code>.</li>
+            <li><strong>Быстрый сброс:</strong> если видишь на карточке плашку <code>↺ Нужен чистый init.sql</code> — прогони скрипт повторно за 1 секунду.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Шаг 1. Подними контейнеры и загрузи скрипты</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · Linux / macOS / Git Bash (из корневой папки курса)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># 1. Запуск стенда (для 4.1–4.3 хватит docker compose up -d; для 4.4 нужен --profile mod4)
+docker compose --profile mod4 up -d
+
+# 2. Загрузка учебной БД в PostgreSQL 16 (повторяй в любой момент для сброса)
+docker exec -i course_pg_primary psql -U student -d learning_db &lt; practice/module_4/init.sql
+
+# 3. Загрузка таблиц дуэли в MySQL 8.4 (перед Уроком 4.4; старт MySQL ~15–20 сек)
+docker exec -i course_mysql_innodb mysql -u student -pstudent_pass learning_db &lt; practice/module_4/init_mysql.sql</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">PowerShell · Windows (из корневой папки курса)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-powershell">docker compose --profile mod4 up -d
+Get-Content practice/module_4/init.sql -Raw | docker exec -i course_pg_primary psql -U student -d learning_db
+Get-Content practice/module_4/init_mysql.sql -Raw | docker exec -i course_mysql_innodb mysql -u student -pstudent_pass learning_db</code></pre>
+      </div>
+
+      <h3>Шаг 2. Открой два окна терминала рядом</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · Вход в консоли PostgreSQL 16 и MySQL 8.4</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash"># Окно 1 и Окно 2 для PostgreSQL 16 (выход: \q)
+docker exec -it course_pg_primary psql -U student -d learning_db
+
+# Консоль MySQL 8.4 InnoDB (выход: exit; для Урока 4.4)
+docker exec -it course_mysql_innodb mysql -u student -pstudent_pass learning_db</code></pre>
+      </div>
+
+      <details class="data-preview" style="margin-top: 0.75rem;">
+        <summary>Чек-лист готовности стенда (3 минуты перед стартом: настройки изоляции, autovacuum и PID)</summary>
+        <div class="preview-body">
+          <p style="margin: 0; font-size: 0.88rem; color: var(--muted);">
+            Выполни этот диагностический блок один раз в PostgreSQL — он заменяет скучные «разминочные» карточки и сразу показывает ключевые параметры сервера.
+          </p>
+          <div class="code-block" style="margin: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL · Паспорт сервера PostgreSQL 16</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- 1. Мой PID и стартовый инвариант балансов (должно быть 2450.00)
+SELECT pg_backend_pid() AS my_pid, SUM(balance) AS total_gold FROM wallets;
+
+-- 2. Главные настройки Модуля 4: изоляция, дедлоки, пороги автоуборщика
+SELECT name, setting
+FROM pg_settings
+WHERE name IN (
+    'transaction_isolation',
+    'deadlock_timeout',
+    'autovacuum',
+    'autovacuum_vacuum_threshold',
+    'autovacuum_vacuum_scale_factor'
+)
+ORDER BY name;</code></pre>
+          </div>
+          <p style="margin: 0; font-size: 0.84rem; color: var(--muted);">
+            Ожидаемые значения: <code>read committed</code>, <code>deadlock_timeout = 1000</code> (мс), <code>autovacuum = on</code>, порог уборки <code>50 + 0.2 * n_live_tup</code>.
+          </p>
+        </div>
+      </details>
+
+      <h3>Схема базы данных Модуля 4 (ER-диаграмма)</h3>
+      <div class="schema-box">
+        <div class="er-scroll">
+          <svg class="er-svg" viewBox="0 0 860 584" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ER-диаграмма базы данных Модуля 4: wallets, transfer_log, ticket_queue, shop_items, mvcc_lab, parking_slots">
+            <defs>
+              <filter id="cardShadow" x="-4%" y="-4%" width="108%" height="112%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.06" />
+              </filter>
+              <marker id="arrowMany" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+                <path d="M 1 1 L 10 6 L 1 11 M 10 6 L 1 6" fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </marker>
+              <marker id="tickOne" viewBox="0 0 10 12" refX="4" refY="6" markerWidth="8" markerHeight="10" orient="auto">
+                <path d="M 4 1 L 4 11" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round" />
+              </marker>
+            </defs>
+
+            <!-- СВЯЗИ -->
+            <path d="M 381 58 L 432 58 L 432 86 L 477 86" fill="none" stroke="#64748b" stroke-width="1.8" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <path d="M 381 66 L 416 66 L 416 110 L 477 110" fill="none" stroke="#64748b" stroke-width="1.8" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <rect x="404" y="34" width="52" height="17" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+            <text x="430" y="46" text-anchor="middle" font-size="10" font-weight="700" fill="#334155">1 : N ×2</text>
+            <text x="444" y="126" text-anchor="middle" font-size="9.5" fill="#64748b">RESTRICT</text>
+
+            <path d="M 381 74 L 398 74 L 398 352 L 477 352" fill="none" stroke="#64748b" stroke-width="1.8" marker-start="url(#tickOne)" marker-end="url(#arrowMany)" />
+            <rect x="383" y="218" width="46" height="17" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+            <text x="406" y="230" text-anchor="middle" font-size="10.5" font-weight="700" fill="#334155">1 : N</text>
+            <text x="424" y="250" text-anchor="middle" font-size="9.5" fill="#64748b">SET NULL</text>
+
+            <!-- ТАБЛИЦА 1: wallets -->
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="18" width="360" height="164" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" />
+              <path d="M 18 28 Q 18 18 28 18 L 368 18 Q 378 18 378 28 L 378 50 L 18 50 Z" fill="#eff6ff" />
+              <line x1="18" y1="50" x2="378" y2="50" stroke="#bfdbfe" stroke-width="1" />
+              <text x="32" y="39" font-size="13.5" font-weight="700" fill="#1e3a8a" font-family="JetBrains Mono, monospace">wallets</text>
+              <rect x="307" y="25" width="59" height="18" rx="9" fill="#dbeafe" />
+              <text x="336.5" y="37.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1d4ed8">5 строк</text>
+
+              <rect x="30" y="55" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="42" y="66" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="62" y="66" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="366" y="66" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <line x1="28" y1="75" x2="368" y2="75" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="30" y="79" width="24" height="15" rx="4" fill="#f3e8ff" />
+              <text x="42" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="62" y="90" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">owner</text>
+              <text x="366" y="90" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <line x1="28" y1="99" x2="368" y2="99" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="114" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">balance</text>
+              <text x="366" y="114" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">NUMERIC(10,2) &gt;= 0</text>
+
+              <line x1="28" y1="123" x2="368" y2="123" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="138" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">city</text>
+              <text x="366" y="138" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <line x1="28" y1="147" x2="368" y2="147" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="162" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">is_vip</text>
+              <text x="366" y="162" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">BOOLEAN · def false</text>
+            </g>
+
+            <!-- ТАБЛИЦА 2: shop_items -->
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="222" width="360" height="164" rx="10" fill="#ffffff" stroke="#c4b5fd" stroke-width="1.5" />
+              <path d="M 18 232 Q 18 222 28 222 L 368 222 Q 378 222 378 232 L 378 254 L 18 254 Z" fill="#f5f3ff" />
+              <line x1="18" y1="254" x2="378" y2="254" stroke="#ddd6fe" stroke-width="1" />
+              <text x="32" y="243" font-size="13.5" font-weight="700" fill="#4c1d95" font-family="JetBrains Mono, monospace">shop_items</text>
+              <rect x="307" y="229" width="59" height="18" rx="9" fill="#ede9fe" />
+              <text x="336.5" y="241.5" text-anchor="middle" font-size="10" font-weight="600" fill="#6d28d9">6 строк</text>
+
+              <rect x="30" y="259" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="42" y="270" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="62" y="270" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="366" y="270" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <line x1="28" y1="279" x2="368" y2="279" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="30" y="283" width="24" height="15" rx="4" fill="#f3e8ff" />
+              <text x="42" y="294" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="62" y="294" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">title</text>
+              <text x="366" y="294" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <line x1="28" y1="303" x2="368" y2="303" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="27" y="307" width="28" height="15" rx="4" fill="#dcfce7" />
+              <text x="41" y="318" text-anchor="middle" font-size="9" font-weight="700" fill="#15803d" font-family="JetBrains Mono, monospace">IDX</text>
+              <text x="62" y="318" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">price</text>
+              <text x="366" y="318" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">NUMERIC(10,2) &gt; 0</text>
+
+              <line x1="28" y1="327" x2="368" y2="327" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="342" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">stock</text>
+              <text x="366" y="342" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT &gt;= 0</text>
+
+              <line x1="28" y1="351" x2="368" y2="351" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="366" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">views</text>
+              <text x="366" y="366" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT (без индекса · HOT)</text>
+            </g>
+
+            <!-- ТАБЛИЦА 3: mvcc_lab -->
+            <g filter="url(#cardShadow)">
+              <rect x="18" y="424" width="360" height="142" rx="10" fill="#ffffff" stroke="#67e8f9" stroke-width="1.5" />
+              <path d="M 18 434 Q 18 424 28 424 L 368 424 Q 378 424 378 434 L 378 456 L 18 456 Z" fill="#ecfeff" />
+              <line x1="18" y1="456" x2="378" y2="456" stroke="#a5f3fc" stroke-width="1" />
+              <text x="32" y="445" font-size="13.5" font-weight="700" fill="#155e75" font-family="JetBrains Mono, monospace">mvcc_lab</text>
+              <rect x="278" y="431" width="88" height="18" rx="9" fill="#cffafe" />
+              <text x="322" y="443.5" text-anchor="middle" font-size="10" font-weight="600" fill="#0e7490">10 000 строк</text>
+
+              <rect x="30" y="461" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="42" y="472" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="62" y="472" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="366" y="472" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <line x1="28" y1="481" x2="368" y2="481" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="496" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">status</text>
+              <text x="366" y="496" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT ('active'/'archived')</text>
+
+              <line x1="28" y1="505" x2="368" y2="505" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="520" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">counter</text>
+              <text x="366" y="520" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT · def 0</text>
+
+              <line x1="28" y1="529" x2="368" y2="529" stroke="#f1f5f9" stroke-width="1" />
+              <text x="62" y="544" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">payload</text>
+              <text x="366" y="544" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT · autovacuum=off</text>
+            </g>
+
+            <!-- ТАБЛИЦА 4: transfer_log -->
+            <g filter="url(#cardShadow)">
+              <rect x="480" y="18" width="362" height="188" rx="10" fill="#ffffff" stroke="#fcd34d" stroke-width="1.5" />
+              <path d="M 480 28 Q 480 18 490 18 L 832 18 Q 842 18 842 28 L 842 50 L 480 50 Z" fill="#fffbeb" />
+              <line x1="480" y1="50" x2="842" y2="50" stroke="#fde68a" stroke-width="1" />
+              <text x="494" y="39" font-size="13.5" font-weight="700" fill="#78350f" font-family="JetBrains Mono, monospace">transfer_log</text>
+              <rect x="767" y="25" width="63" height="18" rx="9" fill="#fef3c7" />
+              <text x="798.5" y="37.5" text-anchor="middle" font-size="10" font-weight="600" fill="#92400e">4 строки</text>
+
+              <rect x="492" y="55" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="504" y="66" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="524" y="66" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="830" y="66" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <line x1="490" y1="75" x2="832" y2="75" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="492" y="79" width="24" height="15" rx="4" fill="#fef3c7" />
+              <text x="504" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="524" y="90" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">from_wallet_id</text>
+              <text x="830" y="90" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT → wallets</text>
+
+              <line x1="490" y1="99" x2="832" y2="99" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="492" y="103" width="24" height="15" rx="4" fill="#fef3c7" />
+              <text x="504" y="114" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="524" y="114" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">to_wallet_id</text>
+              <text x="830" y="114" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT (&lt;&gt; from)</text>
+
+              <line x1="490" y1="123" x2="832" y2="123" stroke="#f1f5f9" stroke-width="1" />
+              <text x="524" y="138" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">amount</text>
+              <text x="830" y="138" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">NUMERIC(10,2) &gt; 0</text>
+
+              <line x1="490" y1="147" x2="832" y2="147" stroke="#f1f5f9" stroke-width="1" />
+              <text x="524" y="162" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">note</text>
+              <rect x="748" y="151" width="36" height="15" rx="4" fill="#fee2e2" />
+              <text x="766" y="162" text-anchor="middle" font-size="9" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono, monospace">NULL</text>
+              <text x="830" y="162" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <line x1="490" y1="171" x2="832" y2="171" stroke="#f1f5f9" stroke-width="1" />
+              <text x="524" y="186" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">created_at</text>
+              <text x="830" y="186" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TIMESTAMPTZ</text>
+            </g>
+
+            <!-- ТАБЛИЦА 5: ticket_queue -->
+            <g filter="url(#cardShadow)">
+              <rect x="480" y="236" width="362" height="142" rx="10" fill="#ffffff" stroke="#86efac" stroke-width="1.5" />
+              <path d="M 480 246 Q 480 236 490 236 L 832 236 Q 842 236 842 246 L 842 268 L 480 268 Z" fill="#f0fdf4" />
+              <line x1="480" y1="268" x2="842" y2="268" stroke="#bbf7d0" stroke-width="1" />
+              <text x="494" y="257" font-size="13.5" font-weight="700" fill="#14532d" font-family="JetBrains Mono, monospace">ticket_queue</text>
+              <rect x="771" y="243" width="59" height="18" rx="9" fill="#dcfce7" />
+              <text x="800.5" y="255.5" text-anchor="middle" font-size="10" font-weight="600" fill="#166534">6 строк</text>
+
+              <rect x="492" y="273" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="504" y="284" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="524" y="284" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="830" y="284" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+
+              <line x1="490" y1="293" x2="832" y2="293" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="492" y="297" width="24" height="15" rx="4" fill="#f3e8ff" />
+              <text x="504" y="308" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7e22ce" font-family="JetBrains Mono, monospace">UK</text>
+              <text x="524" y="308" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">seat</text>
+              <text x="830" y="308" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <line x1="490" y1="317" x2="832" y2="317" stroke="#f1f5f9" stroke-width="1" />
+              <text x="524" y="332" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">status</text>
+              <text x="830" y="332" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT ('free'/'reserved'/'paid')</text>
+
+              <line x1="490" y1="341" x2="832" y2="341" stroke="#f1f5f9" stroke-width="1" />
+              <rect x="492" y="345" width="24" height="15" rx="4" fill="#fef3c7" />
+              <text x="504" y="356" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" font-family="JetBrains Mono, monospace">FK</text>
+              <text x="524" y="356" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">wallet_id</text>
+              <rect x="748" y="345" width="36" height="15" rx="4" fill="#fee2e2" />
+              <text x="766" y="356" text-anchor="middle" font-size="9" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono, monospace">NULL</text>
+              <text x="830" y="356" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+            </g>
+
+            <!-- ТАБЛИЦА 6: parking_slots -->
+            <g filter="url(#cardShadow)">
+              <rect x="480" y="424" width="362" height="142" rx="10" fill="#ffffff" stroke="#fda4af" stroke-width="1.5" />
+              <path d="M 480 434 Q 480 424 490 424 L 832 424 Q 842 424 842 434 L 842 456 L 480 456 Z" fill="#fff1f2" />
+              <line x1="480" y1="456" x2="842" y2="456" stroke="#fecdd3" stroke-width="1" />
+              <text x="494" y="445" font-size="13.5" font-weight="700" fill="#881337" font-family="JetBrains Mono, monospace">parking_slots</text>
+              <rect x="722" y="431" width="108" height="18" rx="9" fill="#ffe4e6" />
+              <text x="776" y="443.5" text-anchor="middle" font-size="10" font-weight="600" fill="#be123c">4 стр · PG+MySQL</text>
+
+              <rect x="492" y="461" width="24" height="15" rx="4" fill="#dbeafe" />
+              <text x="504" y="472" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+              <text x="524" y="472" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+              <text x="830" y="472" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT (50, 10, 30, 70)</text>
+
+              <line x1="490" y1="481" x2="832" y2="481" stroke="#f1f5f9" stroke-width="1" />
+              <text x="524" y="496" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">car</text>
+              <text x="830" y="496" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT / VARCHAR(100)</text>
+
+              <line x1="490" y1="505" x2="832" y2="505" stroke="#f1f5f9" stroke-width="1" />
+              <text x="524" y="520" font-size="12" fill="#1e293b" font-family="JetBrains Mono, monospace">owner_name</text>
+              <rect x="748" y="509" width="36" height="15" rx="4" fill="#fee2e2" />
+              <text x="766" y="520" text-anchor="middle" font-size="9" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono, monospace">NULL</text>
+              <text x="830" y="520" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">TEXT</text>
+
+              <line x1="490" y1="529" x2="832" y2="529" stroke="#f1f5f9" stroke-width="1" />
+              <text x="494" y="547" font-size="10.5" font-style="italic" fill="#64748b">В MySQL 8.4 (init_mysql.sql): + duel_accounts (3 строки)</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="er-legend">
+          <span class="er-legend-item"><span class="er-tag er-tag-pk">PK</span> Первичный ключ</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-fk">FK</span> Внешний ключ</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-uk">UK</span> Уникальное (UNIQUE)</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-idx">IDX</span> Вторичный B-Tree индекс</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-null">NULL</span> Может быть пустым</span>
+        </div>
+
+        <div class="quirks-grid">
+          <div class="quirk-chip">
+            <strong>Кошельки и VIP-лимит:</strong> у Егора (<code>id=5</code>) баланс <code>0.00</code>; Алиса (<code>1000</code>) и Дина (<code>750</code>) — <code>is_vip = true</code> (сумма <code>1750</code> — тест <em>Write Skew</em>).
+          </div>
+          <div class="quirk-chip">
+            <strong>Лавка и HOT:</strong> у «Щита новичка» <code>stock=1</code>, у «Плаща невидимки» <code>stock=0</code>. Поле <code>price</code> проиндексировано, а <code>views</code> — нет.
+          </div>
+          <div class="quirk-chip">
+            <strong>Лаборатория MVCC:</strong> в <code>mvcc_lab</code> <code>10 000</code> строк (8 000 <code>active</code> + 2 000 <code>archived</code>) и выключен <code>autovacuum</code> — для Bloat и <code>VACUUM</code>.
+          </div>
+          <div class="quirk-chip">
+            <strong>Дырки для дуэли:</strong> в <code>parking_slots</code> вставлены <code>50, 10, 30, 70</code> (пробелы <code>20, 40, 60</code>) — показывает Heap vs Clustered и Gap Locks.
+          </div>
+        </div>
+
+        <details class="data-preview">
+          <summary>Заглянуть в стартовые данные таблиц (init.sql и init_mysql.sql)</summary>
+          <div class="preview-body">
+            <div>
+              <div class="preview-table-title">wallets <span>· 5 строк (сумма = 2450.00, VIP = 1750.00)</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>id</th><th>owner</th><th>balance</th><th>city</th><th>is_vip</th></tr></thead>
+                  <tbody>
+                    <tr><td>1</td><td>Алиса</td><td>1000.00</td><td>Алматы</td><td>true</td></tr>
+                    <tr><td>2</td><td>Боб</td><td>500.00</td><td>Астана</td><td>false</td></tr>
+                    <tr><td>3</td><td>Чарли</td><td>200.00</td><td>Алматы</td><td>false</td></tr>
+                    <tr><td>4</td><td>Дина</td><td>750.00</td><td>Шымкент</td><td>true</td></tr>
+                    <tr><td>5</td><td>Егор</td><td>0.00</td><td>Караганда</td><td>false</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div class="preview-table-title">shop_items <span>· 6 строк (сумма цен = 2420.00; price с индексом, views — без)</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>id</th><th>title</th><th>price</th><th>stock</th><th>views</th></tr></thead>
+                  <tbody>
+                    <tr><td>1</td><td>Алмазный меч</td><td>600.00</td><td>2</td><td>120</td></tr>
+                    <tr><td>2</td><td>Зелье маны</td><td>150.00</td><td>5</td><td>85</td></tr>
+                    <tr><td>3</td><td>Щит новичка</td><td>300.00</td><td>1</td><td>40</td></tr>
+                    <tr><td>4</td><td>Плащ невидимки</td><td>450.00</td><td>0</td><td>210</td></tr>
+                    <tr><td>5</td><td>Компас героя</td><td>120.00</td><td>8</td><td>30</td></tr>
+                    <tr><td>6</td><td>Сапоги скорости</td><td>800.00</td><td>3</td><td>65</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div class="preview-table-title">ticket_queue <span>· 6 строк (id 1–4 свободны)</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>id</th><th>seat</th><th>status</th><th>wallet_id</th></tr></thead>
+                  <tbody>
+                    <tr><td>1</td><td>Ряд 1, Место 1</td><td><span class="status-pill">free</span></td><td><span class="null-pill">NULL</span></td></tr>
+                    <tr><td>2</td><td>Ряд 1, Место 2</td><td><span class="status-pill">free</span></td><td><span class="null-pill">NULL</span></td></tr>
+                    <tr><td>3</td><td>Ряд 1, Место 3</td><td><span class="status-pill">free</span></td><td><span class="null-pill">NULL</span></td></tr>
+                    <tr><td>4</td><td>Ряд 1, Место 4</td><td><span class="status-pill">free</span></td><td><span class="null-pill">NULL</span></td></tr>
+                    <tr><td>5</td><td>Ряд 2, Место 1</td><td><span class="status-pill">reserved</span></td><td>1</td></tr>
+                    <tr><td>6</td><td>Ряд 2, Место 2</td><td><span class="status-pill">paid</span></td><td>4</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div class="preview-table-title">parking_slots (PG + MySQL) и duel_accounts (только MySQL)</div>
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>parking_slots.id</th><th>car</th><th>owner_name</th><th>duel_accounts (MySQL)</th></tr></thead>
+                  <tbody>
+                    <tr><td>50</td><td>Кроссовер</td><td>Дина</td><td>1 · Алиса · 1000.00</td></tr>
+                    <tr><td>10</td><td>Седан</td><td>Алиса</td><td>2 · Боб · 500.00</td></tr>
+                    <tr><td>30</td><td>Джип</td><td>Боб</td><td>3 · Чарли · 200.00</td></tr>
+                    <tr><td>70</td><td>Фургон</td><td><span class="null-pill">NULL</span></td><td>—</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 01. УРОК 4.1 ==================== -->
+    <section id="sec-4-1" data-section-lesson="4_1">
+      <h2><span class="sec-num">01</span> Урок 4.1 · Транзакции, ACID и аномалии параллельного доступа (6 заданий)</h2>
+      <p>
+        Отрабатываем атомарность переводов, выход из режима <code>aborted</code>, точки сохранения <code>SAVEPOINT</code>, а затем переходим к двум окнам терминала: ловим классические аномалии чтения и чиним баг <strong>Lost Update</strong>.
+      </p>
+
+      <!-- 4.1.1 -->
+      <div class="task-card" data-task-id="4_1_1" data-lesson="4_1" data-tags="practice">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.1.1" />
+            <div class="task-title"><span class="task-num">4.1.1</span> Жизненный цикл транзакции: откат, подтверждение и инвариант балансов</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg1">1 окно · PG</span>
+            <span class="lvl-badge lvl-base">Практика</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Выполни две короткие транзакции подряд:
+          1) Попробуй списать <code>100.00</code> с <code>'Алиса'</code>, убедись внутри блока, что баланс стал <code>900.00</code>, и полностью отмени операцию через <code>ROLLBACK;</code>.
+          2) В новой <strong>единой транзакции</strong> переведи <code>200.00</code> от <code>'Алиса'</code> (<code>id = 1</code>) к <code>'Боб'</code> (<code>id = 2</code>), запиши операцию в <code>transfer_log</code> (<code>note = 'Перевод за меч'</code>) и зафиксируй <code>COMMIT;</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Критерий приёмки</div>
+          <ul>
+            <li>У Алисы <code>800.00</code>, у Боба <code>700.00</code>, в <code>transfer_log</code> появилась 5-я строка.</li>
+            <li>Общая сумма всех кошельков (<code>SUM(balance)</code>) не изменилась и осталась <code>2450.00</code>.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать решение и разбор</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · PostgreSQL 16</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- Часть 1: тренировочный откат
+BEGIN;
+UPDATE wallets SET balance = balance - 100.00 WHERE owner = 'Алиса';
+SELECT owner, balance FROM wallets WHERE owner = 'Алиса'; -- 900.00 внутри блока
+ROLLBACK;
+
+-- Часть 2: атомарный перевод + запись в журнал
+BEGIN;
+UPDATE wallets SET balance = balance - 200.00 WHERE id = 1;
+UPDATE wallets SET balance = balance + 200.00 WHERE id = 2;
+INSERT INTO transfer_log (from_wallet_id, to_wallet_id, amount, note)
+VALUES (1, 2, 200.00, 'Перевод за меч');
+COMMIT;
+
+-- Проверка инварианта Consistency
+SELECT id, owner, balance FROM wallets WHERE id IN (1, 2) ORDER BY id;
+SELECT SUM(balance) AS total_gold FROM wallets;</code></pre>
+          </div>
+          <p class="solution-note"><strong>Почему это важно:</strong> в <code>psql</code> во время открытой транзакции приглашение меняется с <code>=#</code> на <code>=*#</code>. Если сервер упадёт между двумя <code>UPDATE</code> до <code>COMMIT</code>, WAL откатит незавершённую транзакцию и деньги не пропадут (Atomicity).</p>
+        </details>
+      </div>
+
+      <!-- 4.1.2 -->
+      <div class="task-card" data-task-id="4_1_2" data-lesson="4_1" data-tags="practice">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.1.2" />
+            <div class="task-title"><span class="task-num">4.1.2</span> Режим aborted и щиты Consistency (wallets, transfer_log, shop_items)</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg1">1 окно · PG</span>
+            <span class="lvl-badge lvl-base">Практика</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          В PostgreSQL любая ошибка внутри <code>BEGIN</code> переводит транзакцию в состояние <code>aborted</code> (приглашение <code>=!#</code>), и все следующие команды игнорируются до <code>ROLLBACK</code>. Проверь на практике 3 защитных ограничения:
+          1) Внутри транзакции спиши <code>600.00</code> с Алисы (успешно!), затем попробуй списать <code>2</code> штуки <code>'Щит новичка'</code> (в <code>shop_items</code> осталась <code>1</code> шт. → ошибка <code>CHECK</code>). Не закрывая транзакцию, выполни <code>SELECT * FROM wallets;</code>, поймай ошибку <code>current transaction is aborted</code> и выйди через <code>ROLLBACK;</code>.
+          2) Отдельно проверь запрет перевода самому себе в <code>transfer_log</code> (<code>from_wallet_id = 1, to_wallet_id = 1</code>).
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Если вместо <code>ROLLBACK;</code> в состоянии <code>aborted</code> написать <code>COMMIT;</code> — что на самом деле сделает PostgreSQL?</li>
+            <li>Списались ли <code>600.00</code> с Алисы после ошибки на втором шаге?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать решение и разбор</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · PostgreSQL 16</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- 1. Сбой на втором шаге покупки + состояние aborted
+BEGIN;
+UPDATE wallets SET balance = balance - 600.00 WHERE owner = 'Алиса';
+UPDATE shop_items SET stock = stock - 2 WHERE title = 'Щит новичка';
+-- ERROR: violates check constraint "shop_items_stock_check"
+
+SELECT * FROM wallets;
+-- ERROR: current transaction is aborted, commands ignored until end of transaction block
+
+ROLLBACK;
+
+-- 2. Запрет перевода самому себе (CHECK from_wallet_id &lt;&gt; to_wallet_id)
+BEGIN;
+INSERT INTO transfer_log (from_wallet_id, to_wallet_id, amount, note)
+VALUES (1, 1, 100.00, 'Сам себе');
+ROLLBACK;</code></pre>
+          </div>
+          <p class="solution-note"><strong>Ответ на проверку:</strong> команда <code>COMMIT;</code> в состоянии <code>aborted</code> всё равно выполнит <code>ROLLBACK</code> (в <code>psql</code> так и напечатается — <code>ROLLBACK</code>). Списание <code>600.00</code> с Алисы полностью отменено.</p>
+        </details>
+      </div>
+
+      <!-- 4.1.3 -->
+      <div class="task-card" data-task-id="4_1_3" data-lesson="4_1" data-tags="practice">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.1.3" />
+            <div class="task-title"><span class="task-num">4.1.3</span> Частичный откат покупки через SAVEPOINT и RELEASE SAVEPOINT</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg1">1 окно · PG</span>
+            <span class="lvl-badge lvl-base">Практика</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Игрок <code>'Алиса'</code> в <strong>одной транзакции</strong> покупает корзину из двух товаров:
+          1) <code>'Зелье маны'</code> за <code>150.00</code> (есть на складе);
+          2) <code>'Плащ невидимки'</code> за <code>450.00</code> (<code>stock = 0</code> — упадёт с ошибкой!).
+          Настрой <code>SAVEPOINT</code> так, чтобы при ошибке на плаще покупка зелья не пропала, сними статус <code>aborted</code> откатом к чекпоинту, освободи точку сохранения через <code>RELEASE SAVEPOINT</code> и подтверди транзакцию.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Откатывает ли команда <code>RELEASE SAVEPOINT</code> изменения, сделанные после чекпоинта?</li>
+            <li>Почему нельзя создавать тысячи <code>SAVEPOINT</code> в цикле внутри одной транзакции?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать решение и разбор</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · PostgreSQL 16</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">BEGIN;
+
+-- 1. Успешная покупка зелья
+UPDATE wallets SET balance = balance - 150.00 WHERE owner = 'Алиса';
+UPDATE shop_items SET stock = stock - 1 WHERE title = 'Зелье маны';
+
+-- 2. Ставим точку сохранения
+SAVEPOINT after_potion;
+
+-- 3. Неудачная попытка купить плащ (stock = 0 -&gt; CHECK error)
+UPDATE wallets SET balance = balance - 450.00 WHERE owner = 'Алиса';
+UPDATE shop_items SET stock = stock - 1 WHERE title = 'Плащ невидимки';
+
+-- 4. Откатываем только неудачный шаг (снимает aborted!) и освобождаем чекпоинт
+ROLLBACK TO SAVEPOINT after_potion;
+RELEASE SAVEPOINT after_potion;
+COMMIT;
+
+SELECT owner, balance FROM wallets WHERE owner = 'Алиса';
+SELECT title, stock FROM shop_items WHERE title IN ('Зелье маны', 'Плащ невидимки') ORDER BY id;</code></pre>
+          </div>
+          <p class="solution-note"><strong>Разбор:</strong> <code>RELEASE SAVEPOINT</code> ничего не откатывает — он лишь удаляет метку и освобождает память. Каждый <code>SAVEPOINT</code> создаёт субтранзакцию (SubXID); больше 64 активных субтранзакций на бэкенд приводят к деградации (<code>SubtransSLRU</code>) под нагрузкой.</p>
+        </details>
+      </div>
+
+      <!-- 4.1.4 -->
+      <div class="task-card" data-task-id="4_1_4" data-lesson="4_1" data-tags="multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.1.4" />
+            <div class="task-title"><span class="task-num">4.1.4</span> Доказываем, что Dirty Read невозможен</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg2">2 окна · PG</span>
+            <span class="lvl-badge lvl-exp">Эксперимент</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Проверь гарантию Isolation в двух параллельных сессиях: в <strong>Окне 1</strong> измени цену <code>'Алмазный меч'</code> на <code>9999.00</code> без <code>COMMIT</code>, а в <strong>Окне 2</strong> попробуй прочитать этот «черновик» — даже с явным запросом уровня <code>READ UNCOMMITTED</code>!
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Что наблюдать</div>
+          <ul>
+            <li>Какую цену вернёт Окно 2: <code>600.00</code> или <code>9999.00</code>?</li>
+            <li>Заблокируется ли <code>SELECT</code> в Окне 2 из-за незавершённого <code>UPDATE</code> в Окне 1?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый протокол (Окно 1 | Окно 2)</summary>
+          <div class="tl-wrap">
+            <div class="tl-head">
+              <div class="tl-col-head win1">Окно 1 · Писатель</div>
+              <div class="tl-col-head win2">Окно 2 · Читатель</div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 1</span> Меняем без COMMIT</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+UPDATE shop_items
+SET price = 9999.00
+WHERE title = 'Алмазный меч';</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём завершения Шага 1</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">⏸ Транзакция открыта (без COMMIT)</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 2</span> Пытаемся поймать Dirty Read</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN ISOLATION LEVEL READ UNCOMMITTED;
+SELECT title, price
+FROM shop_items
+WHERE title = 'Алмазный меч';
+COMMIT;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 3</span> Отменяем черновик</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">ROLLBACK;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait">✓ Увидело 600.00 мгновенно, без ожидания</div></div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Вывод:</strong> в PostgreSQL уровень <code>READ UNCOMMITTED</code> внутри работает идентично <code>READ COMMITTED</code> — грязное чтение архитектурно невозможно благодаря MVCC.</p>
+        </details>
+      </div>
+
+      <!-- 4.1.5 -->
+      <div class="task-card" data-task-id="4_1_5" data-lesson="4_1" data-tags="multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.1.5" />
+            <div class="task-title"><span class="task-num">4.1.5</span> Ловим Non-Repeatable Read и Phantom Read в READ COMMITTED</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg2">2 окна · PG</span>
+            <span class="lvl-badge lvl-exp">Эксперимент</span>
+          </div>
+        </div>
+        <div class="state-bar">↺ <strong>Стартовые числа</strong> (после <code>init.sql</code>): <code>Компас героя = 120.00</code>, товаров дешевле <code>200.00</code> ровно <code>2</code>.</div>
+        <p class="task-desc">
+          Покажи, что внутри одной транзакции на уровне по умолчанию (<code>READ COMMITTED</code>) два одинаковых <code>SELECT</code> могут вернуть разные данные: в <strong>Окне 1</strong> прочитай цену <code>'Компас героя'</code> и число товаров дешевле <code>200.00</code>, затем в <strong>Окне 2</strong> подними цену компаса до <code>180.00</code> и добавь новый товар <code>('Факел', 90.00, 10, 0)</code> с <code>COMMIT</code>, после чего повтори оба запроса в <strong>Окне 1</strong>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Что наблюдать</div>
+          <ul>
+            <li>Какая из двух цифр иллюстрирует <em>Non-Repeatable Read</em>, а какая — <em>Phantom Read</em>?</li>
+            <li>В какой момент PostgreSQL берёт новый снимок данных (Snapshot) в режиме <code>READ COMMITTED</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый протокол (Окно 1 | Окно 2)</summary>
+          <div class="tl-wrap">
+            <div class="tl-head">
+              <div class="tl-col-head win1">Окно 1 · Долгий отчёт (READ COMMITTED)</div>
+              <div class="tl-col-head win2">Окно 2 · Обновление прайса</div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 1</span> Первое чтение (120.00 и 2)</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+SELECT title, price FROM shop_items
+WHERE title = 'Компас героя';
+
+SELECT COUNT(*) AS cheap_cnt
+FROM shop_items WHERE price &lt; 200.00;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём Шаг 1</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">⏸ Транзакция всё ещё открыта</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 2</span> Меняем строку + вставляем фантом</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+UPDATE shop_items SET price = 180.00
+WHERE title = 'Компас героя';
+INSERT INTO shop_items (title, price, stock, views)
+VALUES ('Факел', 90.00, 10, 0);
+COMMIT;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 3</span> Повтор тех же SELECT</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">SELECT title, price FROM shop_items
+WHERE title = 'Компас героя'; -- 180.00!
+
+SELECT COUNT(*) AS cheap_cnt
+FROM shop_items WHERE price &lt; 200.00; -- 3!
+COMMIT;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait">✓ Изменения уже видны Окне 1</div></div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Разбор:</strong> в <code>READ COMMITTED</code> новый снимок берётся на <em>каждый отдельный оператор</em> внутри транзакции. Изменившаяся цена <code>120 → 180</code> — <em>Non-Repeatable Read</em>, появление новой строки «Факел» (<code>2 → 3</code>) — <em>Phantom Read</em>.</p>
+        </details>
+      </div>
+
+      <!-- 4.1.6 -->
+      <div class="task-card" data-task-id="4_1_6" data-lesson="4_1" data-tags="bugfix multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.1.6" />
+            <div class="task-title"><span class="task-num">4.1.6</span> Код-ревью: потерянное пополнение кошелька (Lost Update)</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg2">2 окна · PG</span>
+            <span class="lvl-badge lvl-bug">Баг-фикс</span>
+          </div>
+        </div>
+        <div class="state-bar">↺ <strong>Сброс для Дины:</strong> <code>UPDATE wallets SET balance = 750.00 WHERE owner = 'Дина';</code></div>
+        <p class="task-desc">
+          Два платёжных воркера одновременно пополняют баланс <code>'Дина'</code> (исходно <code>750.00</code>): первый начисляет <code>+100.00</code>, второй — <code>+250.00</code>. Клиент жалуется, что вместо <code>1100.00</code> на счёте оказывается <code>1000.00</code>. Вот фрагмент кода из бэкенда:
+        </p>
+        <div class="code-block bug-code">
+          <div class="code-header"><span class="code-lang">❌ ПРОБЛЕМНЫЙ КОД (read-modify-write в приложении)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-sql">-- Воркер 1 и Воркер 2 одновременно читают 750.00:
+SELECT balance FROM wallets WHERE owner = 'Дина';
+-- Код приложения считает 750 + 100 = 850 (Воркер 1) и 750 + 250 = 1000 (Воркер 2)
+-- Затем каждый отправляет готовое абсолютное число:
+UPDATE wallets SET balance = 850.00  WHERE owner = 'Дина'; -- Воркер 1
+UPDATE wallets SET balance = 1000.00 WHERE owner = 'Дина'; -- Воркер 2 перезатёр +100!</code></pre>
+        </div>
+        <p class="task-desc">
+          <strong>Задача:</strong> исправь SQL-логику на атомарное обновление (без чтения числа в код приложения) и докажи в 2 окнах, что при перекрывающихся транзакциях Окно 2 честно дождётся Окна 1 и итоговый баланс Дины станет ровно <code>1100.00</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Что происходит со строкой Дины в Окне 2 на Шаге 2 до того, как Окно 1 сделало <code>COMMIT</code>?</li>
+            <li>Откуда Окно 2 берёт новое значение <code>850.00</code> после отпускания замка, если его транзакция началась раньше?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать исправление и 2-оконную проверку</summary>
+          <div class="tl-wrap">
+            <div class="tl-head">
+              <div class="tl-col-head win1">Окно 1 · Пополнение +100.00</div>
+              <div class="tl-col-head win2">Окно 2 · Пополнение +250.00</div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 1</span> Сброс + атомарный UPDATE</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">UPDATE wallets SET balance = 750.00
+WHERE owner = 'Дина';
+
+BEGIN;
+UPDATE wallets
+SET balance = balance + 100.00
+WHERE owner = 'Дина';</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём Шаг 1</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">🔒 Держит замок на строке Дины</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 2</span> Запустится и ЗАМРЁТ</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+UPDATE wallets
+SET balance = balance + 250.00
+WHERE owner = 'Дина';</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 3</span> Фиксируем +100 (850.00)</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">COMMIT;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait blocked">⏳ Ждёт COMMIT в Окне 1…</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">✓ Завершено</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 4</span> Проснулось → COMMIT + проверка</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">COMMIT;
+SELECT owner, balance FROM wallets
+WHERE owner = 'Дина'; -- ровно 1100.00!</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Почему это работает:</strong> в <code>READ COMMITTED</code> ожидающий <code>UPDATE</code> после освобождения строчного замка перечитывает свежую закоммиченную версию строки (механизм <em>EvalPlanQual</em>) и вычисляет <code>850 + 250 = 1100</code>. Альтернатива при сложной бизнес-логике в коде — <code>SELECT ... FOR UPDATE</code> или оптимистичная блокировка с колонкой <code>version</code>.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 02. УРОК 4.2 ==================== -->
+    <section id="sec-4-2" data-section-lesson="4_2">
+      <h2><span class="sec-num">02</span> Урок 4.2 · MVCC (многоверсионность) и VACUUM в PostgreSQL (5 заданий)</h2>
+      <p>
+        Смотрим на реальную физику строк (<code>ctid</code>, <code>xmin</code>, <code>xmax</code>), проводим 3-шаговую лабораторную по <strong>Table Bloat</strong> и <code>VACUUM</code>, ловим паралич уборщика из-за забытой транзакции и чиним багованный скрипт обслуживания.
+      </p>
+
+      <!-- 4.2.1 -->
+      <div class="task-card" data-task-id="4_2_1" data-lesson="4_2" data-tags="practice">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.2.1" />
+            <div class="task-title"><span class="task-num">4.2.1</span> Рентген MVCC: доказываем «переезд» строки при UPDATE</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg1">1 окно · PG</span>
+            <span class="lvl-badge lvl-base">Практика</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Выведи скрытые системные столбцы <code>ctid</code>, <code>xmin</code>, <code>xmax</code> вместе с <code>title</code> и <code>stock</code> для товара <code>'Зелье маны'</code> в <code>shop_items</code>. Затем увеличь его <code>stock</code> на <code>1</code> (внутри <code>BEGIN ... COMMIT</code>, заодно посмотрев <code>pg_current_xact_id()</code>) и снова выведи те же системные столбцы.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Что означают два числа в <code>ctid</code> вида <code>(0,7)</code> и почему номер слота вырос?</li>
+            <li>Совпал ли новый <code>xmin</code> с тем значением, которое вернула <code>pg_current_xact_id()</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать решение и разбор</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · PostgreSQL 16</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- 1. До обновления
+SELECT ctid, xmin, xmax, title, stock
+FROM shop_items WHERE title = 'Зелье маны';
+
+-- 2. Обновление внутри транзакции с фиксацией её XID
+BEGIN;
+SELECT pg_current_xact_id() AS my_xid;
+UPDATE shop_items SET stock = stock + 1 WHERE title = 'Зелье маны';
+COMMIT;
+
+-- 3. После обновления: новый слот ctid и xmin = my_xid!
+SELECT ctid, xmin, xmax, title, stock
+FROM shop_items WHERE title = 'Зелье маны';</code></pre>
+          </div>
+          <p class="solution-note"><strong>Физика MVCC:</strong> в PostgreSQL <code>UPDATE</code> не переписывает строку на месте — он помечает старую версию (<code>xmax</code>) и вставляет новую версию в новый слот страницы (новый <code>ctid</code> и новый <code>xmin</code>).</p>
+        </details>
+      </div>
+
+      <!-- 4.2.2 -->
+      <div class="task-card" data-task-id="4_2_2" data-lesson="4_2" data-tags="multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.2.2" />
+            <div class="task-title"><span class="task-num">4.2.2</span> Ловим xmax чужой незавершённой транзакции</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg2">2 окна · PG</span>
+            <span class="lvl-badge lvl-exp">Эксперимент</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Загляни в момент «между жизнью и смертью» версии строки: в <strong>Окне 2</strong> открой транзакцию, узнай её XID и обнови баланс <code>'Боб'</code> на <code>999.00</code> <em>без COMMIT</em>. Пока транзакция висит, в <strong>Окне 1</strong> прочитай <code>ctid, xmin, xmax, owner, balance</code> Боба, а затем закоммить Окно 2 и повтори чтение в Окне 1.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Что наблюдать</div>
+          <ul>
+            <li>На Шаге 2 баланс Боба старый, но поле <code>xmax</code> уже НЕ равно <code>0</code> — чему оно равно?</li>
+            <li>Как меняется пара <code>(xmin, xmax)</code> в Окне 1 после <code>COMMIT</code> в Окне 2?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый протокол (Окно 1 | Окно 2)</summary>
+          <div class="tl-wrap">
+            <div class="tl-head">
+              <div class="tl-col-head win1">Окно 1 · Наблюдатель</div>
+              <div class="tl-col-head win2">Окно 2 · Изменяет Боба</div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём Шаг 1</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 1</span> Обновляем без COMMIT</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+SELECT pg_current_xact_id() AS t2_xid;
+UPDATE wallets SET balance = 999.00
+WHERE owner = 'Боб';</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 2</span> Читаем старую версию + xmax</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">SELECT ctid, xmin, xmax, owner, balance
+FROM wallets WHERE owner = 'Боб';
+-- balance старый, но xmax = t2_xid!</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait">⏸ Транзакция открыта (без COMMIT)</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём COMMIT</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 3</span> Подтверждаем</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">COMMIT;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 4</span> Теперь видим новую версию</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">SELECT ctid, xmin, xmax, owner, balance
+FROM wallets WHERE owner = 'Боб';
+-- новый ctid, xmin = t2_xid, xmax = 0, 999.00</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait">✓ Завершено</div></div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Золотое правило MVCC:</strong> писатели не блокируют читателей, а читатели не блокируют писателей — каждая транзакция просто фильтрует видимые версии по <code>xmin</code>/<code>xmax</code> и журналу статусов CLOG.</p>
+        </details>
+      </div>
+
+      <!-- 4.2.3 -->
+      <div class="task-card" data-task-id="4_2_3" data-lesson="4_2" data-tags="practice lab">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.2.3" />
+            <div class="task-title"><span class="task-num">4.2.3</span> Лабораторная: полный цикл Table Bloat (3×UPDATE → VACUUM → VACUUM FULL)</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg1">1 окно · PG</span>
+            <span class="lvl-badge lvl-lab">Лаба · 3 шага</span>
+          </div>
+        </div>
+        <div class="state-bar">↺ <strong>Рекомендуется свежий <code>init.sql</code></strong> — в <code>mvcc_lab</code> 10 000 строк и выключен <code>autovacuum</code>.</div>
+        <p class="task-desc">
+          Пройди три последовательных этапа на <code>mvcc_lab</code> и замерь после каждого этапа <code>pg_size_pretty(pg_relation_size('mvcc_lab'))</code>, <code>n_live_tup</code> и <code>n_dead_tup</code> из <code>pg_stat_user_tables</code>:
+          <strong>Этап 1 (Bloat):</strong> сними исходный размер (~1.28 МБ), затем выполни <strong>3 раза подряд</strong> <code>UPDATE mvcc_lab SET counter = counter + 1;</code>.
+          <strong>Этап 2 (Мягкая уборка):</strong> запусти <code>VACUUM (VERBOSE, ANALYZE) mvcc_lab;</code>.
+          <strong>Этап 3 (Сжатие файла):</strong> удали все 2 000 строк со <code>status = 'archived'</code>, затем выполни <code>VACUUM FULL mvcc_lab; ANALYZE mvcc_lab;</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Заполни таблицу замеров в голове (и проверь в разборе)</div>
+          <ul>
+            <li>Во сколько раз вырос размер файла после 3×<code>UPDATE</code> при том, что <code>n_live_tup</code> остался <code>10 000</code>?</li>
+            <li>Почему после <code>VACUUM (VERBOSE, ANALYZE)</code> счётчик <code>n_dead_tup</code> стал <code>0</code>, а размер файла на диске <strong>не уменьшился</strong>?</li>
+            <li>Почему <code>VACUUM FULL</code> опасен в продакшене и чем его заменяют?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать 3 шага лабораторной и эталонную таблицу замеров</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Этап 1 · Исходный замер + лабораторный Bloat (3×UPDATE)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">-- До обновлений (~1.28 МБ, live=10000, dead=0)
+SELECT pg_size_pretty(pg_relation_size('mvcc_lab')) AS table_size, n_live_tup, n_dead_tup
+FROM pg_stat_user_tables WHERE relname = 'mvcc_lab';
+
+UPDATE mvcc_lab SET counter = counter + 1;
+UPDATE mvcc_lab SET counter = counter + 1;
+UPDATE mvcc_lab SET counter = counter + 1;
+
+SELECT pg_stat_force_next_flush();
+SELECT pg_size_pretty(pg_relation_size('mvcc_lab')) AS size_after_bloat, n_live_tup, n_dead_tup
+FROM pg_stat_user_tables WHERE relname = 'mvcc_lab';</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Этап 2 · Мягкая уборка без блокировок (VACUUM VERBOSE ANALYZE)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">VACUUM (VERBOSE, ANALYZE) mvcc_lab;
+
+SELECT pg_size_pretty(pg_relation_size('mvcc_lab')) AS size_after_vacuum, n_live_tup, n_dead_tup, last_vacuum
+FROM pg_stat_user_tables WHERE relname = 'mvcc_lab';</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Этап 3 · Удаление архива и возврат места ОС (VACUUM FULL)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">DELETE FROM mvcc_lab WHERE status = 'archived';
+SELECT pg_size_pretty(pg_relation_size('mvcc_lab')) AS size_after_delete;
+
+VACUUM FULL mvcc_lab;
+ANALYZE mvcc_lab;
+
+SELECT pg_size_pretty(pg_relation_size('mvcc_lab')) AS size_after_full, n_live_tup, n_dead_tup
+FROM pg_stat_user_tables WHERE relname = 'mvcc_lab';</code></pre>
+            </div>
+          </div>
+
+          <div class="table-wrapper" style="margin-top: 0.75rem; margin-bottom: 0;">
+            <table>
+              <thead><tr><th>Этап</th><th>Размер файла</th><th>n_live_tup</th><th>n_dead_tup</th><th>Что произошло</th></tr></thead>
+              <tbody>
+                <tr><td>Исходно</td><td>~1.3 МБ</td><td>10 000</td><td>0</td><td>Плотно упакованная таблица</td></tr>
+                <tr><td>После 3×UPDATE</td><td><strong>~5.1 МБ (×4)</strong></td><td>10 000</td><td>30 000</td><td>30 000 мёртвых версий раздули Heap</td></tr>
+                <tr><td>После VACUUM</td><td>~5.1 МБ</td><td>10 000</td><td><strong>0</strong></td><td>Слоты помечены свободными <em>внутри</em> файла для новых вставок</td></tr>
+                <tr><td>После DELETE + VACUUM FULL</td><td><strong>~1.0 МБ</strong></td><td>8 000</td><td>0</td><td>Таблица переписана в новый файл, место возвращено ОС</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="solution-note"><strong>Для продакшена:</strong> <code>VACUUM FULL</code> вешает <code>ACCESS EXCLUSIVE LOCK</code> (полностью останавливает чтение и запись в таблицу). Для онлайн-сжатия без простоя используют расширение <code>pg_repack</code>.</p>
+        </details>
+      </div>
+
+      <!-- 4.2.4 -->
+      <div class="task-card" data-task-id="4_2_4" data-lesson="4_2" data-tags="multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.2.4" />
+            <div class="task-title"><span class="task-num">4.2.4</span> Как «забытая» транзакция парализует VACUUM</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg2">2 окна · PG</span>
+            <span class="lvl-badge lvl-exp">Эксперимент</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Воспроизведи одну из главных причин аварийного Bloat в продакшене: в <strong>Окне 1</strong> открой транзакцию, выполни <code>SELECT count(*) FROM mvcc_lab;</code> и «забудь» её закрыть. В <strong>Окне 2</strong> обнови 100 строк и вызови <code>VACUUM VERBOSE mvcc_lab;</code> — найди в отчёте фразу <code>dead but not yet removable</code>. Затем закрой Окно 1, повтори уборку и проверь страховку <code>idle_in_transaction_session_timeout</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Что наблюдать</div>
+          <ul>
+            <li>Сколько мёртвых версий <code>VACUUM</code> смог удалить на Шаге 2 (пока Окно 1 открыто) и сколько — на Шаге 4 (после <code>COMMIT</code>)?</li>
+            <li>Почему даже простой <code>SELECT</code> без записи мешает уборщику?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый протокол (Окно 1 | Окно 2)</summary>
+          <div class="tl-wrap">
+            <div class="tl-head">
+              <div class="tl-col-head win1">Окно 1 · «Забытая» транзакция</div>
+              <div class="tl-col-head win2">Окно 2 · Обновление и VACUUM</div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 1</span> Держим старый снимок</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+SELECT count(*) FROM mvcc_lab;
+-- НЕ делаем COMMIT!</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём Шаг 1</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait blocked">⏸ idle in transaction (держит xmin horizon)</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 2</span> Мусор не удаляется!</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">UPDATE mvcc_lab SET counter = counter + 1
+WHERE id &lt;= 100;
+
+VACUUM VERBOSE mvcc_lab;
+-- Ищи: "0 removed ... dead but not yet removable"</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 3</span> Закрываем транзакцию</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">COMMIT;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём закрытия Окна 1</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">✓ Снимок освобождён</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 4</span> Уборка + страховка</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">VACUUM VERBOSE mvcc_lab; -- теперь удалит!
+
+SET idle_in_transaction_session_timeout = '30s';
+SHOW idle_in_transaction_session_timeout;</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Вывод:</strong> любая транзакция с открытым снимком (даже read-only) удерживает глобальный горизонт <code>oldest_xmin</code>, запрещая <code>VACUUM</code> чистить строки, созданные позже. В проде обязательно задают <code>idle_in_transaction_session_timeout</code>.</p>
+        </details>
+      </div>
+
+      <!-- 4.2.5 -->
+      <div class="task-card" data-task-id="4_2_5" data-lesson="4_2" data-tags="bugfix">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.2.5" />
+            <div class="task-title"><span class="task-num">4.2.5</span> Код-ревью: ночной скрипт обслуживания падает на VACUUM</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg1">1 окно · PG</span>
+            <span class="lvl-badge lvl-bug">Баг-фикс</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Разработчик добавил миграцию/ночную очистку в ORM, которая оборачивает весь SQL-файл в транзакцию. Скрипт падает с ошибкой, а таблица <code>mvcc_lab</code> продолжает раздуваться, потому что для неё забыли включить автоуборку:
+        </p>
+        <div class="code-block bug-code">
+          <div class="code-header"><span class="code-lang">❌ ПРОБЛЕМНЫЙ СКРИПТ ОБСЛУЖИВАНИЯ</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-sql">BEGIN;
+DELETE FROM mvcc_lab WHERE status = 'archived';
+VACUUM ANALYZE mvcc_lab; -- ERROR: VACUUM cannot run inside a transaction block!
+COMMIT;</code></pre>
+        </div>
+        <p class="task-desc">
+          <strong>Задача:</strong> 1) воспроизведи ошибку <code>VACUUM</code> внутри <code>BEGIN</code> и аккуратно откати блок; 2) вынеси <code>VACUUM ANALYZE</code> за пределы транзакции; 3) вместо ручных ночных прогонов настрой агрессивный <code>autovacuum</code> прямо на таблице <code>mvcc_lab</code> (включи <code>autovacuum_enabled = true</code> и снизь <code>autovacuum_vacuum_scale_factor = 0.05</code>, т.е. уборка при 5% мёртвых строк вместо 20%) и проверь результат в <code>pg_class.reloptions</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать исправление и разбор</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · PostgreSQL 16</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- 1. Воспроизводим ошибку
+BEGIN;
+VACUUM ANALYZE mvcc_lab; -- ERROR: VACUUM cannot run inside a transaction block
+ROLLBACK;
+
+-- 2. Правильный порядок: транзакция отдельно, VACUUM — вне блока BEGIN
+BEGIN;
+DELETE FROM mvcc_lab WHERE status = 'archived';
+COMMIT;
+VACUUM ANALYZE mvcc_lab;
+
+-- 3. Включаем и тюнингуем per-table autovacuum (5% вместо 20% по умолчанию)
+ALTER TABLE mvcc_lab SET (
+    autovacuum_enabled = true,
+    autovacuum_vacuum_scale_factor = 0.05
+);
+
+SELECT relname, reloptions FROM pg_class WHERE relname = 'mvcc_lab';</code></pre>
+          </div>
+          <p class="solution-note"><strong>Инженерная практика:</strong> для больших «горячих» таблиц дефолтный <code>scale_factor = 0.2</code> (20%) слишком велик — пока накопится 20% мёртвых строк в таблице на 100 млн записей, она уже раздуется. Тюнинг <code>ALTER TABLE ... SET (autovacuum_vacuum_scale_factor = 0.02..0.05)</code> решает проблему точечно.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 03. УРОК 4.3 ==================== -->
+    <section id="sec-4-3" data-section-lesson="4_3">
+      <h2><span class="sec-num">03</span> Урок 4.3 · Уровни изоляции, строчные блокировки и Deadlocks (7 заданий)</h2>
+      <p>
+        Здесь <strong>все задания многосессионные (2–3 окна)</strong>: замораживаем отчёт в <code>REPEATABLE READ</code>, ловим <em>Write Skew</em> через <code>SERIALIZABLE</code>, строим очередь на <code>SKIP LOCKED</code>, чиним настоящий <strong>Deadlock</strong> и находим виновника зависания через <code>pg_blocking_pids()</code>.
+      </p>
+
+      <!-- 4.3.1 -->
+      <div class="task-card" data-task-id="4_3_1" data-lesson="4_3" data-tags="multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.3.1" />
+            <div class="task-title"><span class="task-num">4.3.1</span> Заморозка отчёта через REPEATABLE READ</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg2">2 окна · PG</span>
+            <span class="lvl-badge lvl-exp">Эксперимент</span>
+          </div>
+        </div>
+        <div class="state-bar">↺ <strong>Рекомендуется свежий <code>init.sql</code></strong> (6 товаров в <code>shop_items</code>, сумма <code>2420.00</code>).</div>
+        <p class="task-desc">
+          В <strong>Окне 1</strong> открой транзакцию <code>REPEATABLE READ</code> и посчитай <code>COUNT(*)</code> и <code>SUM(price)</code> по <code>shop_items</code>. Не закрывая её, в <strong>Окне 2</strong> измени цену <code>'Компас героя'</code> на <code>220.00</code>, вставь товар <code>('Кольцо удачи', 500.00, 2, 0)</code> и сделай <code>COMMIT</code>. Повтори агрегацию в <strong>Окне 1</strong> до и после его <code>COMMIT</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Что наблюдать</div>
+          <ul>
+            <li>Появился ли фантомный товар «Кольцо удачи» внутри транзакции <code>REPEATABLE READ</code> в PostgreSQL?</li>
+            <li>В какой момент именно фиксируется снимок — на команде <code>BEGIN</code> или на первом <code>SELECT</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый протокол (Окно 1 | Окно 2)</summary>
+          <div class="tl-wrap">
+            <div class="tl-head">
+              <div class="tl-col-head win1">Окно 1 · Отчёт (REPEATABLE READ)</div>
+              <div class="tl-col-head win2">Окно 2 · Изменения прайса</div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 1</span> Фиксируем снимок (6 и 2420)</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT COUNT(*) AS items_cnt,
+       SUM(price) AS total_price
+FROM shop_items;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём Шаг 1</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">📸 Снимок заморожен на Шаге 1</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 2</span> UPDATE + INSERT + COMMIT</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+UPDATE shop_items SET price = 220.00
+WHERE title = 'Компас героя';
+INSERT INTO shop_items (title, price, stock, views)
+VALUES ('Кольцо удачи', 500.00, 2, 0);
+COMMIT;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 3</span> Снова 6 и 2420 → COMMIT → 7 и 3020</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">SELECT COUNT(*) AS items_cnt, SUM(price) AS total_price
+FROM shop_items; -- всё ещё 6 и 2420.00!
+COMMIT;
+
+-- Новый снимок после COMMIT: 7 и 3020.00
+SELECT COUNT(*) AS items_cnt, SUM(price) AS total_price
+FROM shop_items;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait">✓ Завершено</div></div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Нюанс PostgreSQL:</strong> снимок в <code>REPEATABLE READ</code> фиксируется на <em>первом запросе</em> (не на <code>BEGIN</code>) и защищает сразу от Non-Repeatable Read <strong>и</strong> Phantom Read (Snapshot Isolation).</p>
+        </details>
+      </div>
+
+      <!-- 4.3.2 -->
+      <div class="task-card" data-task-id="4_3_2" data-lesson="4_3" data-tags="multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.3.2" />
+            <div class="task-title"><span class="task-num">4.3.2</span> Цена REPEATABLE READ: ошибка сериализации при конфликте записи</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg2">2 окна · PG</span>
+            <span class="lvl-badge lvl-exp">Эксперимент</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Покажи, почему при переходе на <code>REPEATABLE READ</code> код приложения обязан уметь делать <strong>retry</strong>: в <strong>Окне 1</strong> открой <code>REPEATABLE READ</code> и прочитай кошелёк Алисы (<code>id = 1</code>). В <strong>Окне 2</strong> обнови <code>id = 1</code> на <code>+50.00</code> с <code>COMMIT</code>. Вернись в <strong>Окно 1</strong> и попробуй списать <code>-100.00</code> с <code>id = 1</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Что наблюдать</div>
+          <ul>
+            <li>В отличие от <code>READ COMMITTED</code>, здесь Окно 1 НЕ перечитывает новую версию строки — какую ошибку оно возвращает?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый протокол (Окно 1 | Окно 2)</summary>
+          <div class="tl-wrap">
+            <div class="tl-head">
+              <div class="tl-col-head win1">Окно 1 · REPEATABLE READ</div>
+              <div class="tl-col-head win2">Окно 2 · Параллельная правка</div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 1</span> Фиксируем снимок на SELECT</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT owner, balance
+FROM wallets WHERE id = 1;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём Шаг 1</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">📸 Видит старую версию id = 1</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 2</span> Меняем ту же строку</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+UPDATE wallets SET balance = balance + 50.00
+WHERE id = 1;
+COMMIT;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 3</span> Получаем ERROR 40001</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">UPDATE wallets SET balance = balance - 100.00
+WHERE id = 1;
+-- ERROR: could not serialize access due to concurrent update
+ROLLBACK;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait">✓ Конфликт пойман (First-Committer-Wins)</div></div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Правило приложения:</strong> при <code>SQLSTATE 40001</code> (<code>serialization_failure</code>) клиент не должен показывать 500-ю ошибку пользователю — нужно сделать <code>ROLLBACK</code> и повторить транзакцию с коротким backoff.</p>
+        </details>
+      </div>
+
+      <!-- 4.3.3 -->
+      <div class="task-card" data-task-id="4_3_3" data-lesson="4_3" data-tags="multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.3.3" />
+            <div class="task-title"><span class="task-num">4.3.3</span> Побеждаем Write Skew на разных строках через SERIALIZABLE</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg2">2 окна · PG</span>
+            <span class="lvl-badge lvl-exp">Эксперимент</span>
+          </div>
+        </div>
+        <div class="state-bar">↺ <strong>Сброс VIP-балансов</strong> включён в Шаг 1 (Алиса = <code>1000.00</code>, Дина = <code>750.00</code>, сумма = <code>1750.00</code>).</div>
+        <p class="task-desc">
+          Бизнес-инвариант: суммарный баланс всех VIP-кошельков (<code>is_vip = true</code>) не может опускаться ниже <code>1000.00</code>. В <strong>обоих окнах</strong> на уровне <code>SERIALIZABLE</code> проверь <code>SUM(balance)</code> (оба увидят <code>1750.00</code> — запас есть!), затем в <strong>Окне 1</strong> спиши <code>600.00</code> с Алисы (<code>id = 1</code>), а в <strong>Окне 2</strong> — <code>600.00</code> с Дины (<code>id = 4</code>) и закоммить оба окна по очереди.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Окна меняют <em>разные</em> строки (<code>id = 1</code> и <code>id = 4</code>), поэтому строчных блокировок нет. Почему же <code>SERIALIZABLE</code> остановил второе окно?</li>
+            <li>Что бы случилось, если бы в этом тесте стоял уровень <code>REPEATABLE READ</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый протокол (Окно 1 | Окно 2)</summary>
+          <div class="tl-wrap">
+            <div class="tl-head">
+              <div class="tl-col-head win1">Окно 1 · Списание с Алисы (id = 1)</div>
+              <div class="tl-col-head win2">Окно 2 · Списание с Дины (id = 4)</div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 1</span> Сброс + проверка + UPDATE id=1</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">UPDATE wallets SET balance = 1000.00 WHERE id = 1;
+UPDATE wallets SET balance = 750.00  WHERE id = 4;
+
+BEGIN ISOLATION LEVEL SERIALIZABLE;
+SELECT SUM(balance) AS vip_total
+FROM wallets WHERE is_vip = true; -- 1750
+UPDATE wallets SET balance = balance - 600.00
+WHERE id = 1;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём Шаг 1</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">⏸ Транзакция открыта (ещё не COMMIT)</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 2</span> Проверка + UPDATE id=4</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN ISOLATION LEVEL SERIALIZABLE;
+SELECT SUM(balance) AS vip_total
+FROM wallets WHERE is_vip = true; -- 1750!
+UPDATE wallets SET balance = balance - 600.00
+WHERE id = 4;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 3</span> Успешный COMMIT (VIP = 1150)</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">COMMIT;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Готовится к COMMIT</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">✓ Зафиксировано</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 4</span> SSI перехватывает Write Skew!</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">COMMIT;
+-- ERROR: could not serialize access due to
+-- read/write dependencies among transactions</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Разбор:</strong> в <code>REPEATABLE READ</code> оба окна спокойно закоммитились бы и оставили сумму VIP = <code>550.00</code> (нарушение бизнес-правила!). <code>SERIALIZABLE</code> в PostgreSQL использует предикатные замки (<em>SIRead locks</em> / SSI) и видит перекрёстную зависимость чтения и записи.</p>
+        </details>
+      </div>
+
+      <!-- 4.3.4 -->
+      <div class="task-card" data-task-id="4_3_4" data-lesson="4_3" data-tags="multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.3.4" />
+            <div class="task-title"><span class="task-num">4.3.4</span> Строчные замки: FOR UPDATE, NOWAIT и разделяемый FOR SHARE</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg2">2 окна · PG</span>
+            <span class="lvl-badge lvl-exp">Эксперимент</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Проверь матрицу совместимости строчных блокировок в 2 окнах:
+          <strong>Сценарий А:</strong> в Окне 1 заблокируй <code>ticket_queue WHERE id = 1 FOR UPDATE</code>; в Окне 2 убедись, что обычный <code>SELECT</code> не ждёт, а <code>FOR UPDATE NOWAIT</code> мгновенно падает с ошибкой.
+          <strong>Сценарий Б:</strong> в Окне 1 поставь <code>SELECT ... FROM wallets WHERE id = 1 FOR SHARE</code>; в Окне 2 убедись, что второй <code>FOR SHARE</code> проходит мгновенно, а <code>UPDATE</code> (с <code>lock_timeout = '2s'</code>) отменяется по таймауту.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Когда в веб-интерфейсе (например, выбор места на карте зала) лучше <code>NOWAIT</code>, чем обычное ожидание <code>FOR UPDATE</code>?</li>
+            <li>В какой задаче нужен именно <code>FOR SHARE</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый протокол (Окно 1 | Окно 2)</summary>
+          <div class="tl-wrap">
+            <div class="tl-head">
+              <div class="tl-col-head win1">Окно 1 · Держатель замка</div>
+              <div class="tl-col-head win2">Окно 2 · Проверка совместимости</div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 1</span> Сценарий А: FOR UPDATE</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+SELECT id, seat, status
+FROM ticket_queue
+WHERE id = 1 FOR UPDATE;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём Шаг 1</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">🔒 Держит FOR UPDATE на id = 1</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 2</span> Обычный SELECT vs NOWAIT</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">-- Обычный SELECT проходит без ожидания:
+SELECT id, seat FROM ticket_queue WHERE id = 1;
+
+-- NOWAIT сразу отдаёт ошибку:
+BEGIN;
+SELECT id, seat FROM ticket_queue
+WHERE id = 1 FOR UPDATE NOWAIT;
+ROLLBACK;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 3</span> Сброс + Сценарий Б: FOR SHARE</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">ROLLBACK;
+
+BEGIN;
+SELECT id, owner, balance
+FROM wallets WHERE id = 1 FOR SHARE;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём Шаг 3</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">🔒 Держит FOR SHARE на id = 1</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 4</span> Второй SHARE ок, UPDATE — таймаут</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">-- Совместимо: проходит мгновенно!
+BEGIN;
+SELECT id, owner FROM wallets WHERE id = 1 FOR SHARE;
+COMMIT;
+
+-- Несовместимо: отменится через 2 сек!
+SET lock_timeout = '2s';
+UPDATE wallets SET balance = balance + 1 WHERE id = 1;
+RESET lock_timeout;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 5</span> Снимаем замок</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">ROLLBACK;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait">✓ Готово</div></div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Практика:</strong> <code>NOWAIT</code> позволяет мгновенно ответить пользователю «место уже оформляют, выберите другое», не вешая воркеры. <code>FOR SHARE</code> защищает родительскую строку от удаления/изменения, пока ты опираешься на неё в расчётах (аналогично проверке <code>FOREIGN KEY</code>).</p>
+        </details>
+      </div>
+
+      <!-- 4.3.5 -->
+      <div class="task-card" data-task-id="4_3_5" data-lesson="4_3" data-tags="multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.3.5" />
+            <div class="task-title"><span class="task-num">4.3.5</span> Очередь бронирования без простоев через FOR UPDATE SKIP LOCKED</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg2">2 окна · PG</span>
+            <span class="lvl-badge lvl-exp">Эксперимент</span>
+          </div>
+        </div>
+        <div class="state-bar">↺ В <code>ticket_queue</code> свободны места <code>id = 1..4</code>.</div>
+        <p class="task-desc">
+          Два покупателя одновременно нажимают «Взять лучшее свободное место». В обоих окнах выполни <strong>одинаковый</strong> запрос выборки 1 свободного места (<code>WHERE status = 'free' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED</code>). Убедись, что Окно 1 взяло <code>id = 1</code>, а Окно 2 без единой миллисекунды ожидания перепрыгнуло его и взяло <code>id = 2</code>. Забронируй оба места (<code>status = 'reserved'</code>) за разными кошельками и закоммить.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Что произошло бы, если бы забыли написать <code>SKIP LOCKED</code> (оставили только <code>FOR UPDATE</code>)?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый протокол (Окно 1 | Окно 2)</summary>
+          <div class="tl-wrap">
+            <div class="tl-head">
+              <div class="tl-col-head win1">Окно 1 · Покупатель 1 (Чарли, id=3)</div>
+              <div class="tl-col-head win2">Окно 2 · Покупатель 2 (Боб, id=2)</div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 1</span> Берёт id = 1 (без COMMIT)</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+SELECT id, seat, status
+FROM ticket_queue
+WHERE status = 'free'
+ORDER BY id LIMIT 1
+FOR UPDATE SKIP LOCKED;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait mobile-hide">Ждём Шаг 1</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell"><div class="tl-wait">🔒 Держит место id = 1</div></div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 2</span> Перепрыгивает на id = 2 + COMMIT</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+SELECT id, seat, status
+FROM ticket_queue
+WHERE status = 'free'
+ORDER BY id LIMIT 1
+FOR UPDATE SKIP LOCKED; -- вернуло id = 2!
+
+UPDATE ticket_queue
+SET status = 'reserved', wallet_id = 2
+WHERE id = 2;
+COMMIT;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 3</span> Завершает бронь id = 1</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">UPDATE ticket_queue
+SET status = 'reserved', wallet_id = 3
+WHERE id = 1;
+COMMIT;
+
+SELECT id, seat, status, wallet_id
+FROM ticket_queue ORDER BY id;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait">✓ Оба воркера отработали параллельно</div></div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Вывод:</strong> без <code>SKIP LOCKED</code> все воркеры выстраивались бы в очередь за одной строкой <code>id = 1</code>. Паттерн <code>FOR UPDATE SKIP LOCKED</code> — промышленный стандарт для очередей задач (Outbox / Job Queue) в PostgreSQL.</p>
+        </details>
+      </div>
+
+      <!-- 4.3.6 -->
+      <div class="task-card" data-task-id="4_3_6" data-lesson="4_3" data-tags="bugfix multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.3.6" />
+            <div class="task-title"><span class="task-num">4.3.6</span> Код-ревью: воспроизводим Deadlock и лечим единым порядком блокировок</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg2">2 окна · PG</span>
+            <span class="lvl-badge lvl-bug">Баг-фикс</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          При встречных переводах между двумя кошельками (<code>1 → 2</code> и <code>2 → 1</code>) сервис регулярно падает с <code>ERROR: deadlock detected</code>. Вот проблемный код:
+        </p>
+        <div class="code-block bug-code">
+          <div class="code-header"><span class="code-lang">❌ ПРОБЛЕМНЫЙ КОД (захват строк в разном порядке)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-sql">-- Перевод 1 -&gt; 2 блокирует сначала id=1, потом id=2
+-- Перевод 2 -&gt; 1 блокирует сначала id=2, потом id=1  =&gt; взаимная блокировка!</code></pre>
+        </div>
+        <p class="task-desc">
+          <strong>Задача:</strong> 1) воспроизведи реальный <code>deadlock detected</code> в 2 окнах (подожди <code>deadlock_timeout = 1s</code>); 2) перепиши обе транзакции так, чтобы они захватывали оба кошелька в <strong>едином отсортированном порядке</strong> через <code>SELECT ... WHERE id IN (1, 2) ORDER BY id FOR UPDATE</code>, и докажи, что оба встречных перевода проходят без ошибок.
+        </p>
+        <details class="solution">
+          <summary>Показать воспроизведение Deadlock и исправленную версию</summary>
+          <div class="tl-wrap">
+            <div class="tl-head">
+              <div class="tl-col-head win1">Окно 1 · Перевод 1 → 2 (10.00)</div>
+              <div class="tl-col-head win2">Окно 2 · Перевод 2 → 1 (20.00)</div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">1. Баг</span> Берёт id = 1</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+UPDATE wallets SET balance = balance - 10
+WHERE id = 1;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">2. Баг</span> Берёт id = 2</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+UPDATE wallets SET balance = balance - 20
+WHERE id = 2;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">3. Баг</span> Ждёт id = 2 (замрёт)</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">UPDATE wallets SET balance = balance + 10
+WHERE id = 2;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">4. Баг</span> Цикл! Deadlock через ~1с</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">UPDATE wallets SET balance = balance + 20
+WHERE id = 1;
+-- ERROR: deadlock detected!
+ROLLBACK;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">5. Завершить</span> Отвисло → COMMIT</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">COMMIT;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell"><div class="tl-wait">✓ Deadlock воспроизведён — теперь чиним!</div></div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Фикс · Шаг 1</span> ORDER BY id FOR UPDATE</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+SELECT id FROM wallets
+WHERE id IN (1, 2) ORDER BY id FOR UPDATE;
+UPDATE wallets SET balance = balance - 10 WHERE id = 1;
+UPDATE wallets SET balance = balance + 10 WHERE id = 2;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Фикс · Шаг 2</span> Тот же порядок → просто ждёт</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">BEGIN;
+SELECT id FROM wallets
+WHERE id IN (1, 2) ORDER BY id FOR UPDATE;</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Фикс · Шаг 3</span> Отпускает замки</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">COMMIT;</code></pre>
+                </div>
+              </div>
+              <div class="tl-cell">
+                <div class="code-block">
+                  <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Фикс · Шаг 4</span> Завершает без Deadlock!</span><button class="copy-btn" type="button">Копировать</button></div>
+                  <pre><code class="language-sql">UPDATE wallets SET balance = balance - 20 WHERE id = 2;
+UPDATE wallets SET balance = balance + 20 WHERE id = 1;
+COMMIT;</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Почему это гарантированно работает:</strong> строгий глобальный порядок захвата ресурсов (<code>ORDER BY id</code>) математически исключает появление цикла в графе ожиданий.</p>
+        </details>
+      </div>
+
+      <!-- 4.3.7 -->
+      <div class="task-card" data-task-id="4_3_7" data-lesson="4_3" data-tags="multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.3.7" />
+            <div class="task-title"><span class="task-num">4.3.7</span> Радар диспетчера: lock_timeout и поиск виновника через pg_blocking_pids()</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg3">3 окна · PG</span>
+            <span class="lvl-badge lvl-exp">Эксперимент</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Смоделируй аварию с зависшим запросом и найди блокировщика в реальном времени:
+          1) <strong>Окно 1</strong> держит замок на Чарли (<code>id = 3</code>) без <code>COMMIT</code>.
+          2) <strong>Окно 2</strong> сначала тестирует предохранитель <code>SET lock_timeout = '2s';</code> (отмена через 2 сек), затем сбрасывает его (<code>RESET lock_timeout;</code>) и повисает в ожидании.
+          3) <strong>Окно 3</strong> (дежурный DBA) находит ждущий процесс и PID виновника одним запросом к <code>pg_stat_activity</code> + <code>pg_blocking_pids(pid)</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Что наблюдать в Окне 3</div>
+          <ul>
+            <li>Какие значения показывают <code>wait_event_type</code> и <code>wait_event</code> для зависшего запроса?</li>
+            <li>Какой функцией дежурный DBA может принудительно оборвать зависший PID блокировщика в аварии?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать пошаговый протокол (Окно 1 → Окно 2 → Окно 3)</summary>
+          <div class="step-flow">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 1 · Окно 1</span> Удерживаем замок на id = 3 (без COMMIT)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">BEGIN;
+UPDATE wallets SET balance = balance + 1.00 WHERE id = 3;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">Шаг 2 · Окно 2</span> Тест lock_timeout → затем зависание</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SET lock_timeout = '2s';
+UPDATE wallets SET balance = balance + 2.00 WHERE id = 3;
+-- Через 2 сек: ERROR: canceling statement due to lock timeout
+
+RESET lock_timeout;
+UPDATE wallets SET balance = balance + 2.00 WHERE id = 3;
+-- Теперь Окно 2 ждёт бесконечно...</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="step-pill step-w3">Шаг 3 · Окно 3</span> Радар DBA: кто кого заблокировал прямо сейчас</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">SELECT
+    pid AS waiting_pid,
+    pg_blocking_pids(pid) AS blocked_by_pids,
+    wait_event_type,
+    wait_event,
+    state,
+    left(query, 60) AS waiting_query
+FROM pg_stat_activity
+WHERE cardinality(pg_blocking_pids(pid)) &gt; 0;</code></pre>
+            </div>
+
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">Шаг 4 · Окно 1</span> Отпускаем замок (Окно 2 сразу выполнится)</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-sql">ROLLBACK;</code></pre>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Разбор:</strong> у ждущего процесса <code>wait_event_type = 'Lock'</code> и <code>wait_event = 'transactionid'</code>. В экстренной ситуации найденный PID из <code>blocked_by_pids</code> снимают через <code>SELECT pg_terminate_backend(pid);</code>.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 04. УРОК 4.4 ==================== -->
+    <section id="sec-4-4" data-section-lesson="4_4">
+      <h2><span class="sec-num">04</span> Урок 4.4 · Дуэль СУБД (PostgreSQL 16 vs MySQL 8.4) и финал модуля (6 заданий)</h2>
+      <p>
+        Сравниваем <strong>PostgreSQL 16</strong> и <strong>MySQL 8.4 (InnoDB)</strong> бок о бок: физику хранения, Upsert, HOT-обновления, <code>O(1) ROLLBACK</code>, <code>Index-Only Scan</code>, <strong>Gap Locks</strong> и транзакционный DDL. Убедись, что поднят <code>docker compose --profile mod4 up -d</code> и загружен <a href="init_mysql.sql"><code>init_mysql.sql</code></a>.
+      </p>
+
+      <!-- 4.4.1 -->
+      <div class="task-card" data-task-id="4_4_1" data-lesson="4_4" data-tags="duel">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.4.1" />
+            <div class="task-title"><span class="task-num">4.4.1</span> Дуэль · Раунд 1: Heap vs Clustered Index и изоляция по умолчанию</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-duel">PG vs MySQL</span>
+            <span class="lvl-badge lvl-exp">Дуэль СУБД</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          В обе СУБД строки в <code>parking_slots</code> были вставлены в одинаковом перепутанном порядке: <code>50, 10, 30, 70</code>. Выполни в обеих СУБД <code>SELECT</code> <strong>без</strong> <code>ORDER BY</code> и одновременно проверь уровень изоляции по умолчанию.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Почему в InnoDB строки сами выстроились в <code>10, 30, 50, 70</code>, а в PostgreSQL остались <code>50, 10, 30, 70</code>?</li>
+            <li>Какая проблема возникает в InnoDB при использовании случайного <code>UUIDv4</code> в качестве <code>PRIMARY KEY</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать раунд бок о бок (PostgreSQL 16 | MySQL 8.4)</summary>
+          <div class="duel-grid">
+            <div class="duel-col duel-pg">
+              <div class="duel-col-head"><span>PostgreSQL 16</span><span>:5432</span></div>
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang">SQL · PG</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-sql">SELECT ctid, id, car, owner_name
+FROM parking_slots;
+
+SHOW transaction_isolation;</code></pre>
+              </div>
+              <div class="duel-result">Порядок: <strong>50, 10, 30, 70</strong> (куча Heap).<br />Изоляция: <code>read committed</code>.</div>
+            </div>
+
+            <div class="duel-col duel-mysql">
+              <div class="duel-col-head"><span>MySQL 8.4 (InnoDB)</span><span>:3306</span></div>
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang">SQL · MySQL</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-sql">SELECT id, car, owner_name
+FROM parking_slots;
+
+SELECT @@transaction_isolation;</code></pre>
+              </div>
+              <div class="duel-result">Порядок: <strong>10, 30, 50, 70</strong> (Clustered B-Tree).<br />Изоляция: <code>REPEATABLE-READ</code>.</div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Вывод раунда:</strong> в InnoDB сама таблица является B-Tree деревом по PK — поэтому случайный <code>UUIDv4</code> вызывает постоянные разрывы страниц (page splits) и раздувает все вторичные индексы (они хранят значение PK, а не 6-байтный <code>ctid</code>).</p>
+        </details>
+      </div>
+
+      <!-- 4.4.2 -->
+      <div class="task-card" data-task-id="4_4_2" data-lesson="4_4" data-tags="duel">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.4.2" />
+            <div class="task-title"><span class="task-num">4.4.2</span> Дуэль · Раунд 2: Upsert-диалект (ON CONFLICT RETURNING vs ON DUPLICATE KEY)</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-duel">PG vs MySQL</span>
+            <span class="lvl-badge lvl-exp">Дуэль СУБД</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          Реализуй операцию «вставить пользователя или прибавить <code>+100.00</code> к его балансу» для <code>'Боб'</code>: в PostgreSQL на таблице <code>wallets</code> с возвратом обновлённой строки за 1 запрос (<code>RETURNING</code>), и в MySQL 8.4 на таблице <code>duel_accounts</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать раунд бок о бок (PostgreSQL 16 | MySQL 8.4)</summary>
+          <div class="duel-grid">
+            <div class="duel-col duel-pg">
+              <div class="duel-col-head"><span>PostgreSQL 16</span><span>1 запрос</span></div>
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang">SQL · PG</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-sql">INSERT INTO wallets (owner, balance, city, is_vip)
+VALUES ('Боб', 100.00, 'Астана', false)
+ON CONFLICT (owner) DO UPDATE
+SET balance = wallets.balance + EXCLUDED.balance
+RETURNING id, owner, balance;</code></pre>
+              </div>
+              <div class="duel-result">Явно указывает конфликтную колонку <code>(owner)</code> и сразу возвращает новую строку.</div>
+            </div>
+
+            <div class="duel-col duel-mysql">
+              <div class="duel-col-head"><span>MySQL 8.4 (InnoDB)</span><span>2 запроса</span></div>
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang">SQL · MySQL</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-sql">INSERT INTO duel_accounts (owner, balance)
+VALUES ('Боб', 100.00)
+ON DUPLICATE KEY UPDATE
+    balance = balance + 100.00;
+
+SELECT id, owner, balance
+FROM duel_accounts WHERE owner = 'Боб';</code></pre>
+              </div>
+              <div class="duel-result">Нет <code>RETURNING</code> и срабатывает на <em>любой</em> уникальный ключ сразу.</div>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- 4.4.3 -->
+      <div class="task-card" data-task-id="4_4_3" data-lesson="4_4" data-tags="bugfix">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.4.3" />
+            <div class="task-title"><span class="task-num">4.4.3</span> Код-ревью: HOT-обновления (views vs price), ловушка лишнего индекса и fillfactor</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg1">1 окно · PG</span>
+            <span class="lvl-badge lvl-bug">Баг-фикс</span>
+          </div>
+        </div>
+        <p class="task-desc">
+          На таблице <code>shop_items</code> счётчик просмотров <code>views</code> обновляется тысячи раз в минуту. Коллега предлагает «на всякий случай» повесить B-Tree индекс на <code>views</code>:
+        </p>
+        <div class="code-block bug-code">
+          <div class="code-header"><span class="code-lang">❌ ПРЕДЛОЖЕНИЕ КОЛЛЕГИ (убьёт HOT-обновления!)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-sql">CREATE INDEX idx_shop_items_views ON shop_items (views); -- НЕ делай так!</code></pre>
+        </div>
+        <p class="task-desc">
+          <strong>Задача:</strong> докажи цифрами из <code>pg_stat_user_tables</code> (<code>n_tup_upd</code> vs <code>n_tup_hot_upd</code>), почему индекс на <code>views</code> вреден: сделай <strong>4 обновления</strong> неиндексированного <code>views</code> и <strong>1 обновление</strong> проиндексированного <code>price</code> для <code>id = 1</code>, сравни прирост обоих счётчиков, а затем оставь 20% резерва на страницах таблицы через <code>fillfactor = 80</code>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Какие <strong>два</strong> условия обязательны, чтобы обновление в PostgreSQL стало HOT (Heap-Only Tuple)?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать эксперимент, настройку fillfactor и разбор</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · PostgreSQL 16</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- 1. Зафиксируй стартовые счётчики
+SELECT pg_stat_force_next_flush();
+SELECT relname, n_tup_upd, n_tup_hot_upd
+FROM pg_stat_user_tables WHERE relname = 'shop_items';
+
+-- 2. 4 HOT-обновления (views не индексирован) + 1 НЕ-HOT (price в idx_shop_items_price)
+UPDATE shop_items SET views = views + 1 WHERE id = 1;
+UPDATE shop_items SET views = views + 1 WHERE id = 1;
+UPDATE shop_items SET views = views + 1 WHERE id = 1;
+UPDATE shop_items SET views = views + 1 WHERE id = 1;
+UPDATE shop_items SET price = price + 10.00 WHERE id = 1;
+
+SELECT pg_stat_force_next_flush();
+SELECT relname, n_tup_upd AS total_updates, n_tup_hot_upd AS hot_updates
+FROM pg_stat_user_tables WHERE relname = 'shop_items';
+-- Прирост: total_updates +5, hot_updates +4!
+
+-- 3. Оставляем 20% пустого места на страницах под будущие HOT-обновления
+ALTER TABLE shop_items SET (fillfactor = 80);
+SELECT relname, reloptions FROM pg_class WHERE relname = 'shop_items';</code></pre>
+          </div>
+          <p class="solution-note"><strong>Два условия HOT:</strong> (1) ни одна из изменяемых колонок не входит ни в один индекс; (2) на той же 8-КБ странице Heap есть свободное место (для этого и нужен <code>fillfactor &lt; 100</code>).</p>
+        </details>
+      </div>
+
+      <!-- 4.4.4 -->
+      <div class="task-card" data-task-id="4_4_4" data-lesson="4_4" data-tags="practice">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.4.4" />
+            <div class="task-title"><span class="task-num">4.4.4</span> Суперсилы PostgreSQL: O(1) ROLLBACK и Index-Only Scan (Heap Fetches: 0)</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg1">1 окно · PG</span>
+            <span class="lvl-badge lvl-base">Практика</span>
+          </div>
+        </div>
+        <div class="state-bar">↺ <strong>Для контраста Heap Fetches нужен свежий <code>init.sql</code></strong> (до ручного <code>VACUUM</code> на <code>mvcc_lab</code>).</div>
+        <p class="task-desc">
+          Проверь две ключевые архитектурные особенности PostgreSQL на таблице <code>mvcc_lab</code> (10 000 строк):
+          1) Включи таймер <code>\timing on</code> в <code>psql</code>, обнови все 10 000 строк в транзакции и сделай <code>ROLLBACK;</code> — сравни время <code>UPDATE</code> и <code>ROLLBACK</code>.
+          2) Выполни <code>EXPLAIN (ANALYZE, BUFFERS) SELECT id FROM mvcc_lab WHERE id BETWEEN 100 AND 200;</code>, посмотри <code>Heap Fetches</code>, затем прогони <code>VACUUM ANALYZE mvcc_lab;</code> и повтори <code>EXPLAIN</code> — убедись, что <code>Heap Fetches</code> упал до <strong>0</strong>.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Почему <code>ROLLBACK</code> в PostgreSQL занимает ~0.1 мс независимо от числа изменённых строк, а в InnoDB массовый откат может идти минутами?</li>
+            <li>Какая внутренняя структура данных обновляется при <code>VACUUM</code>, позволяя не ходить в Heap при <code>Index Only Scan</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать решение и разбор</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · PostgreSQL 16 (psql)</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">-- Часть 1: мгновенный O(1) ROLLBACK
+\timing on
+BEGIN;
+UPDATE mvcc_lab SET counter = counter + 100;
+ROLLBACK;
+\timing off
+
+-- Часть 2: Visibility Map и Heap Fetches: 0
+-- До VACUUM: карта видимости пуста -&gt; Heap Fetches &gt; 0
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id FROM mvcc_lab WHERE id BETWEEN 100 AND 200;
+
+VACUUM ANALYZE mvcc_lab;
+
+-- После VACUUM: Index Only Scan + Heap Fetches: 0!
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id FROM mvcc_lab WHERE id BETWEEN 100 AND 200;</code></pre>
+          </div>
+          <p class="solution-note"><strong>Разбор:</strong> в PostgreSQL <code>ROLLBACK</code> лишь меняет 2 бита статуса транзакции в CLOG (O(1)), а в InnoDB приходится физически откатывать каждую строку из Undo Log. <code>Index Only Scan</code> избавляется от походов в Heap благодаря <em>Visibility Map</em> (карте all-visible страниц), которую поддерживает <code>VACUUM</code>.</p>
+        </details>
+      </div>
+
+      <!-- 4.4.5 -->
+      <div class="task-card" data-task-id="4_4_5" data-lesson="4_4" data-tags="duel multiwin">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.4.5" />
+            <div class="task-title"><span class="task-num">4.4.5</span> Дуэль · Раунд 3: Gap Locks (id = 20, 2 окна) и транзакционный DDL</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-duel">PG vs MySQL · 2 окна</span>
+            <span class="lvl-badge lvl-exp">Дуэль СУБД</span>
+          </div>
+        </div>
+        <div class="state-bar">↺ <strong>Чистые слоты:</strong> в <code>parking_slots</code> заняты <code>10, 30, 50, 70</code>; место <code>20</code> свободно.</div>
+        <p class="task-desc">
+          Проведи два решающих раунда бок о бок:
+          <strong>Раунд 3А (Gap Locks, по 2 окна в каждой СУБД):</strong> в Окне 1 заблокируй <code>WHERE id BETWEEN 10 AND 30 FOR UPDATE</code>, а в Окне 2 попробуй вставить новую машину в пустую «дырку» <code>(20, 'Спорткар', 'Чарли')</code>.
+          <strong>Раунд 3Б (DDL внутри транзакции):</strong> в PostgreSQL добавь колонку и сделай <code>DROP TABLE parking_slots;</code> внутри <code>BEGIN ... ROLLBACK;</code> — таблица выживет! В MySQL внутри <code>START TRANSACTION;</code> спиши <code>100.00</code> с Алисы в <code>duel_accounts</code>, выполни <code>ALTER TABLE</code> и сделай <code>ROLLBACK;</code> — проверь баланс Алисы.
+        </p>
+        <div class="observe-box">
+          <div class="observe-title">Что наблюдать</div>
+          <ul>
+            <li>Почему в MySQL Окно 2 зависло при вставке <code>id = 20</code>, хотя такой строки ещё даже нет в таблице?</li>
+            <li>Откатилось ли списание <code>-100.00</code> у Алисы в MySQL после <code>ALTER TABLE ...; ROLLBACK;</code>?</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать оба раунда бок о бок (PostgreSQL 16 | MySQL 8.4)</summary>
+          <div class="duel-grid">
+            <div class="duel-col duel-pg">
+              <div class="duel-col-head"><span>PostgreSQL 16 · :5432</span><span>Без Gap Locks</span></div>
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">3А · Окно 1</span> Блок 10..30</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-sql">BEGIN;
+SELECT * FROM parking_slots
+WHERE id BETWEEN 10 AND 30 FOR UPDATE;</code></pre>
+              </div>
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">3А · Окно 2</span> Вставка id = 20</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-sql">BEGIN;
+INSERT INTO parking_slots
+VALUES (20, 'Спорткар', 'Чарли');
+COMMIT; -- МГНОВЕННО!
+-- Затем COMMIT в Окне 1</code></pre>
+              </div>
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang">3Б · Транзакционный DDL</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-sql">BEGIN;
+ALTER TABLE parking_slots
+  ADD COLUMN color TEXT DEFAULT 'синий';
+DROP TABLE parking_slots;
+ROLLBACK;
+
+SELECT * FROM parking_slots ORDER BY id;</code></pre>
+              </div>
+              <div class="duel-result">✓ Вставка в «дырку» не блокируется.<br />✓ <code>DROP TABLE</code> полностью откатился — таблица цела!</div>
+            </div>
+
+            <div class="duel-col duel-mysql">
+              <div class="duel-col-head"><span>MySQL 8.4 InnoDB · :3306</span><span>Gap Lock + Implicit COMMIT</span></div>
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang"><span class="step-pill step-w1">3А · Окно 1</span> Record + Gap Lock</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-sql">START TRANSACTION;
+SELECT * FROM parking_slots
+WHERE id BETWEEN 10 AND 30 FOR UPDATE;</code></pre>
+              </div>
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang"><span class="step-pill step-w2">3А · Окно 2</span> ЗАВИСНЕТ на Gap Lock!</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-sql">START TRANSACTION;
+INSERT INTO parking_slots
+VALUES (20, 'Спорткар', 'Чарли');
+-- Отвиснет только после COMMIT в Окне 1!
+COMMIT;</code></pre>
+              </div>
+              <div class="code-block">
+                <div class="code-header"><span class="code-lang">3Б · Неявный COMMIT при DDL</span><button class="copy-btn" type="button">Копировать</button></div>
+                <pre><code class="language-sql">START TRANSACTION;
+UPDATE duel_accounts
+SET balance = balance - 100.00 WHERE owner = 'Алиса';
+ALTER TABLE duel_accounts ADD COLUMN tag VARCHAR(20);
+ROLLBACK; -- уже поздно!
+
+SELECT owner, balance, tag FROM duel_accounts
+WHERE owner = 'Алиса'; -- 900.00!</code></pre>
+              </div>
+              <div class="duel-result">⏳ InnoDB заблокировал сам промежуток <code>(10, 30)</code>.<br />⚠ <code>ALTER TABLE</code> сделал неявный <code>COMMIT</code> — списание не откатилось!</div>
+            </div>
+          </div>
+          <p class="solution-note"><strong>Вывод дуэли:</strong> транзакционный DDL в PostgreSQL делает миграции БД безопасными («всё или ничего»), а отсутствие Gap Locks избавляет от неожиданных блокировок и дедлоков при параллельных вставках.</p>
+        </details>
+      </div>
+
+      <!-- 4.4.6 -->
+      <div class="task-card" data-task-id="4_4_6" data-lesson="4_4" data-tags="practice boss">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 4.4.6" />
+            <div class="task-title"><span class="task-num">4.4.6</span> Финал Модуля 4: боевая транзакция покупки билета с защитой от всех аномалий</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg1">1 окно · PG</span>
+            <span class="lvl-badge lvl-boss">Финал модуля</span>
+          </div>
+        </div>
+        <div class="state-bar">↺ <strong>Перед финалом прогони <code>init.sql</code></strong>, чтобы проверить точные итоговые балансы.</div>
+        <p class="task-desc">
+          Собери в <strong>PostgreSQL 16</strong> продакшен-транзакцию покупки билета (<code>300.00</code>) для <code>'Алиса'</code> (<code>id = 1</code>) с перечислением оплаты организатору <code>'Дина'</code> (<code>id = 4</code>), объединив <strong>все лучшие практики Модуля 4</strong>:
+        </p>
+        <ol style="margin: 0.35rem 0 0.7rem; font-size: 0.94rem;">
+          <li>Поставь локальный предохранитель <code>lock_timeout = '3s'</code> только на текущую транзакцию.</li>
+          <li>Захвати оба кошелька (<code>id IN (1, 4)</code>) в строгом порядке <code>ORDER BY id FOR UPDATE</code> (исключаем Deadlock).</li>
+          <li>Поставь чекпоинт <code>SAVEPOINT before_ticket;</code>.</li>
+          <li>Одним CTE-запросом забери первое свободное место в <code>ticket_queue</code> через <code>FOR UPDATE SKIP LOCKED</code>, переведи его в <code>status = 'paid'</code> (<code>wallet_id = 1</code>) и верни результат через <code>RETURNING</code>.</li>
+          <li>Атомарно переведи <code>300.00</code> от <code>id = 1</code> к <code>id = 4</code> (без Lost Update), запиши в <code>transfer_log</code> (<code>note = 'Покупка билета'</code>) и выполни <code>COMMIT;</code>.</li>
+        </ol>
+        <div class="observe-box">
+          <div class="observe-title">Критерий приёмки</div>
+          <ul>
+            <li>У Алисы <code>700.00</code>, у Дины <code>1050.00</code> (сумма <code>2450.00</code> сохранилась).</li>
+            <li>Билет <code>id = 1</code> в статусе <code>paid</code> на <code>wallet_id = 1</code>, в <code>transfer_log</code> есть свежая запись на <code>300.00</code>.</li>
+            <li>После <code>COMMIT</code> <code>SHOW lock_timeout;</code> снова показывает <code>0</code> (благодаря <code>SET LOCAL</code>).</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать эталонную транзакцию Модуля 4</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL · PostgreSQL 16 (итоговый паттерн)</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">BEGIN;
+
+-- 1. Локальный предохранитель от вечного ожидания блокировок
+SET LOCAL lock_timeout = '3s';
+
+-- 2. Единый порядок блокировок кошельков (гарантия отсутствия Deadlock)
+SELECT id, owner, balance
+FROM wallets
+WHERE id IN (1, 4)
+ORDER BY id
+FOR UPDATE;
+
+-- 3. Чекпоинт перед списанием и бронью
+SAVEPOINT before_ticket;
+
+-- 4. Атомарно забираем первое свободное место без простоев (SKIP LOCKED + RETURNING)
+WITH next_seat AS (
+    SELECT id
+    FROM ticket_queue
+    WHERE status = 'free'
+    ORDER BY id
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED
+)
+UPDATE ticket_queue t
+SET status = 'paid', wallet_id = 1
+FROM next_seat ns
+WHERE t.id = ns.id
+RETURNING t.id, t.seat, t.status, t.wallet_id;
+
+-- 5. Атомарный перевод (без Lost Update) + запись в журнал
+UPDATE wallets SET balance = balance - 300.00 WHERE id = 1;
+UPDATE wallets SET balance = balance + 300.00 WHERE id = 4;
+
+INSERT INTO transfer_log (from_wallet_id, to_wallet_id, amount, note)
+VALUES (1, 4, 300.00, 'Покупка билета');
+
+COMMIT;
+
+-- 6. Проверка согласованности
+SELECT id, owner, balance FROM wallets WHERE id IN (1, 4) ORDER BY id;
+SELECT id, seat, status, wallet_id FROM ticket_queue WHERE id = 1;
+SELECT id, from_wallet_id, to_wallet_id, amount, note
+FROM transfer_log ORDER BY id DESC LIMIT 1;
+SHOW lock_timeout;</code></pre>
+          </div>
+          <p class="solution-note"><strong>Итог:</strong> в одной короткой транзакции сошлись все столпы Модуля 4 — <code>ACID</code>, <code>SET LOCAL lock_timeout</code>, <code>ORDER BY id FOR UPDATE</code>, <code>SAVEPOINT</code>, <code>FOR UPDATE SKIP LOCKED</code> и <code>RETURNING</code>.</p>
+        </details>
+      </div>
+    </section>
+
+    <div class="empty-filter" id="empty-filter">
+      Нет заданий по выбранному фильтру — либо они все уже выполнены! Отличная работа 🎉
+    </div>
+
+  </article>
+
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Автоматическое оглавление из <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = Array.from(document.querySelectorAll('article.lecture > section'));
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${clone.textContent.trim()}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Разделы практикума</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 3. Копирование кода (с fallback для file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (_) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => { btn.textContent = originalText; }, 1800);
+          }
+        });
+      });
+
+      // 4. Прогресс и фильтрация (по урокам, статусу и форматам)
+      const STORAGE_KEY = 'db_course_practice_m4_v2';
+      const cards = Array.from(document.querySelectorAll('.task-card[data-task-id]'));
+      const progressText = document.getElementById('progress-text');
+      const progressFill = document.getElementById('progress-fill');
+      const resetBtn = document.getElementById('reset-progress');
+      const filterBtns = Array.from(document.querySelectorAll('.filter-btn'));
+      const emptyFilter = document.getElementById('empty-filter');
+      let currentFilter = 'all';
+
+      function loadDone() {
+        try {
+          return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+        } catch (_) {
+          return new Set();
+        }
+      }
+
+      function saveDone(set) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(set)));
+        } catch (_) {}
+      }
+
+      const doneSet = loadDone();
+
+      function applyFilter() {
+        let visibleCards = 0;
+
+        cards.forEach((card) => {
+          const id = card.dataset.taskId;
+          const lesson = card.dataset.lesson;
+          const tags = (card.dataset.tags || '').split(/\s+/).filter(Boolean);
+          const isDone = doneSet.has(id);
+          let show = true;
+
+          if (currentFilter === 'todo') {
+            show = !isDone;
+          } else if (currentFilter.startsWith('tag:')) {
+            const targetTag = currentFilter.slice(4);
+            show = tags.includes(targetTag);
+          } else if (currentFilter !== 'all') {
+            show = lesson === currentFilter;
+          }
+
+          card.classList.toggle('hidden', !show);
+          if (show) visibleCards++;
+        });
+
+        sections.forEach((sec) => {
+          const secLesson = sec.dataset.sectionLesson;
+          if (secLesson === 'init') {
+            sec.classList.toggle('hidden', currentFilter !== 'all' && currentFilter !== 'todo');
+            return;
+          }
+          const secCards = Array.from(sec.querySelectorAll('.task-card'));
+          const anyVisible = secCards.some((c) => !c.classList.contains('hidden'));
+          sec.classList.toggle('hidden', !anyVisible);
+        });
+
+        emptyFilter.classList.toggle('visible', visibleCards === 0);
+      }
+
+      function syncUI() {
+        let doneCount = 0;
+        cards.forEach((card) => {
+          const id = card.dataset.taskId;
+          const cb = card.querySelector('.task-check');
+          const isDone = doneSet.has(id);
+          cb.checked = isDone;
+          card.classList.toggle('done', isDone);
+          if (isDone) doneCount++;
+        });
+
+        const total = cards.length;
+        const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+        progressText.textContent = `${doneCount} / ${total} (${pct}%)`;
+        progressFill.style.width = `${pct}%`;
+        resetBtn.classList.toggle('visible', doneCount > 0);
+        applyFilter();
+      }
+
+      cards.forEach((card) => {
+        const cb = card.querySelector('.task-check');
+        cb.addEventListener('change', () => {
+          const id = card.dataset.taskId;
+          if (cb.checked) doneSet.add(id);
+          else doneSet.delete(id);
+          saveDone(doneSet);
+          syncUI();
+        });
+      });
+
+      filterBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          currentFilter = btn.dataset.filter;
+          filterBtns.forEach((b) => b.classList.toggle('active', b === btn));
+          applyFilter();
+        });
+      });
+
+      resetBtn.addEventListener('click', () => {
+        doneSet.clear();
+        saveDone(doneSet);
+        syncUI();
+      });
+
+      syncUI();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 6.2: Партиционирование таблиц и материализованные представления в PostgreSQL</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_6/practice.html#sec-6-2">Практикум 6.2</a>
+        <a class="course-nav-btn" href="../slides/module-6.html#6.2">Слайды урока 6.2</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 6 · Архитектура DWH, OLAP-движки и итоговый проект</span>
+        <span class="pill pill-neutral">Урок 6.2</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Партиционирование таблиц и материализованные представления в PostgreSQL</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Научишься разрезать гигантские таблицы фактов на быстрые «ломтики» с помощью <strong>декларативного партиционирования</strong> (<code>RANGE</code>, <code>LIST</code>, <code>HASH</code>).</li>
+          <li>Увидишь вживую через <code>EXPLAIN ANALYZE</code>, как работает <strong>отсечение партиций</strong> (<code>Partition Pruning</code>) и как мгновенно убирать старые архивы командой <code>DETACH PARTITION</code>.</li>
+          <li>Разберёшься, чем обычное представление (<code>VIEW</code>) отличается от <strong>материализованного представления</strong> (<code>MATERIALIZED VIEW</code>), и ускоришь тяжёлый отчёт в сотни раз.</li>
+          <li>Узнаешь, как обновлять витрины командой <code>REFRESH MATERIALIZED VIEW CONCURRENTLY</code> без зависания дашбордов у пользователей.</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. ОСНОВНЫЕ РАЗДЕЛЫ ЛЕКЦИИ ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Зачем резать таблицу на папки: что такое партиционирование</h2>
+      <p>
+        Представь школьную библиотеку, в которой все читательские карточки за последние 5 лет просто свалили в одну гигантскую картонную коробку. Когда библиотекарь просит найти все выданные книги за <strong>февраль 2026 года</strong>, тебе приходится перерыть всю гору бумаги до самого дна. А если директор скажет «выброси карточки за 2021 год», ты потратишь три дня, выискивая их по одной штучке!
+      </p>
+      <p>
+        Теперь представь, что библиотекарь поставил шкаф с аккуратными папками, подписанными по месяцам: «Январь 2026», «Февраль 2026», «Март 2026». Вся полка целиком по-прежнему называется «Архив выдач», но:
+      </p>
+      <ul>
+        <li>Чтобы посмотреть февраль, ты достаёшь <strong>ровно одну папку</strong> и даже не прикасаешься к остальным.</li>
+        <li>Чтобы удалить старый месяц, ты просто вынимаешь папку со шкафа целиком за <strong>1 секунду</strong>.</li>
+      </ul>
+      <p>
+        В PostgreSQL этот приём называется <strong>декларативным партиционированием (Declarative Partitioning)</strong>. Для твоих SQL-запросов существует одна привычная <strong>родительская таблица (Parent Table)</strong>, но внутри база сама раскладывает строки по отдельным маленьким таблицам-файлам — <strong>партициям (Partitions)</strong>. Когда ты пишешь <code>WHERE sale_date ...</code>, планировщик автоматически отбрасывает ненужные папки — эта магия называется <strong>отсечением партиций (Partition Pruning)</strong>.
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart TB
+            Q["Запрос: WHERE sale_date &gt;= '2026-02-01' AND sale_date &lt; '2026-03-01'"]
+            P["Родитель: fact_sales_part\n(PARTITION BY RANGE sale_date)"]
+            P1["fact_sales_2026_01\n(Пропущена ✗)"]
+            P2["fact_sales_2026_02\n(Читаем только её ✓)"]
+            P3["fact_sales_2026_03\n(Пропущена ✗)"]
+
+            Q --> P
+            P -. "Partition Pruning" .-> P1
+            P ==>|"Сканируем"| P2
+            P -. "Partition Pruning" .-> P3
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Отсечение партиций (Partition Pruning): PostgreSQL читает только февральскую папку, экономя время и диск.</figcaption>
+      </figure>
+
+      <p>
+        В PostgreSQL есть три способа нарезать таблицу на папки — выбор зависит от того, по какому признаку твои запросы чаще всего фильтруют данные:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Тип партиционирования</th>
+              <th>Как раскладывает строки</th>
+              <th>Типичный пример в DWH</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>RANGE</code> (по диапазону)</td>
+              <td>По интервалам «ОТ и ДО» (даты, числа)</td>
+              <td>Продажи по месяцам (<code>sale_date</code>), логи событий по дням</td>
+            </tr>
+            <tr>
+              <td><code>LIST</code> (по списку)</td>
+              <td>По конкретным значениям из списка</td>
+              <td>Регионы (<code>'KZ'</code>, <code>'RU'</code>), статусы, филиалы</td>
+            </tr>
+            <tr>
+              <td><code>HASH</code> (по хэшу)</td>
+              <td>Равномерно раскидывает по остатку от деления хэша</td>
+              <td>Миллионы пользователей по <code>customer_id</code>, когда нет даты</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Важная деталь границ в <code>RANGE</code>:</strong> Фраза <code>FROM ('2026-01-01') TO ('2026-02-01')</code> работает как полуинтервал <code>[начало, конец)</code> — то есть 1 января <strong>входит</strong> в январскую папку, а 1 февраля <strong>уже нет</strong> (оно пойдёт в февраль). Благодаря этому между месяцами никогда не бывает дыр и нахлёстов!
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">02</span> Создаём партиционированную таблицу фактов на 300 000 строк</h2>
+      <p>
+        Давай проверим партиционирование на деле, а не на 10 строчках! Подключись к нашему контейнеру с <code>PostgreSQL 16</code> и базе <code>learning_db</code>:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash · Подключение к PostgreSQL</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker compose up -d
+docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+      </div>
+
+      <h3>Пример 1. Создаём таблицу с <code>PARTITION BY RANGE</code> и наполняем её</h3>
+      <p>
+        В PostgreSQL есть одно железное правило: если ты хочешь создать <code>PRIMARY KEY</code> или <code>UNIQUE</code> на партиционированной таблице, <strong>ключ партиционирования (<code>sale_date</code>) обязан входить в этот первичный ключ</strong>. Иначе база не сможет быстро гарантировать уникальность без проверки всех остальных папок.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Создание партиционированной таблицы и 300 000 продаж</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP SCHEMA IF EXISTS dwh_part CASCADE;
+CREATE SCHEMA dwh_part;
+
+-- 1. Родительская таблица (сама строки не хранит — только маршрутизирует!)
+CREATE TABLE dwh_part.fact_sales_part (
+    sale_id      BIGINT GENERATED ALWAYS AS IDENTITY,
+    sale_date    DATE NOT NULL,
+    city_name    TEXT NOT NULL,
+    category     TEXT NOT NULL,
+    qty          INT NOT NULL,
+    total_amount NUMERIC(10, 2) NOT NULL,
+    PRIMARY KEY (sale_id, sale_date)
+) PARTITION BY RANGE (sale_date);
+
+-- 2. Создаём 3 папки-партиции на 1-й квартал 2026 года
+CREATE TABLE dwh_part.fact_sales_2026_01
+    PARTITION OF dwh_part.fact_sales_part
+    FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
+
+CREATE TABLE dwh_part.fact_sales_2026_02
+    PARTITION OF dwh_part.fact_sales_part
+    FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
+
+CREATE TABLE dwh_part.fact_sales_2026_03
+    PARTITION OF dwh_part.fact_sales_part
+    FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
+
+-- 3. Генерируем 300 000 покупок равномерно за 90 дней (январь–март 2026)
+INSERT INTO dwh_part.fact_sales_part (sale_date, city_name, category, qty, total_amount)
+SELECT
+    DATE '2026-01-01' + (g % 90),
+    (ARRAY['Алматы', 'Астана', 'Костанай', 'Москва'])[1 + (g % 4)],
+    (ARRAY['Электроника', 'Мерч', 'Аксессуары'])[1 + (g % 3)],
+    1 + (g % 3),
+    (1 + (g % 3)) * (5000 + (g % 5) * 3000)::NUMERIC(10, 2)
+FROM generate_series(1, 300000) AS g;
+
+-- Собираем свежую статистику для планировщика запросов
+ANALYZE dwh_part.fact_sales_part;
+
+-- 4. Смотрим через системную колонку tableoid, в какие папки легли строки
+SELECT tableoid::regclass AS partition_name, COUNT(*) AS rows_count
+FROM dwh_part.fact_sales_part
+GROUP BY tableoid
+ORDER BY partition_name;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>       partition_name       | rows_count 
+----------------------------+------------
+ dwh_part.fact_sales_2026_01 |     103353
+ dwh_part.fact_sales_2026_02 |      93324
+ dwh_part.fact_sales_2026_03 |     103323
+(3 rows)</pre>
+      </div>
+
+      <p>
+        Обрати внимание: мы сделали <strong>один</strong> обычный <code>INSERT INTO dwh_part.fact_sales_part</code>, но PostgreSQL сам аккуратно разложил 300 000 строк по трём разным файлам-партициям!
+      </p>
+
+      <h3>Пример 2. Что случится 1 апреля, если забыть создать новую папку?</h3>
+      <p>
+        Это классический ночной кошмар инженеров данных: наступает новый месяц, прилетает первая покупка за апрель, а подходящей партиции в базе нет. Давай воспроизведём эту ошибку прямо сейчас:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Попытка вставить дату без партиции</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">INSERT INTO dwh_part.fact_sales_part (sale_date, city_name, category, qty, total_amount)
+VALUES ('2026-04-05', 'Алматы', 'Мерч', 2, 44000.00);</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  no partition of relation "fact_sales_part" found for row
+DETAIL:  Partition key of the failing row contains (sale_date) = (2026-04-05).</pre>
+      </div>
+
+      <p>
+        PostgreSQL честно говорит: <em>«Я не знаю, в какую папку положить 5 апреля!»</em>. Как защититься? Во-первых, создавать партиции на следующие месяцы заранее (автоматическим скриптом или расширением <code>pg_partman</code>). Во-вторых, можно добавить страховочную папку <code>DEFAULT</code> — туда временно попадут все строки, для которых не нашлось своего интервала, чтобы ночная загрузка не упала.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Создаём партицию на апрель и страховочную DEFAULT-партицию</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Создаём партицию на апрель 2026
+CREATE TABLE dwh_part.fact_sales_2026_04
+    PARTITION OF dwh_part.fact_sales_part
+    FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
+
+-- Добавляем страховочную папку для любых других дат
+CREATE TABLE dwh_part.fact_sales_default
+    PARTITION OF dwh_part.fact_sales_part
+    DEFAULT;
+
+-- Повторяем вставку — теперь всё проходит без ошибок!
+INSERT INTO dwh_part.fact_sales_part (sale_date, city_name, category, qty, total_amount)
+VALUES ('2026-04-05', 'Алматы', 'Мерч', 2, 44000.00);</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>INSERT 0 1</pre>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">03</span> Магия Partition Pruning и мгновенная очистка архивов</h2>
+      <p>
+        Давай посмотрим, какую реальную выгоду мы получили от нарезки таблицы. Сравним две главные операции любого хранилища данных:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Операция</th>
+              <th>Было (одна огромная таблица)</th>
+              <th>Стало (партиции по месяцам)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Отчёт за 1 месяц</strong></td>
+              <td>Сканирует все 300 000 строк (или огромный B-Tree индекс)</td>
+              <td>Читает только 1 папку (93 324 строки), остальные отбрасывает</td>
+            </tr>
+            <tr>
+              <td><strong>Удаление старого месяца</strong></td>
+              <td>Медленный <code>DELETE</code>, блокировки, раздувание таблицы и долгий <code>VACUUM</code></td>
+              <td>Мгновенный <code>DETACH PARTITION</code> + <code>DROP TABLE</code> за пару миллисекунд</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Пример 3. Проверяем отсечение партиций через <code>EXPLAIN ANALYZE</code></h3>
+      <p>
+        Запустим подсчёт выручки за февраль 2026 года и заглянем внутрь плана выполнения:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Проверка Partition Pruning</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">EXPLAIN (ANALYZE, COSTS OFF)
+SELECT city_name, SUM(total_amount) AS feb_revenue
+FROM dwh_part.fact_sales_part
+WHERE sale_date &gt;= DATE '2026-02-01'
+  AND sale_date &lt;  DATE '2026-03-01'
+GROUP BY city_name
+ORDER BY feb_revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">План выполнения PostgreSQL (EXPLAIN ANALYZE)</div>
+        <pre> Sort (actual time=24.112..24.114 rows=4 loops=1)
+   Sort Key: (sum(total_amount)) DESC
+   Sort Method: quicksort  Memory: 25kB
+   -&gt;  HashAggregate (actual time=24.085..24.088 rows=4 loops=1)
+         Group Key: city_name
+         -&gt;  Seq Scan on fact_sales_2026_02 fact_sales_part (actual time=0.014..11.640 rows=93324 loops=1)
+               Filter: ((sale_date &gt;= '2026-02-01'::date) AND (sale_date &lt; '2026-03-01'::date))
+ Planning Time: 0.245 ms
+ Execution Time: 24.180 ms</pre>
+      </div>
+
+      <p>
+        Посмотри на строчку <code>Seq Scan on fact_sales_2026_02</code>! Январь, март, апрель и <code>default</code> даже не упоминаются в плане — PostgreSQL мгновенно отсёк лишние 200 000 строк ещё на этапе планирования. Именно так мы решили проблему медленного перебора всей «коробки с карточками» из начала урока!
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT SUM(total_amount)
+FROM dwh_part.fact_sales_part
+WHERE EXTRACT(MONTH FROM sale_date)
+      = 2;</code></pre>
+            </div>
+            <p>Функция вокруг <code>sale_date</code> ослепляет планировщик: <strong>Partition Pruning не сработает</strong>, и база просканирует все 5 партиций целиком!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT SUM(total_amount)
+FROM dwh_part.fact_sales_part
+WHERE sale_date &gt;= '2026-02-01'
+  AND sale_date &lt;  '2026-03-01';</code></pre>
+            </div>
+            <p>Сравнивай саму колонку <code>sale_date</code> напрямую с границами дат — тогда отсечение сработает идеально.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Пример 4. Мгновенная архивация старого месяца через <code>DETACH PARTITION</code></h3>
+      <p>
+        Представь, что январь 2026 года устарел и больше не нужен в оперативной витрине, но удалять его навсегда пока страшно — вдруг бухгалтерия попросит сверку? Вместо тяжёлого <code>DELETE FROM ... WHERE sale_date &lt; '2026-02-01'</code> мы просто отцепляем январскую папку от шкафа!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Мгновенное отцепление партиции без DELETE</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Отцепляем январскую папку (в продакшене добавляют слово CONCURRENTLY!)
+ALTER TABLE dwh_part.fact_sales_part
+    DETACH PARTITION dwh_part.fact_sales_2026_01;
+
+-- В родительской таблице января больше нет
+SELECT tableoid::regclass AS partition_name, COUNT(*) AS rows_count
+FROM dwh_part.fact_sales_part
+GROUP BY tableoid
+ORDER BY partition_name;
+
+-- Зато данные января спокойно лежат в отдельной архивной таблице!
+SELECT COUNT(*) AS archived_jan_rows
+FROM dwh_part.fact_sales_2026_01;
+
+-- Если архив больше не нужен, его можно удалить мгновенно:
+-- DROP TABLE dwh_part.fact_sales_2026_01;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>       partition_name       | rows_count 
+----------------------------+------------
+ dwh_part.fact_sales_2026_02 |      93324
+ dwh_part.fact_sales_2026_03 |     103323
+ dwh_part.fact_sales_2026_04 |          1
+(3 rows)
+
+ archived_jan_rows 
+-------------------
+            103353
+(1 row)</pre>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет для продакшена:</strong> На живой базе с активными пользователями всегда пиши <code>ALTER TABLE ... DETACH PARTITION ... CONCURRENTLY</code> (доступно начиная с PostgreSQL 14). Обычный <code>DETACH</code> на долю секунды вешает жёсткую блокировку на всю родительскую таблицу, а вариант с <code>CONCURRENTLY</code> аккуратно ждёт завершения текущих запросов и никому не мешает.
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">04</span> Обычное VIEW против Материализованного (MATERIALIZED VIEW)</h2>
+      <p>
+        Партиционирование отлично помогло сократить объём чтения с 300 000 строк до 93 000. Но представь, что каждый понедельник в 9:00 утра <strong>500 менеджеров</strong> одновременно открывают один и тот же дашборд: «Выручка по городам и категориям за каждый месяц». Даже если запрос бегает за 50 миллисекунд, 500 одинаковых тяжёлых подсчётов подряд перегрузят процессор!
+      </p>
+      <p>
+        Подумай о разнице между <strong>рецептом борща</strong> и <strong>готовой кастрюлей борща в холодильнике</strong>:
+      </p>
+      <ul>
+        <li><strong>Обычное представление (<code>VIEW</code>)</strong> — это просто сохранённый <em>рецепт</em>. Оно не хранит никаких данных на диске. Каждый раз, когда менеджер делает <code>SELECT * FROM v_revenue</code>, PostgreSQL заново «режет овощи и варит суп» — бежит в <code>fact_sales_part</code> и заново суммирует сотни тысяч строк.</li>
+        <li><strong>Материализованное представление (<code>MATERIALIZED VIEW</code>)</strong> — это <em>готовая кастрюля</em>. PostgreSQL один раз выполняет тяжёлый <code>GROUP BY</code> и <strong>физически сохраняет маленькую готовую табличку на диск</strong>. Когда 500 менеджеров открывают дашборд, база не считает ничего заново — она за доли миллисекунды отдаёт 25 готовых строчек!</li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            subgraph V["Обычное VIEW (Рецепт)"]
+              U1["500 менеджеров"] -->|"500 раз заново"| F1[("fact_sales_part\n~200 000 строк")]
+            end
+            subgraph MV["MATERIALIZED VIEW (Готовая витрина)"]
+              F2[("fact_sales_part\n~200 000 строк")] -->|"1 раз в час: REFRESH"| M[("mv_monthly_city_revenue\nвсего 25 строк!")]
+              U2["500 менеджеров"] -->|"Мгновенно (~0.05 ms)"| M
+            end
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Материализованное представление превращает 500 тяжёлых пересчётов в один фоновый расчёт и мгновенное чтение.</figcaption>
+      </figure>
+
+      <h3>Пример 5. Создаём материализованную витрину и замеряем ускорение</h3>
+      <p>
+        Давай создадим <code>MATERIALIZED VIEW</code> поверх нашей партиционированной таблицы и сравним скорость отчёта за февраль с тем, что мы видели в Примере 3 (там было <strong>24.18 ms</strong>):
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Создание материализованной витрины и замер скорости</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP MATERIALIZED VIEW IF EXISTS dwh_part.mv_monthly_city_revenue;
+
+-- Создаём витрину и сразу наполняем её данными (WITH DATA)
+CREATE MATERIALIZED VIEW dwh_part.mv_monthly_city_revenue AS
+SELECT
+    DATE_TRUNC('month', sale_date)::DATE AS month_start,
+    city_name,
+    category,
+    SUM(qty)          AS total_qty,
+    SUM(total_amount) AS total_revenue
+FROM dwh_part.fact_sales_part
+GROUP BY DATE_TRUNC('month', sale_date)::DATE, city_name, category
+WITH DATA;
+
+-- На материализованном представлении можно строить обычные индексы!
+CREATE INDEX idx_mv_month ON dwh_part.mv_monthly_city_revenue (month_start);
+
+-- Замеряем скорость того же февральского отчёта по готовой витрине
+EXPLAIN (ANALYZE, COSTS OFF)
+SELECT city_name, SUM(total_revenue) AS feb_revenue
+FROM dwh_part.mv_monthly_city_revenue
+WHERE month_start = DATE '2026-02-01'
+GROUP BY city_name
+ORDER BY feb_revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">План выполнения PostgreSQL (EXPLAIN ANALYZE)</div>
+        <pre> Sort (actual time=0.058..0.060 rows=4 loops=1)
+   Sort Key: (sum(total_revenue)) DESC
+   Sort Method: quicksort  Memory: 25kB
+   -&gt;  HashAggregate (actual time=0.044..0.046 rows=4 loops=1)
+         Group Key: city_name
+         -&gt;  Seq Scan on mv_monthly_city_revenue (actual time=0.012..0.021 rows=12 loops=1)
+               Filter: (month_start = '2026-02-01'::date)
+               Rows Removed by Filter: 13
+ Planning Time: 0.140 ms
+ Execution Time: 0.088 ms</pre>
+      </div>
+
+      <p>
+        Сравни результат: было <strong>24.18 ms</strong> и 93 324 прочитанных строки — стало <strong>0.088 ms</strong> и всего 25 строк! Ускорение почти в <strong>275 раз</strong>, а на реальной таблице с 50 миллионами покупок разница будет в тысячи раз. Проблема перегрузки процессора от 500 менеджеров решена!
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">05</span> Обновление витрины без простоя (<code>REFRESH ... CONCURRENTLY</code>)</h2>
+      <p>
+        У готовой кастрюли в холодильнике есть один очевидный минус: если в магазин завезли свежие покупки, сама собой кастрюля не обновится! Материализованное представление в PostgreSQL <strong>не обновляется автоматически</strong> при вставке новых строк в <code>fact_sales_part</code>. Его нужно пересчитывать командой <code>REFRESH MATERIALIZED VIEW</code> (обычно по расписанию — раз в 15 минут, раз в час или ночью).
+      </p>
+      <p>
+        Но здесь прячется коварная ловушка: обычный <code>REFRESH MATERIALIZED VIEW</code> на всё время пересчёта вешает замок <code>ACCESS EXCLUSIVE</code>. Если витрина пересчитывается 2 минуты, то все 2 минуты дашборд директора просто висит и не открывается! Чтобы читатели продолжали видеть старые данные, пока в фоне готовятся свежие, добавляют ключевое слово <code>CONCURRENTLY</code>.
+      </p>
+
+      <h3>Пример 6. Ошибка <code>CONCURRENTLY</code> без уникального индекса и её решение</h3>
+      <p>
+        Добавим в апрель новую продажу из Астаны и попробуем обновить витрину в режиме <code>CONCURRENTLY</code> прямо сейчас:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Вставляем новую продажу и пробуем CONCURRENTLY</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Пришла новая продажа за апрель 2026
+INSERT INTO dwh_part.fact_sales_part (sale_date, city_name, category, qty, total_amount)
+VALUES ('2026-04-10', 'Астана', 'Электроника', 1, 35000.00);
+
+-- Пробуем обновить витрину без блокировки читателей
+REFRESH MATERIALIZED VIEW CONCURRENTLY dwh_part.mv_monthly_city_revenue;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  cannot refresh materialized view "dwh_part.mv_monthly_city_revenue" concurrently
+HINT:  Create a unique index with no WHERE clause on one or more columns of the materialized view.</pre>
+      </div>
+
+      <p>
+        Зачем PostgreSQL требует <code>UNIQUE INDEX</code>? Чтобы обновлять витрину незаметно для пользователей, база должна сравнить старую версию витрины с новой строчка к строчке и точечно заменить только изменившиеся строки (сделать внутренний diff). Без уникального ключа она просто не знает, какая новая строка соответствует какой старой! Исправляем в две команды:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Создаём UNIQUE INDEX и обновляем витрину без блокировок</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- 1. Создаём уникальный индекс по колонкам группировки (без WHERE!)
+CREATE UNIQUE INDEX idx_mv_monthly_city_rev_uniq
+    ON dwh_part.mv_monthly_city_revenue (month_start, city_name, category);
+
+-- 2. Теперь обновление проходит мягко и не мешает дашбордам!
+REFRESH MATERIALIZED VIEW CONCURRENTLY dwh_part.mv_monthly_city_revenue;
+
+-- 3. Проверяем свежие данные за апрель
+SELECT month_start, city_name, category, total_qty, total_revenue
+FROM dwh_part.mv_monthly_city_revenue
+WHERE month_start = DATE '2026-04-01'
+ORDER BY total_revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> month_start | city_name |  category   | total_qty | total_revenue 
+-------------+-----------+-------------+-----------+---------------
+ 2026-04-01  | Алматы    | Мерч        |         2 |      44000.00
+ 2026-04-01  | Астана    | Электроника |         1 |      35000.00
+(2 rows)</pre>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Вешает ACCESS EXCLUSIVE!
+REFRESH MATERIALIZED VIEW
+  dwh_part.mv_monthly_city_revenue;</code></pre>
+            </div>
+            <p>Пока идёт пересчёт, любые <code>SELECT</code> от BI-систем и аналитиков встают в очередь и ждут.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Нужен UNIQUE INDEX (один раз)
+REFRESH MATERIALIZED VIEW
+  CONCURRENTLY
+  dwh_part.mv_monthly_city_revenue;</code></pre>
+            </div>
+            <p>Читатели мгновенно получают старый снимок данных, а после расчёта база незаметно подменяет отличия.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Помни о цене свежести:</strong> <code>MATERIALIZED VIEW</code> всегда показывает данные с задержкой на момент последнего <code>REFRESH</code>. Если бизнесу нужны цифры <em>«секунда в секунду»</em> (например, баланс банковской карты), материализованное представление не подойдёт. Зато для аналитических отчётов, которые достаточно обновлять раз в час или ночью, это идеальный инструмент!
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">06</span> Шпаргалка урока перед практикой</h2>
+      <p>
+        Короткий чек-лист главных правил этого урока — держи его под рукой, пока решаешь задачи:
+      </p>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Инструмент / Правило</th>
+              <th>Как работает и на что смотреть</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong><code>PARTITION BY RANGE / LIST / HASH</code></strong></td>
+              <td>Режет одну гигантскую таблицу на маленькие файлы-партиции. Ключ партиционирования обязан входить в <code>PRIMARY KEY</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Partition Pruning</strong></td>
+              <td>Отсечение ненужных папок на этапе планирования. Не оборачивай колонку партиционирования в функции вроде <code>EXTRACT()</code> в <code>WHERE</code>!</td>
+            </tr>
+            <tr>
+              <td><strong><code>DEFAULT</code> и <code>DETACH</code></strong></td>
+              <td>Папка <code>DEFAULT</code> спасёт от падения вставки вне диапазона. <code>DETACH PARTITION [CONCURRENTLY]</code> отцепляет старый месяц за миллисекунды без <code>DELETE</code>.</td>
+            </tr>
+            <tr>
+              <td><strong><code>MATERIALIZED VIEW</code></strong></td>
+              <td>Сохраняет результат тяжёлого <code>GROUP BY</code> на диск. Можно вешать индексы. Не обновляется само — нужен <code>REFRESH</code>.</td>
+            </tr>
+            <tr>
+              <td><strong><code>REFRESH ... CONCURRENTLY</code></strong></td>
+              <td>Обновляет витрину без блокировки читателей. Обязательное условие — наличие <code>UNIQUE INDEX</code> без <code>WHERE</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== 3. БЛОК САМОПРОВЕРКИ ==================== -->
+    <section>
+      <h2><span class="sec-num">07</span> Мини-практикум для закрепления</h2>
+      <p>
+        Выполни 4 автономных задания в <code>learning_db</code>. Каждая задача полностью независима — она сама создаёт нужную схему/таблицы, поэтому ты можешь решать их в любом порядке.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый). Партиционирование по странам (<code>LIST</code>)</div>
+        <p style="margin-bottom: 0;">
+          Создай схему <code>dwh_part</code> (если её ещё нет) и таблицу <code>dwh_part.lab_list_orders</code> (<code>order_id INT</code>, <code>country_code TEXT</code>, <code>amount NUMERIC(10, 2)</code>) с партиционированием <code>PARTITION BY LIST (country_code)</code> и первичным ключом <code>(order_id, country_code)</code>. Создай 3 партиции: для <code>'KZ'</code>, для <code>'RU'</code> и папку <code>DEFAULT</code> для остальных стран. Вставь 4 заказа (из <code>'KZ'</code>, <code>'RU'</code>, <code>'UZ'</code>, <code>'KZ'</code>) и проверь через <code>EXPLAIN (COSTS OFF)</code>, что запрос <code>WHERE country_code = 'KZ'</code> обращается только к одной партиции.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 1</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">CREATE SCHEMA IF NOT EXISTS dwh_part;
+DROP TABLE IF EXISTS dwh_part.lab_list_orders CASCADE;
+
+CREATE TABLE dwh_part.lab_list_orders (
+    order_id     INT NOT NULL,
+    country_code TEXT NOT NULL,
+    amount       NUMERIC(10, 2) NOT NULL,
+    PRIMARY KEY (order_id, country_code)
+) PARTITION BY LIST (country_code);
+
+CREATE TABLE dwh_part.lab_list_orders_kz
+    PARTITION OF dwh_part.lab_list_orders FOR VALUES IN ('KZ');
+
+CREATE TABLE dwh_part.lab_list_orders_ru
+    PARTITION OF dwh_part.lab_list_orders FOR VALUES IN ('RU');
+
+CREATE TABLE dwh_part.lab_list_orders_other
+    PARTITION OF dwh_part.lab_list_orders DEFAULT;
+
+INSERT INTO dwh_part.lab_list_orders VALUES
+    (1, 'KZ', 15000.00),
+    (2, 'RU', 22000.00),
+    (3, 'UZ',  9000.00),
+    (4, 'KZ', 31000.00);
+
+-- В плане должна остаться только одна партиция: lab_list_orders_kz
+EXPLAIN (COSTS OFF)
+SELECT * FROM dwh_part.lab_list_orders WHERE country_code = 'KZ';</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Средний). Поймай «потерянные» строки в <code>DEFAULT</code>-партиции</div>
+        <p style="margin-bottom: 0;">
+          Создай таблицу <code>dwh_part.lab_logs</code> (<code>log_id SERIAL</code>, <code>log_date DATE</code>, <code>msg TEXT</code>) с <code>PARTITION BY RANGE (log_date)</code>. Добавь партиции на май 2026 (<code>2026-05-01</code> — <code>2026-06-01</code>), июнь 2026 (<code>2026-06-01</code> — <code>2026-07-01</code>) и папку <code>lab_logs_default</code>. Вставь 4 события: по одному на май и июнь, и два события с ошибочной датой из июля (<code>'2026-07-03'</code> и <code>'2026-07-15'</code>). Выведи количество строк в каждой партиции через <code>tableoid::regclass</code>, чтобы увидеть, сколько строк осело в <code>DEFAULT</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 2</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">CREATE SCHEMA IF NOT EXISTS dwh_part;
+DROP TABLE IF EXISTS dwh_part.lab_logs CASCADE;
+
+CREATE TABLE dwh_part.lab_logs (
+    log_id   SERIAL,
+    log_date DATE NOT NULL,
+    msg      TEXT NOT NULL,
+    PRIMARY KEY (log_id, log_date)
+) PARTITION BY RANGE (log_date);
+
+CREATE TABLE dwh_part.lab_logs_2026_05
+    PARTITION OF dwh_part.lab_logs
+    FOR VALUES FROM ('2026-05-01') TO ('2026-06-01');
+
+CREATE TABLE dwh_part.lab_logs_2026_06
+    PARTITION OF dwh_part.lab_logs
+    FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
+
+CREATE TABLE dwh_part.lab_logs_default
+    PARTITION OF dwh_part.lab_logs DEFAULT;
+
+INSERT INTO dwh_part.lab_logs (log_date, msg) VALUES
+    ('2026-05-10', 'Оплата прошла'),
+    ('2026-06-14', 'Новый клиент'),
+    ('2026-07-03', 'Июльский заказ #1'),
+    ('2026-07-15', 'Июльский заказ #2');
+
+SELECT tableoid::regclass AS partition_name, COUNT(*) AS rows_count
+FROM dwh_part.lab_logs
+GROUP BY tableoid
+ORDER BY partition_name;
+-- В lab_logs_default окажется 2 строки!</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Продвинутый). Быстрая витрина с обновлением <code>CONCURRENTLY</code></div>
+        <p style="margin-bottom: 0;">
+          Создай автономную таблицу <code>dwh_part.lab_sales</code> (<code>id SERIAL PRIMARY KEY</code>, <code>category TEXT</code>, <code>amount NUMERIC(10, 2)</code>) и вставь в неё 4 продажи по категориям <code>'Игры'</code> и <code>'Книги'</code>. Затем создай материализованное представление <code>dwh_part.mv_lab_category_stats</code> с количеством продаж и суммой выручки по каждой категории, добавь на него правильный <code>UNIQUE INDEX</code>, вставь ещё 1 продажу в категорию <code>'Игры'</code> на <code>15000.00</code>, обнови витрину через <code>REFRESH MATERIALIZED VIEW CONCURRENTLY</code> и проверь свежие итоги.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 3</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">CREATE SCHEMA IF NOT EXISTS dwh_part;
+DROP MATERIALIZED VIEW IF EXISTS dwh_part.mv_lab_category_stats;
+DROP TABLE IF EXISTS dwh_part.lab_sales;
+
+CREATE TABLE dwh_part.lab_sales (
+    id       SERIAL PRIMARY KEY,
+    category TEXT NOT NULL,
+    amount   NUMERIC(10, 2) NOT NULL
+);
+
+INSERT INTO dwh_part.lab_sales (category, amount) VALUES
+    ('Игры',  12000.00),
+    ('Игры',   8000.00),
+    ('Книги',  4500.00),
+    ('Книги',  5500.00);
+
+CREATE MATERIALIZED VIEW dwh_part.mv_lab_category_stats AS
+SELECT
+    category,
+    COUNT(*)    AS sales_count,
+    SUM(amount) AS total_revenue
+FROM dwh_part.lab_sales
+GROUP BY category
+WITH DATA;
+
+-- Уникальный индекс обязателен для CONCURRENTLY
+CREATE UNIQUE INDEX idx_mv_lab_cat_uniq
+    ON dwh_part.mv_lab_category_stats (category);
+
+-- Новая продажа
+INSERT INTO dwh_part.lab_sales (category, amount) VALUES ('Игры', 15000.00);
+
+-- Обновляем витрину без блокировок
+REFRESH MATERIALIZED VIEW CONCURRENTLY dwh_part.mv_lab_category_stats;
+
+SELECT * FROM dwh_part.mv_lab_category_stats ORDER BY total_revenue DESC;
+-- Ожидаемый результат: Игры (3 шт, 35000.00), Книги (2 шт, 10000.00)</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Проектирование). Безопасная архивация прошлого года через <code>DETACH</code></div>
+        <p style="margin-bottom: 0;">
+          Создай партиционированную таблицу <code>dwh_part.lab_events</code> (<code>event_id SERIAL</code>, <code>event_date DATE</code>, <code>title TEXT</code>) с двумя годовыми партициями: <code>lab_events_2025</code> (весь 2025 год) и <code>lab_events_2026</code> (весь 2026 год). Добавь по 2 события в каждый год. Затем отцепи партицию за 2025 год командой <code>DETACH PARTITION</code> и двумя запросами <code>SELECT</code> докажи, что: 1) в основной таблице <code>lab_events</code> остались только 2 события за 2026 год; 2) события за 2025 год не пропали и доступны в самостоятельной таблице <code>lab_events_2025</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 4</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">CREATE SCHEMA IF NOT EXISTS dwh_part;
+DROP TABLE IF EXISTS dwh_part.lab_events CASCADE;
+DROP TABLE IF EXISTS dwh_part.lab_events_2025;
+
+CREATE TABLE dwh_part.lab_events (
+    event_id   SERIAL,
+    event_date DATE NOT NULL,
+    title      TEXT NOT NULL,
+    PRIMARY KEY (event_id, event_date)
+) PARTITION BY RANGE (event_date);
+
+CREATE TABLE dwh_part.lab_events_2025
+    PARTITION OF dwh_part.lab_events
+    FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
+
+CREATE TABLE dwh_part.lab_events_2026
+    PARTITION OF dwh_part.lab_events
+    FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
+
+INSERT INTO dwh_part.lab_events (event_date, title) VALUES
+    ('2025-03-10', 'Весенняя акция 2025'),
+    ('2025-11-28', 'Чёрная пятница 2025'),
+    ('2026-01-15', 'Зимняя распродажа 2026'),
+    ('2026-02-20', 'Старт нового каталога 2026');
+
+-- Отцепляем 2025 год в архив
+ALTER TABLE dwh_part.lab_events
+    DETACH PARTITION dwh_part.lab_events_2025;
+
+-- 1. В основной таблице только 2026 год (2 строки)
+SELECT event_date, title FROM dwh_part.lab_events ORDER BY event_date;
+
+-- 2. В архивной таблице полностью сохранён 2025 год (2 строки)
+SELECT event_date, title FROM dwh_part.lab_events_2025 ORDER BY event_date;</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_6/practice.html#sec-6-2"><strong>Практикум по Уроку 6.2 →</strong></a> — там 10 заданий с ответами на <code>tableoid</code>, проверку <code>Partition Pruning</code> в <code>EXPLAIN ANALYZE</code>, защиту через <code>DEFAULT</code>, <code>DETACH PARTITION CONCURRENTLY</code> и бесшовное обновление <code>MATERIALIZED VIEW CONCURRENTLY</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока и мостик дальше</span>
+      Ты прокачал аналитику в <code>PostgreSQL</code> на два мощных уровня: научился разрезать гигантские таблицы фактов на быстрые партиции с отсечением <code>Partition Pruning</code> и мгновенной архивацией через <code>DETACH PARTITION</code>, а также ускорять популярные отчёты в сотни раз с помощью <code>MATERIALIZED VIEW</code> и безопасного обновления <code>CONCURRENTLY</code>. Но у классического PostgreSQL есть фундаментальный предел: он хранит данные <strong>построчно</strong> — если в таблице 50 колонок, а тебе нужна сумма всего по двум, он всё равно вынужден читать с диска всю строку целиком. В следующем <strong>Уроке 6.3</strong> мы запустим настоящий колончатый OLAP-движок <strong>ClickHouse</strong> из нашего <code>docker-compose.yaml</code> и узнаем, как колончатое хранение, сверхплотное сжатие, векторизация и шардирование (<code>MPP</code>) позволяют перемалывать миллиарды строк за доли секунды!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_6_1.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">6.1 · OLTP vs OLAP и размерное моделирование («Звезда»…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_6_3.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">6.3 · Колончатое хранение и OLAP-движки (ClickHouse): с…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

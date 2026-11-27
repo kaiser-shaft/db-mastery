@@ -1,0 +1,212 @@
+name: db-course
+
+services:
+  # ==========================================================
+  # МОДУЛИ 1–6 (БАЗОВЫЙ): Основной PostgreSQL 16 (Primary / OLTP)
+  # Запускается всегда по умолчанию: docker compose up -d
+  # ==========================================================
+  pg_primary:
+    image: postgres:16
+    container_name: course_pg_primary
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: learning_db
+      POSTGRES_USER: student
+      POSTGRES_PASSWORD: student_pass
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
+    ports:
+      - "5432:5432"
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
+      - -c
+      - wal_keep_size=128MB
+      - -c
+      - hot_standby=on
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      # Для Урока 5.4 (PITR) раскомментируй 4 строки ниже и перезапусти контейнер:
+      # - -c
+      # - archive_mode=on
+      # - -c
+      # - archive_command=mkdir -p /backups/wal && test ! -f /backups/wal/%f && cp %p /backups/wal/%f
+    configs:
+      - source: pg_enable_replication
+        target: /docker-entrypoint-initdb.d/01-enable-replication.sh
+    volumes:
+      - pg_primary_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U student -d learning_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - db_net
+
+  # ==========================================================
+  # МОДУЛЬ 4 (Урок 4.4): MySQL 8.4 (InnoDB) для сравнения с PostgreSQL
+  # Запуск: docker compose --profile mod4 up -d
+  # ==========================================================
+  mysql_innodb:
+    image: mysql:8.4
+    container_name: course_mysql_innodb
+    profiles: ["mod4", "all"]
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_DATABASE: learning_db
+      MYSQL_USER: student
+      MYSQL_PASSWORD: student_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - db_net
+
+  # ==========================================================
+  # МОДУЛЬ 5 (Уроки 5.1–5.2): Физическая потоковая реплика (Standby)
+  # Автоматически клонирует pg_primary через pg_basebackup при первом старте
+  # Запуск: docker compose --profile mod5 up -d
+  # ==========================================================
+  pg_standby:
+    image: postgres:16
+    container_name: course_pg_standby
+    profiles: ["mod5", "all"]
+    restart: unless-stopped
+    depends_on:
+      pg_primary:
+        condition: service_healthy
+    environment:
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    entrypoint:
+      - bash
+      - -c
+      - |
+        set -e
+        if [ ! -s "$$PGDATA/PG_VERSION" ]; then
+          echo "Клонирование pg_primary через pg_basebackup..."
+          rm -rf "$$PGDATA"/*
+          pg_basebackup \
+            -d "host=pg_primary port=5432 user=student password=student_pass" \
+            -D "$$PGDATA" -Fp -Xs -P -R
+          chown -R postgres:postgres "$$PGDATA"
+          chmod 0700 "$$PGDATA"
+        fi
+        exec docker-entrypoint.sh postgres -c hot_standby=on
+    volumes:
+      - pg_standby_data:/var/lib/postgresql/data
+    networks:
+      - db_net
+
+  # ==========================================================
+  # МОДУЛЬ 5 (Урок 5.3): Отдельный Postgres для логической репликации (Subscriber)
+  # ==========================================================
+  pg_logical:
+    image: postgres:16
+    container_name: course_pg_logical
+    profiles: ["mod5", "all"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: learning_db
+      POSTGRES_USER: student
+      POSTGRES_PASSWORD: student_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg_logical_data:/var/lib/postgresql/data
+    networks:
+      - db_net
+
+  # ==========================================================
+  # МОДУЛЬ 5 (Урок 5.4): Пулер соединений PgBouncer
+  # ==========================================================
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: course_pgbouncer
+    profiles: ["mod5", "all"]
+    restart: unless-stopped
+    depends_on:
+      pg_primary:
+        condition: service_healthy
+    environment:
+      DB_HOST: pg_primary
+      DB_PORT: "5432"
+      DB_NAME: learning_db
+      DB_USER: student
+      DB_PASSWORD: student_pass
+      POOL_MODE: transaction
+      AUTH_TYPE: scram-sha-256
+      MAX_CLIENT_CONN: "200"
+      DEFAULT_POOL_SIZE: "10"
+    ports:
+      - "6432:5432"
+    networks:
+      - db_net
+
+  # ==========================================================
+  # МОДУЛЬ 6 (Уроки 6.3–6.5): Колончатая OLAP-СУБД ClickHouse
+  # Веб-интерфейс Play доступен на http://localhost:8123/play
+  # Запуск: docker compose --profile mod6 up -d
+  # ==========================================================
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: course_clickhouse
+    profiles: ["mod6", "all"]
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: analytics_db
+      CLICKHOUSE_USER: student
+      CLICKHOUSE_PASSWORD: student_pass
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks:
+      - db_net
+
+  # ==========================================================
+  # ОПЦИОНАЛЬНО: Лёгкий веб-клиент Adminer (PostgreSQL + MySQL)
+  # Доступен на http://localhost:8080
+  # Запуск: docker compose --profile ui up -d
+  # ==========================================================
+  adminer:
+    image: adminer:latest
+    container_name: course_adminer
+    profiles: ["ui", "all"]
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - db_net
+
+configs:
+  pg_enable_replication:
+    content: |
+      #!/bin/bash
+      echo "host replication all 0.0.0.0/0 scram-sha-256" >> "$$PGDATA/pg_hba.conf"
+
+volumes:
+  pg_primary_data:
+  pg_standby_data:
+  pg_logical_data:
+  mysql_data:
+  clickhouse_data:
+
+networks:
+  db_net:
+    driver: bridge

@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 2.5: Практикум-чекпоинт — комплексные SQL-задачи на реальном датасете</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_2/practice.html#sec-2-5">Практикум 2.5</a>
+        <a class="course-nav-btn" href="../slides/module-2.html#2.5">Слайды урока 2.5</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 2 · Продвинутый SQL и проектирование БД</span>
+        <span class="pill pill-neutral">Урок 2.5 · Чекпоинт</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Урок 2.5: Практикум-чекпоинт — комплексные SQL-задачи на реальном датасете</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Соберёшь воедино <strong>весь арсенал Модуля 2</strong>: <code>LEFT JOIN</code>, <code>CASE WHEN</code>, <code>GROUP BY/HAVING</code>, CTE, даты, строки, <code>JSONB</code> и оконные функции.</li>
+          <li>Разберёшь 3 боевых бизнес-кейса от руководства интернет-магазина — от схемы расчёта до готового отчёта в <code>psql</code>.</li>
+          <li>Научишься ловить самые коварные ошибки комплексных запросов (потеря строк в <code>LEFT JOIN</code>, дублирование сумм и фильтрация окон).</li>
+          <li>Пройдёшь <strong>итоговый чекпоинт</strong> из 4 разноуровневых автономных задач, чтобы уверенно закрепить Модуль 2.</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. ДАТАСЕТ ЧЕКПОИНТА ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Боевой датасет маркетплейса в learning_db</h2>
+      <p>
+        Представь, что ты устроился аналитиком данных в интернет-магазин мерча и гаджетов. В первый же рабочий день руководитель присылает список вопросов: <em>«Кто наши VIP-клиенты, а кто так ничего и не купил? Как меняется выручка по месяцам? Какие товары с тегом hit приносят больше всего денег?»</em>.
+      </p>
+      <p>
+        В реальной жизни данные не бывают идеальными: у кого-то в имени лишние пробелы, один клиент зарегистрировался и не сделал ни одного заказа, другой заказ отменил, а свойства товаров и доставки лежат в <code>JSONB</code>. Сначала посмотрим на схему связей нашей базы:
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            C[("customers (клиенты)")] -->|1 : N| O[("orders (заказы + JSONB)")]
+            O -->|1 : N| OI[("order_items (позиции)")]
+            P[("products (товары + JSONB)")] -->|1 : N| OI
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Нормализованная схема (3НФ) интернет-магазина: связь «многие-ко-многим» между заказами и товарами реализована через order_items.</figcaption>
+      </figure>
+
+      <p>
+        Запусти скрипт ниже в базе <code>learning_db</code> — он безопасно пересоздаст все 4 таблицы и наполнит их данными для нашего чекпоинта.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Разворачиваем датасет чекпоинта в learning_db</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Безопасный перезапуск таблиц чекпоинта
+DROP TABLE IF EXISTS order_items, orders, products, customers CASCADE;
+
+CREATE TABLE customers (
+  id SERIAL PRIMARY KEY,
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  city TEXT,
+  registered_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE products (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL,
+  price NUMERIC(10, 2) NOT NULL CHECK (price &gt;= 0),
+  specs JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE orders (
+  id SERIAL PRIMARY KEY,
+  customer_id INT NOT NULL REFERENCES customers(id),
+  status TEXT NOT NULL CHECK (status IN ('paid', 'cancelled')),
+  created_at TIMESTAMPTZ NOT NULL,
+  delivery_info JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE order_items (
+  id SERIAL PRIMARY KEY,
+  order_id INT NOT NULL REFERENCES orders(id),
+  product_id INT NOT NULL REFERENCES products(id),
+  quantity INT NOT NULL CHECK (quantity &gt; 0),
+  unit_price NUMERIC(10, 2) NOT NULL
+);
+
+INSERT INTO customers (full_name, email, city, registered_at) VALUES
+  ('  алексей иванов  ', 'Alex.Ivanov@Mail.KZ', 'Алматы',   '2025-11-05 10:00:00+05'),
+  ('Мария Смирнова',     'maria@company.org',   'Астана',   '2025-11-20 14:15:00+05'),
+  ('Тимур Касымов',      'timur.k@gmail.com',   'Костанай', '2025-12-12 09:30:00+05'),
+  ('Елена Волкова',      'ELENA@shop.kz',       'Алматы',   '2026-01-08 16:45:00+05'),
+  ('Данияр Нурланов',    'daniyar@tech.kz',     NULL,       '2026-02-01 12:00:00+05'),
+  ('Ольга Ким',          'olga.kim@mail.kz',    'Астана',   '2026-02-15 11:10:00+05');
+
+INSERT INTO products (title, category, price, specs) VALUES
+  ('Механическая клавиатура', 'Гаджеты',    40000.00, '{"brand": "KeyPro", "tags": ["hit", "pro"]}'),
+  ('Беспроводная мышь',       'Гаджеты',    18000.00, '{"brand": "KeyPro", "tags": ["pro"]}'),
+  ('Худи «SQL Master»',       'Мерч',       15000.00, '{"size": "L", "tags": ["hit", "winter"]}'),
+  ('Футболка «SELECT *»',     'Мерч',        9000.00, '{"size": "M", "tags": ["summer"]}'),
+  ('Термокружка кодера',      'Аксессуары',  6000.00, '{"volume_ml": 450, "tags": ["hit", "gift"]}'),
+  ('Стикерпак «Postgres»',    'Аксессуары',  2000.00, '{"pcs": 10, "tags": ["gift"]}');
+
+INSERT INTO orders (customer_id, status, created_at, delivery_info) VALUES
+  (1, 'paid',      '2026-01-10 10:00:00+05', '{"courier": "FastBox", "express": true}'),
+  (2, 'paid',      '2026-01-20 15:00:00+05', '{"courier": "PostKZ",  "express": false}'),
+  (1, 'paid',      '2026-02-05 12:00:00+05', '{"courier": "FastBox", "express": true}'),
+  (6, 'cancelled', '2026-02-18 19:00:00+05', '{"courier": "PostKZ",  "express": false}'),
+  (3, 'paid',      '2026-02-25 14:00:00+05', '{"courier": "PostKZ",  "express": false}'),
+  (2, 'paid',      '2026-03-04 11:00:00+05', '{"courier": "FastBox", "express": true}'),
+  (4, 'paid',      '2026-03-18 17:30:00+05', '{"courier": "FastBox", "express": false}'),
+  (1, 'paid',      '2026-03-28 09:15:00+05', '{"courier": "FastBox", "express": true}');
+
+INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES
+  (1, 3, 1, 15000.00), (1, 6, 2,  2000.00), -- заказ 1: 19000
+  (2, 1, 1, 40000.00),                      -- заказ 2: 40000 (январь = 59000)
+  (3, 2, 1, 18000.00), (3, 5, 2,  6000.00), -- заказ 3: 30000
+  (4, 1, 1, 40000.00),                      -- заказ 4: отменён
+  (5, 4, 2,  9000.00),                      -- заказ 5: 18000 (февраль = 48000)
+  (6, 3, 2, 15000.00), (6, 5, 1,  6000.00), -- заказ 6: 36000
+  (7, 5, 1,  6000.00), (7, 6, 3,  2000.00), -- заказ 7: 12000
+  (8, 1, 1, 40000.00);                      -- заказ 8: 40000 (март = 88000)</code></pre>
+      </div>
+    </section>
+
+    <!-- ==================== 3. КЕЙС 1: СЕГМЕНТАЦИЯ КЛИЕНТОВ ==================== -->
+    <section>
+      <h2><span class="sec-num">02</span> Кейс 1: Сегментация всех клиентов (LEFT JOIN + CASE + строки)</h2>
+      <p>
+        Первая задача от маркетинга: <strong>«Покажи ВСЕХ зарегистрированных клиентов, почисти их имена, посчитай число оплаченных заказов, общую сумму трат и раздай статусы: VIP (от 50 000), Активный (меньше 50 000) или Спящий (0 оплаченных покупок)»</strong>.
+      </p>
+      <p>
+        Здесь скрыта классическая ловушка: нам нужны <em>все</em> клиенты, включая Данияра (у него нет заказов) и Ольгу (у неё заказ отменён). Значит, условие <code>o.status = 'paid'</code> нужно ставить <strong>внутрь <code>ON</code> при <code>LEFT JOIN</code></strong>, а не в <code>WHERE</code> — иначе «спящие» клиенты просто исчезнут из отчёта!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Кейс 1 — Полная витрина клиентов со статусами</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Собираем профиль каждого клиента, не теряя тех, у кого нет оплаченных заказов
+SELECT
+  INITCAP(TRIM(c.full_name)) AS customer_name,
+  COALESCE(c.city, 'Не указан') AS city,
+  COUNT(DISTINCT o.id) AS paid_orders,
+  COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total_spent,
+  CASE
+    WHEN COALESCE(SUM(oi.quantity * oi.unit_price), 0) &gt;= 50000 THEN 'VIP'
+    WHEN COALESCE(SUM(oi.quantity * oi.unit_price), 0) &gt; 0      THEN 'Активный'
+    ELSE 'Спящий'
+  END AS segment
+FROM customers c
+LEFT JOIN orders o
+  ON o.customer_id = c.id AND o.status = 'paid'
+LEFT JOIN order_items oi
+  ON oi.order_id = o.id
+GROUP BY c.id, c.full_name, c.city
+ORDER BY total_spent DESC, c.id;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>  customer_name  |   city    | paid_orders | total_spent | segment
+-----------------+-----------+-------------+-------------+----------
+ Алексей Иванов  | Алматы    |           3 |    89000.00 | VIP
+ Мария Смирнова  | Астана    |           2 |    76000.00 | VIP
+ Тимур Касымов   | Костанай  |           1 |    18000.00 | Активный
+ Елена Волкова   | Алматы    |           1 |    12000.00 | Активный
+ Данияр Нурланов | Не указан |           0 |           0 | Спящий
+ Ольга Ким       | Астана    |           0 |           0 | Спящий
+(6 rows)</pre>
+      </div>
+
+      <p>
+        Отчёт получился идеальным: имя Алексея очистилось от пробелов, пустой город Данияра превратился в <code>Не указан</code>, отменённый заказ Ольги не попал в выручку, а оба «спящих» клиента остались в таблице с нулями.
+      </p>
+    </section>
+
+    <!-- ==================== 4. КЕЙС 2: ВЫРУЧКА, ДИНАМИКА И НАКОПИТЕЛЬНЫЙ ИТОГ ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Кейс 2: Финансовый дашборд по месяцам (CTE + даты + окна)</h2>
+      <p>
+        Вторая задача от финансового директора: <strong>«Собери помесячный отчёт за 1-й квартал 2026 года: выручка месяца, сколько из неё принесли экспресс-доставки (<code>JSONB</code>), разница с прошлым месяцем (<code>LAG</code>) и накопительная выручка с начала года»</strong>.
+      </p>
+      <p>
+        Такой запрос кажется огромным, пока не разобьёшь его на два простых шага через CTE:
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            A[("orders + order_items")] --> B["Шаг 1 (CTE): monthly — группируем по DATE_TRUNC('month') и считаем экспресс через FILTER"]
+            B --> C["Шаг 2 (Финал): добавляем LAG() для динамики и SUM() OVER для накопительной кассы"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Двухшаговый конвейер: сначала агрегация по месяцам, затем оконные функции поверх готовых итогов.</figcaption>
+      </figure>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Кейс 2 — Помесячная выручка, экспресс-доставки и динамика</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Шаг 1: считаем общую выручку и выручку экспресс-заказов по месяцам
+WITH monthly AS (
+  SELECT
+    DATE_TRUNC('month', o.created_at)::date AS sales_month,
+    SUM(oi.quantity * oi.unit_price) AS revenue,
+    COALESCE(
+      SUM(oi.quantity * oi.unit_price)
+        FILTER (WHERE o.delivery_info @&gt; '{"express": true}'::jsonb),
+      0
+    ) AS express_revenue
+  FROM orders o
+  JOIN order_items oi ON oi.order_id = o.id
+  WHERE o.status = 'paid'
+    AND o.created_at &gt;= TIMESTAMPTZ '2026-01-01 00:00:00+05'
+    AND o.created_at &lt;  TIMESTAMPTZ '2026-04-01 00:00:00+05'
+  GROUP BY sales_month
+)
+-- Шаг 2: добавляем динамику к прошлому месяцу и накопительный итог
+SELECT
+  sales_month,
+  revenue,
+  express_revenue,
+  revenue - LAG(revenue) OVER (ORDER BY sales_month) AS diff_prev_month,
+  SUM(revenue) OVER (
+    ORDER BY sales_month
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS running_total
+FROM monthly
+ORDER BY sales_month;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> sales_month | revenue  | express_revenue | diff_prev_month | running_total
+-------------+----------+-----------------+-----------------+---------------
+ 2026-01-01  | 59000.00 |        19000.00 |                 |      59000.00
+ 2026-02-01  | 48000.00 |        30000.00 |       -11000.00 |     107000.00
+ 2026-03-01  | 88000.00 |        76000.00 |        40000.00 |     195000.00
+(3 rows)</pre>
+      </div>
+
+      <p>
+        Обрати внимание на элегантную фишку PostgreSQL: <code>SUM(...) FILTER (WHERE ...)</code> работает так же, как <code>CASE WHEN</code> внутри <code>SUM</code>, но читается намного чище. За один запрос директор видит и просадку в феврале (<code>-11000.00</code>), и взрывной рост в марте (<code>+40000.00</code>), и то, что почти вся мартовская выручка (<code>76000.00</code> из <code>88000.00</code>) пришла через экспресс-доставку!
+      </p>
+    </section>
+
+    <!-- ==================== 5. КЕЙС 3: ТОП-ТОВАРЫ И JSONB ==================== -->
+    <section>
+      <h2><span class="sec-num">04</span> Кейс 3: Рейтинг товаров-хитов по выручке (JSONB + окна)</h2>
+      <p>
+        Третья задача от отдела закупок: <strong>«Покажи самый прибыльный товар в каждой категории среди оплаченных заказов, его долю в выручке магазина и отметь, есть ли у него тег <code>"hit"</code> в <code>JSONB</code>»</strong>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Кейс 3 — Лидер продаж в каждой категории</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Шаг 1: считаем фактическую выручку каждого товара по оплаченным заказам
+WITH product_sales AS (
+  SELECT
+    p.id,
+    p.category,
+    p.title,
+    (p.specs @&gt; '{"tags": ["hit"]}'::jsonb) AS is_hit,
+    SUM(oi.quantity * oi.unit_price) AS product_revenue
+  FROM products p
+  JOIN order_items oi ON oi.product_id = p.id
+  JOIN orders o ON o.id = oi.order_id
+  WHERE o.status = 'paid'
+  GROUP BY p.id, p.category, p.title, p.specs
+),
+-- Шаг 2: нумеруем товары внутри категории и считаем долю в общей кассе
+ranked AS (
+  SELECT
+    *,
+    ROUND(product_revenue * 100.0 / SUM(product_revenue) OVER (), 1) AS store_share_pct,
+    ROW_NUMBER() OVER (
+      PARTITION BY category
+      ORDER BY product_revenue DESC, id
+    ) AS pos
+  FROM product_sales
+)
+SELECT category, title, is_hit, product_revenue, store_share_pct
+FROM ranked
+WHERE pos = 1
+ORDER BY product_revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>  category  |          title          | is_hit | product_revenue | store_share_pct
+------------+-------------------------+--------+-----------------+-----------------
+ Гаджеты    | Механическая клавиатура | t      |        80000.00 |            41.0
+ Мерч       | Худи «SQL Master»       | t      |        45000.00 |            23.1
+ Аксессуары | Термокружка кодера      | t      |        24000.00 |            12.3
+(3 rows)</pre>
+      </div>
+
+      <p>
+        Все три лидера категорий действительно имеют тег <code>hit</code> (<code>t</code> — true), а одна только механическая клавиатура приносит <strong>41.0%</strong> всей выручки магазина!
+      </p>
+    </section>
+
+    <!-- ==================== 6. ГЛАВНЫЕ ЛОВУШКИ МОДУЛЯ 2 ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Две главные ловушки комплексных запросов</h2>
+      <p>
+        Даже опытные разработчики иногда попадаются на двух классических ошибках, когда объединяют <code>LEFT JOIN</code>, <code>GROUP BY</code> и оконные функции. Запомни их раз и навсегда:
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо (убили LEFT JOIN)</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT c.full_name, COUNT(o.id)
+FROM customers c
+LEFT JOIN orders o
+  ON o.customer_id = c.id
+WHERE o.status = 'paid'
+GROUP BY c.id, c.full_name;</code></pre>
+            </div>
+            <p>Условие по правой таблице в <code>WHERE</code> выбрасывает всех клиентов без заказов, превращая <code>LEFT JOIN</code> в обычный <code>INNER JOIN</code>.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT c.full_name, COUNT(o.id)
+FROM customers c
+LEFT JOIN orders o
+  ON o.customer_id = c.id
+ AND o.status = 'paid'
+GROUP BY c.id, c.full_name;</code></pre>
+            </div>
+            <p>Фильтр <code>o.status = 'paid'</code> перенесён в <code>ON</code>: все клиенты остаются на месте, а отменённые заказы не считаются.</p>
+          </div>
+        </div>
+      </div>
+
+      <p>
+        Вторая частая ошибка — забыть, что после <code>GROUP BY</code> в оконной функции можно обращаться только к сгруппированным колонкам или агрегатам:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Ошибка смешивания GROUP BY и неагрегированной колонки</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- ОШИБКА: unit_price не входит в GROUP BY и не обёрнут в агрегат
+SELECT
+  o.customer_id,
+  SUM(oi.unit_price) OVER (ORDER BY o.customer_id)
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+GROUP BY o.customer_id;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  column "oi.unit_price" must appear in the GROUP BY clause or be used in an aggregate function</pre>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Золотое правило для сложных запросов:</strong> Никогда не пытайся засунуть <code>GROUP BY</code> и оконные функции в один запутанный <code>SELECT</code>. Сделай шаг 1 в CTE (посчитай суммы через <code>GROUP BY</code>), а в шаге 2 спокойно вешай сверху любые <code>ROW_NUMBER()</code>, <code>LAG()</code> и <code>SUM() OVER</code>.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 7. ШПАРГАЛКА ПЕРЕД ЧЕКПОИНТОМ ==================== -->
+    <section>
+      <h2><span class="sec-num">06</span> Чек-лист перед самостоятельным чекпоинтом</h2>
+      <p>
+        Перед тем как приступить к 4 финальным задачам Модуля 2, проверь свой «инженерный рюкзак»:
+      </p>
+      <ul>
+        <li><strong>Нужны «все» записи слева (даже с нулями)?</strong> Используй <code>LEFT JOIN</code>, фильтр правой таблицы ставь в <code>ON</code>, а пустые суммы оборачивай в <code>COALESCE(..., 0)</code>.</li>
+        <li><strong>Запрос состоит из 2+ логических этапов?</strong> Сразу пиши <code>WITH step1 AS (...), step2 AS (...)</code> — отлаживать по шагам в разы проще.</li>
+        <li><strong>Нужен «Топ-N в группе» или сравнение с прошлым?</strong> Считай <code>ROW_NUMBER()</code> / <code>LAG()</code> в CTE и фильтруй результат во внешнем <code>WHERE</code>.</li>
+        <li><strong>Работаешь с <code>JSONB</code>?</strong> Для проверки наличия ключа/тега бери <code>@&gt;</code>, для чтения текста — <code>-&gt;&gt;</code>, для чисел добавляй <code>::int</code>.</li>
+      </ul>
+    </section>
+
+    <!-- ==================== 8. САМОСТОЯТЕЛЬНЫЙ ЧЕКПОИНТ ==================== -->
+    <section>
+      <h2><span class="sec-num">07</span> Итоговый чекпоинт Модуля 2 (4 задачи)</h2>
+      <p>
+        Выполни все 4 автономные задачи на датасете из Раздела 01 в базе <code>learning_db</code>. Старайся сначала получить ответ самостоятельно, проверяя промежуточные шаги в <code>psql</code>, и только потом открывай эталонное решение.
+      </p>
+
+      <!-- Задача 1 -->
+      <div class="task-card">
+        <div class="task-title">Задача 1 (Базовый). Непроданные или непопулярные товары</div>
+        <p style="margin-bottom: 0;">
+          Выведи все товары из таблицы <code>products</code>, количество проданных штук (<code>units_sold</code>) по <strong>оплаченным</strong> заказам и общую выручку по товару (<code>revenue</code>). Оставь только те товары, которых продано <strong>меньше 3 штук</strong> (включая 0, если такие появятся). Отсортируй по возрастанию <code>units_sold</code>, затем по <code>id</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задачи 1</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  p.title,
+  p.category,
+  COALESCE(SUM(oi.quantity), 0) AS units_sold,
+  COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS revenue
+FROM products p
+LEFT JOIN order_items oi ON oi.product_id = p.id
+LEFT JOIN orders o
+  ON o.id = oi.order_id AND o.status = 'paid'
+WHERE o.id IS NOT NULL OR oi.id IS NULL
+GROUP BY p.id, p.title, p.category
+HAVING COALESCE(SUM(oi.quantity), 0) &lt; 3
+ORDER BY units_sold ASC, p.id;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задача 2 -->
+      <div class="task-card">
+        <div class="task-title">Задача 2 (Средний). Эффективность служб доставки из JSONB</div>
+        <p style="margin-bottom: 0;">
+          Сгруппируй все <strong>оплаченные</strong> заказы по названию курьерской службы (<code>delivery_info -&gt;&gt; 'courier'</code>). Выведи службу доставки, количество заказов, общую выручку и средний чек заказа (<code>avg_order_total</code>, округлённый до 2 знаков). Подсказка: сначала посчитай сумму каждого заказа в CTE, чтобы <code>AVG</code> считался именно по заказам, а не по позициям!
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задачи 2</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">WITH order_totals AS (
+  SELECT
+    o.id AS order_id,
+    o.delivery_info -&gt;&gt; 'courier' AS courier,
+    SUM(oi.quantity * oi.unit_price) AS order_total
+  FROM orders o
+  JOIN order_items oi ON oi.order_id = o.id
+  WHERE o.status = 'paid'
+  GROUP BY o.id, o.delivery_info
+)
+SELECT
+  courier,
+  COUNT(*) AS orders_count,
+  SUM(order_total) AS total_revenue,
+  ROUND(AVG(order_total), 2) AS avg_order_total
+FROM order_totals
+GROUP BY courier
+ORDER BY total_revenue DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задача 3 -->
+      <div class="task-card">
+        <div class="task-title">Задача 3 (Средний). Почтовые домены и средний чек</div>
+        <p style="margin-bottom: 0;">
+          Извлеки почтовый домен каждого клиента (часть email после <code>@</code> в нижнем регистре). Посчитай для каждого домена: сколько всего клиентов с этим доменом зарегистрировано и какую суммарную выручку принесли их <strong>оплаченные</strong> заказы. Выведи только домены с ненулевой выручкой, отсортировав по убыванию выручки.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задачи 3</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  SPLIT_PART(LOWER(c.email), '@', 2) AS email_domain,
+  COUNT(DISTINCT c.id) AS customers_count,
+  COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total_revenue
+FROM customers c
+LEFT JOIN orders o
+  ON o.customer_id = c.id AND o.status = 'paid'
+LEFT JOIN order_items oi
+  ON oi.order_id = o.id
+GROUP BY email_domain
+HAVING COALESCE(SUM(oi.quantity * oi.unit_price), 0) &gt; 0
+ORDER BY total_revenue DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- Задача 4 -->
+      <div class="task-card">
+        <div class="task-title">Задача 4 (Продвинутый). Повторные покупатели и рост их чека</div>
+        <p style="margin-bottom: 0;">
+          Найди всех клиентов, у которых есть <strong>минимум 2 оплаченных заказа</strong>. Для каждого их заказа выведи: очищенное имя клиента, порядковый номер покупки этого клиента (<code>purchase_num</code>: 1, 2, 3...), дату заказа, сумму заказа и изменение суммы по сравнению с его предыдущим заказом (<code>diff_from_prev</code>).
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Решение задачи 4</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">WITH order_totals AS (
+  SELECT
+    o.customer_id,
+    INITCAP(TRIM(c.full_name)) AS customer_name,
+    o.id AS order_id,
+    o.created_at::date AS order_date,
+    SUM(oi.quantity * oi.unit_price) AS order_total
+  FROM orders o
+  JOIN customers c ON c.id = o.customer_id
+  JOIN order_items oi ON oi.order_id = o.id
+  WHERE o.status = 'paid'
+  GROUP BY o.customer_id, c.full_name, o.id, o.created_at
+),
+enriched AS (
+  SELECT
+    *,
+    COUNT(*) OVER (PARTITION BY customer_id) AS total_orders,
+    ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date, order_id) AS purchase_num,
+    order_total - LAG(order_total) OVER (
+      PARTITION BY customer_id ORDER BY order_date, order_id
+    ) AS diff_from_prev
+  FROM order_totals
+)
+SELECT
+  customer_name,
+  purchase_num,
+  order_date,
+  order_total,
+  diff_from_prev
+FROM enriched
+WHERE total_orders &gt;= 2
+ORDER BY customer_name, purchase_num;</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_2/practice.html#sec-2-5"><strong>Практикум по Уроку 2.5 →</strong></a> — там ещё 7 комплексных задач и финальные задания Модуля 2 с подробными решениями.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 9. ИТОГ МОДУЛЯ 2 ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог Модуля 2</span>
+      Поздравляю с завершением Модуля 2! Теперь ты умеешь не только проектировать чистые нормализованные схемы, но и вытаскивать из PostgreSQL аналитику любого уровня сложности: от очистки грязных строк и поиска в <code>JSONB</code> до многошаговых CTE и оконных функций. Все твои запросы уже дают <strong>правильный</strong> ответ — а в следующем <strong>Модуле 3</strong> мы научимся делать так, чтобы они работали <strong>мгновенно</strong> даже на десятках миллионов строк: разберём устройство индексов (B-Tree, GIN), чтение планов <code>EXPLAIN ANALYZE</code> и надёжные транзакции!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_2_4.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">2.4 · Оконные функции — аналитика без схлопывания строк</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_3_1.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">3.1 · Физическая архитектура PostgreSQL: страницы (8 КБ…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,2149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Гид по Docker-стенду курса БД: запуск, подключение и помощь</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark (как в уроках курса) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #0b1120;
+      --surface: #131c2e;
+      --surface-2: #19243a;
+      --surface-3: #0e1525;
+      --text: #f1f5f9;
+      --text-body: #d1dbe8;
+      --muted: #94a3b8;
+      --border: #26344d;
+      --border-strong: #364766;
+      --accent: #38bdf8;
+      --accent-solid: #0284c7;
+      --accent-soft: rgba(56, 189, 248, 0.14);
+      --accent-border: rgba(56, 189, 248, 0.42);
+      --warn-bg: rgba(245, 158, 11, 0.11);
+      --warn-border: #f59e0b;
+      --warn-text: #fcd34d;
+      --tip-bg: rgba(34, 197, 94, 0.11);
+      --tip-border: #22c55e;
+      --tip-text: #4ade80;
+      --err-bg: rgba(244, 63, 94, 0.12);
+      --err-border: #f43f5e;
+      --err-text: #fda4af;
+      --purple-bg: rgba(167, 139, 250, 0.14);
+      --purple-text: #c4b5fd;
+      --purple-border: rgba(167, 139, 250, 0.35);
+      --rose-bg: rgba(251, 113, 133, 0.14);
+      --rose-text: #fda4af;
+      --rose-border: rgba(251, 113, 133, 0.35);
+      --code-bg: #080d17;
+      --code-text: #e6edf3;
+      --code-header-bg: #111827;
+      --code-border: #27344a;
+      --inline-code-bg: #1e293b;
+      --inline-code-text: #7dd3fc;
+      --inline-code-border: #334155;
+      --row-even: rgba(255, 255, 255, 0.02);
+      --row-hover: rgba(56, 189, 248, 0.07);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.25rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.72;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер */
+    .lecture {
+      max-width: 940px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.75rem 3.25rem;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.42);
+    }
+
+    /* ==================== ШАПКА ДОКУМЕНТА ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      text-decoration: none;
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 0.38rem 0.78rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-2);
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    .lecture-header {
+      padding-bottom: 1.85rem;
+      margin-bottom: 2.35rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid var(--accent-border);
+    }
+
+    .pill-tip {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+    }
+
+    .pill-neutral {
+      background: var(--surface-2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    h1 {
+      margin: 0 0 0.85rem;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    .hero-lead {
+      margin: 0 0 1.4rem;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.65;
+    }
+
+    /* Карточка реквизитов доступа */
+    .focus-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.15rem 1.35rem;
+    }
+
+    .focus-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.65rem;
+    }
+
+    .creds-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+
+    .cred-pill {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--surface-3);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 0.38rem 0.75rem;
+      font-family: inherit;
+      font-size: 0.86rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .cred-pill:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .cred-pill.copied {
+      background: var(--tip-bg);
+      border-color: var(--tip-border);
+      color: var(--tip-text);
+    }
+
+    .cred-pill code {
+      background: none !important;
+      border: none !important;
+      padding: 0 !important;
+      color: var(--tip-text) !important;
+      font-weight: 600;
+    }
+
+    .cred-hint {
+      margin: 0.6rem 0 0;
+      font-size: 0.81rem;
+      color: var(--muted);
+    }
+
+    /* Автоматическое оглавление */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.55rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid rgba(38, 52, 77, 0.55);
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.42rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: var(--surface-2);
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.85rem;
+      padding: 0.08rem 0.4rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.65rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.38rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 1.85rem 0 0.7rem;
+      font-size: 1.08rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.05rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.2rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    a.ext-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a.ext-link:hover {
+      text-decoration: underline;
+    }
+
+    kbd {
+      display: inline-block;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.78em;
+      padding: 0.1rem 0.45rem;
+      border-radius: 5px;
+      background: var(--surface-3);
+      border: 1px solid var(--border-strong);
+      border-bottom-width: 2px;
+      color: var(--text);
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.15em 0.42em;
+      border-radius: 5px;
+      border: 1px solid var(--inline-code-border);
+    }
+
+    .code-block {
+      margin: 0.9rem 0 1.25rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.48rem 0.95rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .code-lang {
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .copy-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.24rem 0.68rem;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .copy-btn.copied {
+      background: var(--tip-bg);
+      border-color: var(--tip-border);
+      color: var(--tip-text);
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 0.95rem 1.2rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #334155 #080d17;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85rem;
+      line-height: 1.58;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ ==================== */
+    .output-block {
+      margin: -0.8rem 0 1.35rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      color: var(--tip-text);
+    }
+
+    .output-label {
+      padding: 0.3rem 0.95rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--surface-2);
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .output-block pre {
+      margin: 0;
+      padding: 0.65rem 1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+    }
+
+    /* ==================== КАРТОЧКИ СЛОВАРЯ И ШАГОВ ==================== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin: 1.2rem 0 1.6rem;
+    }
+
+    .mini-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.05rem 1.2rem;
+    }
+
+    .mini-card-head {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-weight: 700;
+      color: var(--text);
+      font-size: 0.98rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .mini-card p {
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.58;
+      color: var(--text-body);
+    }
+
+    .step-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.95rem;
+      margin: 1.2rem 0 1.5rem;
+    }
+
+    .step-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.15rem 1.35rem;
+    }
+
+    .step-item-head {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 999px;
+      background: var(--accent-solid);
+      color: #ffffff;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-item-head h3 {
+      margin: 0;
+      font-size: 1.03rem;
+    }
+
+    .step-item p {
+      margin: 0 0 0.7rem;
+      font-size: 0.93rem;
+    }
+
+    .step-item p:last-child {
+      margin-bottom: 0;
+    }
+
+    .step-item .code-block {
+      margin: 0.65rem 0 0.75rem;
+    }
+
+    .step-item .code-block:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ==================== ИНТЕРАКТИВНЫЙ ПОМОЩНИК ПО УРОКАМ ==================== */
+    .picker-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin: 1rem 0 1.1rem;
+    }
+
+    .picker-tab {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-2);
+      color: var(--text-body);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.48rem 0.88rem;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .picker-tab:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .picker-tab.active {
+      background: var(--accent-solid);
+      border-color: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 2px 12px rgba(2, 132, 199, 0.35);
+    }
+
+    .picker-panel {
+      display: none;
+      background: var(--surface-2);
+      border: 1px solid var(--accent-border);
+      border-radius: 12px;
+      padding: 1.35rem 1.45rem;
+    }
+
+    .picker-panel.active {
+      display: block;
+    }
+
+    .picker-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+      margin-bottom: 0.9rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .picker-panel .code-block {
+      margin: 0.6rem 0 0.9rem;
+    }
+
+    .picker-panel .callout {
+      margin: 0.95rem 0 0;
+    }
+
+    .picker-step-label {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0.9rem 0 0.25rem;
+    }
+
+    .picker-step-label:first-of-type {
+      margin-top: 0;
+    }
+
+    /* ==================== БЕЙДЖИ ПРОФИЛЕЙ ==================== */
+    .badge {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 0.2rem 0.58rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .b-default { background: var(--tip-bg); color: var(--tip-text); border: 1px solid rgba(34, 197, 94, 0.35); }
+    .b-mod4    { background: var(--warn-bg); color: var(--warn-text); border: 1px solid rgba(245, 158, 11, 0.35); }
+    .b-mod5    { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); }
+    .b-mod6    { background: var(--purple-bg); color: var(--purple-text); border: 1px solid var(--purple-border); }
+    .b-ui      { background: var(--rose-bg); color: var(--rose-text); border: 1px solid var(--rose-border); }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.4rem 0 1.65rem;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.58rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: rgba(244, 63, 94, 0.42);
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid rgba(244, 63, 94, 0.32);
+    }
+
+    .compare-card.good {
+      border-color: rgba(34, 197, 94, 0.42);
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid rgba(34, 197, 94, 0.32);
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.91rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.75rem 0.9rem;
+    }
+
+    .compare-body .code-block pre code {
+      font-size: 0.8rem;
+    }
+
+    /* ==================== СХЕМА ==================== */
+    .diagram-box {
+      margin: 1.4rem 0 1.75rem;
+      padding: 1.25rem 1.15rem 0.95rem;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box svg {
+      width: 100%;
+      min-width: 680px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.45rem 0;
+      padding: 1.05rem 1.25rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.93rem;
+      line-height: 1.62;
+      color: var(--text-body);
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .callout-body strong {
+      color: #7dd3fc;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    .callout.danger {
+      background: var(--err-bg);
+      border-left-color: var(--err-border);
+    }
+
+    .callout.danger .callout-icon {
+      color: var(--err-border);
+    }
+
+    .callout.danger .callout-body strong {
+      color: var(--err-text);
+    }
+
+    .callout .code-block {
+      margin: 0.75rem 0 0;
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.25rem 0 1.6rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-3);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.89rem;
+      line-height: 1.5;
+    }
+
+    table.table-wide {
+      min-width: 680px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.78rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-2);
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.77rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: var(--row-even);
+    }
+
+    tbody tr:hover {
+      background: var(--row-hover);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== КАРТОЧКИ И FAQ ==================== */
+    .task-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.35rem;
+      margin: 1.15rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+      font-size: 1rem;
+    }
+
+    .task-card p {
+      font-size: 0.92rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .task-card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .task-card .code-block {
+      margin: 0.65rem 0 0.8rem;
+    }
+
+    .task-card .code-block:last-child {
+      margin-bottom: 0;
+    }
+
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 1.1rem;
+    }
+
+    details.faq {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color 0.15s ease;
+    }
+
+    details.faq[open] {
+      border-color: var(--accent-border);
+    }
+
+    details.faq summary {
+      padding: 0.95rem 1.2rem;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.93rem;
+      color: var(--text);
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      user-select: none;
+    }
+
+    details.faq summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.faq summary::after {
+      content: "+";
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.15rem;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    details.faq[open] summary::after {
+      content: "−";
+    }
+
+    .faq-body {
+      padding: 0.85rem 1.2rem 1.1rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface-3);
+      font-size: 0.92rem;
+      line-height: 1.62;
+    }
+
+    .faq-body p {
+      margin: 0 0 0.65rem;
+    }
+
+    .faq-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .faq-body .code-block {
+      margin: 0.6rem 0 0;
+    }
+
+    /* ==================== ИТОГ ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: var(--surface-2);
+      border: 1px solid var(--accent-border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.95rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.45rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .glossary-grid,
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.25rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.22rem;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        color: #0f172a;
+        padding: 0;
+      }
+      .copy-btn,
+      .picker-tabs,
+      .course-nav {
+        display: none !important;
+      }
+      .picker-panel {
+        display: block !important;
+        margin-bottom: 1rem;
+      }
+      .lecture,
+      .focus-box,
+      .toc-box,
+      .mini-card,
+      .step-item,
+      .picker-panel,
+      .compare-card,
+      .diagram-box,
+      .task-card,
+      details.faq,
+      .takeaway,
+      .table-wrapper {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: none !important;
+      }
+      .lecture {
+        border: none !important;
+        padding: 0;
+        max-width: 100%;
+      }
+      h1, h2, h3, strong, th, summary {
+        color: #0f172a !important;
+      }
+      .code-block,
+      .output-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card,
+      details.faq {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="nav-btn primary" href="index.html">← Содержание курса</a>
+    </nav>
+
+    <!-- ==================== ШАПКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Учебный стенд · Модули 1–6</span>
+        <span class="pill pill-tip">Знание Docker не требуется</span>
+        <span class="pill pill-neutral">docker-compose.yaml · проект db-course</span>
+      </div>
+
+      <h1>Гид по Docker-стенду курса: запуск и работа с базами</h1>
+      <p class="hero-lead">
+        Все базы курса (PostgreSQL 16, MySQL 8.4, репликация, PgBouncer, ClickHouse и веб-клиент Adminer) уже собраны в файле <code>docker-compose.yaml</code>.
+        Тебе не нужно учить Docker — достаточно выбрать свой урок ниже и копировать готовые команды.
+      </p>
+
+      <div class="focus-box">
+        <div class="focus-title">Единые реквизиты доступа ко всем базам курса (кликни, чтобы скопировать)</div>
+        <div class="creds-bar">
+          <button type="button" class="cred-pill" data-copy="student">Логин: <code>student</code></button>
+          <button type="button" class="cred-pill" data-copy="student_pass">Пароль: <code>student_pass</code></button>
+          <button type="button" class="cred-pill" data-copy="learning_db">OLTP БД: <code>learning_db</code></button>
+          <button type="button" class="cred-pill" data-copy="analytics_db">OLAP БД: <code>analytics_db</code></button>
+          <button type="button" class="cred-pill" data-copy="db_net">Сеть Docker: <code>db_net</code></button>
+        </div>
+        <p class="cred-hint">Все уроки (1.1–6.5), слайды и справочник курса используют именно эти логины, пароли и имена контейнеров.</p>
+      </div>
+
+      <!-- Автоматическое оглавление собирается скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание гида"></nav>
+    </header>
+
+    <!-- ==================== 01. СТАРТ С НУЛЯ ==================== -->
+    <section id="quickstart">
+      <h2><span class="sec-num">01</span> Старт с нуля за 3 минуты</h2>
+      <p>
+        Если ты никогда раньше не открывал Docker — не переживай. Достаточно запомнить <strong>4 простые аналогии</strong>, и всё сразу станет понятным:
+      </p>
+
+      <div class="glossary-grid">
+        <div class="mini-card">
+          <div class="mini-card-head">🎮 Контейнер</div>
+          <p>Как <strong>игровая приставка</strong> в коробке: внутри уже идеально настроен PostgreSQL, MySQL или ClickHouse. Не засоряет твой Windows или macOS.</p>
+        </div>
+        <div class="mini-card">
+          <div class="mini-card-head">💾 Том (Volume)</div>
+          <p><strong>«Флешка с сохранениями»</strong>. Даже если выключить контейнер, твои таблицы останутся на месте — пока ты сам не сотрёшь их флагом <code>-v</code>.</p>
+        </div>
+        <div class="mini-card">
+          <div class="mini-card-head">🪟 Порт</div>
+          <p><strong>«Окошко выдачи»</strong> (<code>5432</code>, <code>3306</code>, <code>8080</code>, <code>8123</code>). Через него браузер, DBeaver и терминал на твоём ПК общаются с базой.</p>
+        </div>
+        <div class="mini-card">
+          <div class="mini-card-head">🎛️ Профиль (<code>--profile</code>)</div>
+          <p><strong>Переключатель модулей</strong>. Чтобы не тратить лишнюю память ноутбука, MySQL, реплики и ClickHouse включаются только тогда, когда ты до них дойдёшь.</p>
+        </div>
+      </div>
+
+      <h3>Четыре шага до первого SQL-запроса</h3>
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-item-head">
+            <span class="step-badge">1</span>
+            <h3>Включи Docker Desktop</h3>
+          </div>
+          <p>Установи и запусти <strong>Docker Desktop</strong> (на Windows/macOS в трее появится значок кита со статусом <em>Engine running</em>). Убедись в терминале, что Docker отвечает:</p>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">BASH · Проверка Docker</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-bash">docker compose version</code></pre>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-item-head">
+            <span class="step-badge">2</span>
+            <h3>Открой терминал в папке курса</h3>
+          </div>
+          <p>Терминал должен быть открыт в папке, где лежит файл <code>docker-compose.yaml</code>. На Windows удобно нажать ПКМ по папке → <em>Открыть в терминале</em> (или открыть папку в VS Code). Проверка:</p>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">BASH / PowerShell · Проверка папки</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-bash">ls docker-compose.yaml</code></pre>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-item-head">
+            <span class="step-badge">3</span>
+            <h3>Запусти базовый PostgreSQL 16</h3>
+          </div>
+          <p>В первый раз Docker скачает образ (~1–2 минуты), все следующие запуски занимают 2 секунды:</p>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">BASH · Запуск базового контейнера</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-bash">docker compose up -d</code></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">BASH · Проверить, что база «здорова»</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-bash">docker compose ps</code></pre>
+          </div>
+          <p>Увидел слово <code>(healthy)</code> напротив <code>course_pg_primary</code> — сервер полностью готов!</p>
+        </div>
+
+        <div class="step-item">
+          <div class="step-item-head">
+            <span class="step-badge">4</span>
+            <h3>Войди в базу (и запомни, как выйти!)</h3>
+          </div>
+          <p>Открываем консольный клиент <code>psql</code> внутри контейнера:</p>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">BASH · Вход в PostgreSQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+          </div>
+          <p>
+            Появится приглашение <code>learning_db=#</code> — сюда вводятся SQL-запросы из уроков (не забывай <code>;</code> в конце!).
+            Чтобы <strong>выйти обратно в обычный терминал</strong>, введи <code>\q</code> и нажми <kbd>Enter</kbd> (в MySQL и ClickHouse — <code>exit</code>, универсально — <kbd>Ctrl</kbd>+<kbd>D</kbd>).
+          </p>
+        </div>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Опасно: стирает все таблицы</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-bash">docker compose --profile all down -v</code></pre>
+            </div>
+            <p>Флаг <code>-v</code> (<strong>volumes</strong>) безвозвратно удаляет «флешки» с данными. Используй только для полного сброса курса с нуля.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Ежедневная пауза: таблицы целы</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-bash">docker compose --profile all stop</code></pre>
+            </div>
+            <p>Закончил заниматься — ставь контейнеры на паузу. Они не тратят ОЗУ и батарею, а завтра включатся через <code>up -d</code> со всеми таблицами.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 02. ПОМОЩНИК ПО УРОКАМ ==================== -->
+    <section id="lesson-picker">
+      <h2><span class="sec-num">02</span> Помощник по урокам: что запускать прямо сейчас</h2>
+      <p>
+        Выбери свой текущий модуль или урок — получишь точные команды запуска и входа для нужных контейнеров:
+      </p>
+
+      <div class="picker-tabs" role="tablist">
+        <button class="picker-tab active" type="button" data-target="p-m13" role="tab">Модули 1–3 и 4.1–4.3</button>
+        <button class="picker-tab" type="button" data-target="p-m44" role="tab">Урок 4.4 (MySQL)</button>
+        <button class="picker-tab" type="button" data-target="p-m51" role="tab">Уроки 5.1–5.2 (Репликация)</button>
+        <button class="picker-tab" type="button" data-target="p-m53" role="tab">Урок 5.3 (Logical + Failover)</button>
+        <button class="picker-tab" type="button" data-target="p-m54" role="tab">Урок 5.4 (Бэкапы, PITR, PgBouncer)</button>
+        <button class="picker-tab" type="button" data-target="p-m61" role="tab">Уроки 6.1–6.2 (DWH в PG)</button>
+        <button class="picker-tab" type="button" data-target="p-m63" role="tab">Уроки 6.3–6.5 (ClickHouse)</button>
+        <button class="picker-tab" type="button" data-target="p-ui" role="tab">Веб-клиент (Adminer)</button>
+      </div>
+
+      <!-- Панель: Модули 1-3 и 4.1-4.3 -->
+      <div class="picker-panel active" id="p-m13">
+        <div class="picker-meta">
+          <span class="badge b-default">Профиль: по умолчанию</span>
+          <span>Работает один контейнер <code>course_pg_primary</code> (PostgreSQL 16, порт <code>5432</code>)</span>
+        </div>
+        <div class="picker-step-label">Шаг 1. Запустить PostgreSQL</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Запуск</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose up -d</code></pre>
+        </div>
+        <div class="picker-step-label">Шаг 2. Войти в консоль psql (в Уроках 4.1 и 4.3 открой 2 окна терминала)</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Вход в learning_db</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+        </div>
+        <aside class="callout tip">
+          <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <div class="callout-body">
+            <strong>Спецкоманды Модулей 2–3:</strong> загрузка SQL-файла миграции (Урок 2.1, включая PowerShell), перезапуск кеша (Урок 3.1) и краш-тест <code>SIGKILL</code> (Урок 3.4) собраны в <a href="#special-cmds" class="ext-link">разделе 03 ниже</a>.
+          </div>
+        </aside>
+      </div>
+
+      <!-- Панель: Урок 4.4 -->
+      <div class="picker-panel" id="p-m44">
+        <div class="picker-meta">
+          <span class="badge b-mod4">Профиль: mod4</span>
+          <span>Запускает <code>course_pg_primary</code> (5432) + <code>course_mysql_innodb</code> (3306)</span>
+        </div>
+        <div class="picker-step-label">Шаг 1. Поднять PostgreSQL и MySQL 8.4 (первый старт MySQL занимает ~15–20 сек)</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Запуск mod4</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose --profile mod4 up -d</code></pre>
+        </div>
+        <div class="picker-step-label">Шаг 2. Открыть два окна: PostgreSQL и MySQL (InnoDB)</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Окно 1: PostgreSQL (выход: \q)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Окно 2: MySQL 8.4 (выход: exit)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it course_mysql_innodb mysql -u student -pstudent_pass learning_db</code></pre>
+        </div>
+      </div>
+
+      <!-- Панель: Уроки 5.1-5.2 -->
+      <div class="picker-panel" id="p-m51">
+        <div class="picker-meta">
+          <span class="badge b-mod5">Профиль: mod5</span>
+          <span><code>course_pg_primary</code> (5432) + авто-клон <code>course_pg_standby</code> (5433) + <code>pg_logical</code> + <code>pgbouncer</code></span>
+        </div>
+        <div class="picker-step-label">Шаг 1. Запустить кластер Модуля 5 и посмотреть клонирование Standby</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Запуск mod5</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose --profile mod5 up -d</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Логи первого старта Standby (pg_basebackup)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker logs course_pg_standby --tail 15</code></pre>
+        </div>
+        <div class="picker-step-label">Шаг 2. Открыть два окна: Primary (запись) и Standby (только чтение)</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Окно 1: Primary (порт 5432)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Окно 2: Standby (порт 5433, Read-Only)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it course_pg_standby psql -U student -d learning_db</code></pre>
+        </div>
+      </div>
+
+      <!-- Панель: Урок 5.3 -->
+      <div class="picker-panel" id="p-m53">
+        <div class="picker-meta">
+          <span class="badge b-mod5">Профиль: mod5</span>
+          <span><code>course_pg_primary</code> (Publisher, 5432), <code>course_pg_logical</code> (Subscriber, 5434), <code>course_pg_standby</code> (Failover, 5433)</span>
+        </div>
+        <div class="picker-step-label">Шаг 1. Убедиться, что кластер mod5 запущен</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Запуск mod5</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose --profile mod5 up -d</code></pre>
+        </div>
+        <div class="picker-step-label">Шаг 2. Подключиться к Publisher (Primary) и Subscriber (Logical)</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Окно 1: Publisher (5432)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Окно 2: Subscriber (5434)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it course_pg_logical psql -U student -d learning_db</code></pre>
+        </div>
+        <aside class="callout warn">
+          <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <div class="callout-body">
+            <strong>После эксперимента с Failover (<code>pg_promote()</code>):</strong> реплика перейдёт на новый Timeline 2. Вернуть её обратно в строй можно за 3 команды — см. <a href="#reset-standby" class="ext-link">Сброс реплики в разделе 06</a>.
+          </div>
+        </aside>
+      </div>
+
+      <!-- Панель: Урок 5.4 -->
+      <div class="picker-panel" id="p-m54">
+        <div class="picker-meta">
+          <span class="badge b-mod5">Профиль: mod5</span>
+          <span><code>course_pg_primary</code> (бэкапы и PITR в папку <code>./backups</code>) + <code>course_pgbouncer</code> (пулер, порт <code>6432</code>)</span>
+        </div>
+        <div class="picker-step-label">Шаг 1. Запустить профиль mod5</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Запуск mod5</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose --profile mod5 up -d</code></pre>
+        </div>
+        <div class="picker-step-label">Шаг 2. Подключиться через пулер PgBouncer или открыть его админ-консоль</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · SQL к learning_db ЧЕРЕЗ PgBouncer</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it -e PGPASSWORD=student_pass course_pg_primary psql -h pgbouncer -p 5432 -U student -d learning_db</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Админ-консоль PgBouncer (SHOW POOLS;)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it -e PGPASSWORD=student_pass course_pg_primary psql -h pgbouncer -p 5432 -U student -d pgbouncer</code></pre>
+        </div>
+        <aside class="callout">
+          <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <div class="callout-body">
+            <strong>Для части PITR:</strong> нужно раскомментировать 4 строки <code>archive_mode=on</code> в <code>docker-compose.yaml</code> — точная пошаговая инструкция есть в <a href="#pitr-guide" class="ext-link">разделе 06 ниже</a>.
+          </div>
+        </aside>
+      </div>
+
+      <!-- Панель: Уроки 6.1-6.2 -->
+      <div class="picker-panel" id="p-m61">
+        <div class="picker-meta">
+          <span class="badge b-default">Профиль: по умолчанию</span>
+          <span>Схема «Звезда», партиционирование и Materialized Views выполняются в базовом <code>course_pg_primary</code></span>
+        </div>
+        <div class="picker-step-label">Шаг 1. Запустить PostgreSQL</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Запуск</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose up -d</code></pre>
+        </div>
+        <div class="picker-step-label">Шаг 2. Войти в learning_db</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Вход в psql</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+        </div>
+      </div>
+
+      <!-- Панель: Уроки 6.3-6.5 -->
+      <div class="picker-panel" id="p-m63">
+        <div class="picker-meta">
+          <span class="badge b-mod6">Профиль: mod6</span>
+          <span><code>course_pg_primary</code> (OLTP, 5432) + <code>course_clickhouse</code> (OLAP, порты 8123 / 9000)</span>
+        </div>
+        <div class="picker-step-label">Шаг 1. Запустить PostgreSQL и ClickHouse</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Запуск mod6</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose --profile mod6 up -d</code></pre>
+        </div>
+        <div class="picker-step-label">Шаг 2. Войти в консоли (для итогового Урока 6.5 — 2 окна) или открыть браузер</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Окно 1: ClickHouse CLI (выход: exit)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it course_clickhouse clickhouse-client -u student --password student_pass -d analytics_db</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Окно 2: PostgreSQL (выход: \q)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+        </div>
+        <aside class="callout tip">
+          <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <div class="callout-body">
+            <strong>Веб-консоль ClickHouse Play:</strong> после запуска <code>mod6</code> открой <a class="ext-link" href="http://localhost:8123/play" target="_blank" rel="noopener">http://localhost:8123/play</a> (логин <code>student</code>, пароль <code>student_pass</code>, база <code>analytics_db</code>). В мосте <code>postgresql(...)</code> всегда пиши адрес <code>'pg_primary:5432'</code>!
+          </div>
+        </aside>
+      </div>
+
+      <!-- Панель: Adminer -->
+      <div class="picker-panel" id="p-ui">
+        <div class="picker-meta">
+          <span class="badge b-ui">Профиль: ui</span>
+          <span>Удобный веб-интерфейс в браузере для PostgreSQL и MySQL без работы в терминале</span>
+        </div>
+        <div class="picker-step-label">Шаг 1. Запустить Adminer вместе с базой</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Запуск PostgreSQL + Adminer</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose --profile ui up -d</code></pre>
+        </div>
+        <div class="picker-step-label">Шаг 2. Открыть в браузере <a class="ext-link" href="http://localhost:8080" target="_blank" rel="noopener">http://localhost:8080</a></div>
+        <p style="margin-bottom: 0; font-size: 0.92rem;">
+          Система: <strong>PostgreSQL</strong> · Сервер: <code>pg_primary</code> (не <code>localhost</code>!) · Пользователь: <code>student</code> · Пароль: <code>student_pass</code> · База: <code>learning_db</code>.
+          Чтобы добавить Adminer к MySQL или репликации, просто комбинируй флаги: <code>docker compose --profile mod4 --profile ui up -d</code>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ==================== 03. СПЕЦКОМАНДЫ ИЗ УРОКОВ ==================== -->
+    <section id="special-cmds">
+      <h2><span class="sec-num">03</span> Спецкоманды из уроков и правило Docker</h2>
+      <p>
+        Помимо обычного входа в базу, в Модулях 2–3 встречаются три полезные команды: загрузка SQL-файла, перезапуск сервера и имитация сбоя питания. Вот готовые варианты (включая Windows PowerShell):
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Урок 2.1 · Загрузка файла миграции (.sql) в PostgreSQL</div>
+        <p>В Windows PowerShell знак <code>&lt;</code> не работает, поэтому для PowerShell используй вторую команду через <code>Get-Content</code>:</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · macOS / Linux</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec -i course_pg_primary psql -U student -d learning_db -v ON_ERROR_STOP=1 &lt; migrations/001_add_product_sku.up.sql</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">PowerShell · Windows</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-powershell">Get-Content migrations/001_add_product_sku.up.sql | docker exec -i course_pg_primary psql -U student -d learning_db -v ON_ERROR_STOP=1</code></pre>
+        </div>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Уроки 3.1 и 3.4 · Перезапуск Shared Buffers и краш-тест WAL (SIGKILL)</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Урок 3.1: перезапуск PostgreSQL (сброс кеша)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose restart pg_primary</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Урок 3.4: 1) имитация отключения питания (SIGKILL)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose kill -s SIGKILL pg_primary</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Урок 3.4: 2) включить обратно и прочитать логи WAL</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose up -d pg_primary &amp;&amp; docker logs --tail=20 course_pg_primary</code></pre>
+        </div>
+      </div>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        <div class="callout-body">
+          <strong>Почему где-то <code>docker compose</code>, а где-то <code>docker exec</code>?</strong><br>
+          1) <strong>Включить / выключить / перезапустить</strong> стенд → <code>docker compose ...</code> (запускать в папке с <code>docker-compose.yaml</code>; для Модулей 4–6 добавлять <code>--profile</code>).<br>
+          2) <strong>Зайти в базу или посмотреть логи</strong> → <code>docker exec -it course_...</code> и <code>docker logs course_...</code> — используют имя контейнера, поэтому <strong>работают из любой папки и без <code>--profile</code></strong>!
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 04. КАРТА СЕРВИСОВ И GUI ==================== -->
+    <section id="services">
+      <h2><span class="sec-num">04</span> Карта сервисов, портов и графических клиентов (GUI)</h2>
+      <p>
+        Главная вещь, которую нужно понять о сети Docker: <strong>снаружи</strong> (с твоего компьютера) базы доступны на <code>localhost</code>, а <strong>внутри</strong> сети <code>db_net</code> контейнеры видят друг друга по именам сервисов (<code>pg_primary</code>, <code>mysql_innodb</code> и т.д.).
+      </p>
+
+      <figure class="diagram-box">
+        <svg viewBox="0 0 920 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема сети Docker и портов учебного стенда">
+          <defs>
+            <marker id="arr-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+            </marker>
+            <marker id="arr-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#4ade80" />
+            </marker>
+          </defs>
+
+          <!-- Левый блок: Host PC -->
+          <rect x="8" y="18" width="206" height="264" rx="12" fill="#131c2e" stroke="#364766" stroke-width="1.5" />
+          <text x="111" y="45" text-anchor="middle" fill="#f1f5f9" font-size="13.5" font-weight="700" font-family="Inter, sans-serif">Твой компьютер (Host)</text>
+          <text x="111" y="64" text-anchor="middle" fill="#94a3b8" font-size="11" font-family="JetBrains Mono, monospace">Адрес: localhost</text>
+
+          <rect x="22" y="82" width="178" height="50" rx="8" fill="#19243a" stroke="#38bdf8" stroke-width="1.1" />
+          <text x="111" y="103" text-anchor="middle" fill="#f1f5f9" font-size="12" font-weight="600" font-family="Inter, sans-serif">Терминал (docker exec)</text>
+          <text x="111" y="120" text-anchor="middle" fill="#7dd3fc" font-size="10.5" font-family="JetBrains Mono, monospace">psql / mysql / clickhouse</text>
+
+          <rect x="22" y="146" width="178" height="52" rx="8" fill="#19243a" stroke="#fb7185" stroke-width="1.1" />
+          <text x="111" y="167" text-anchor="middle" fill="#f1f5f9" font-size="12" font-weight="600" font-family="Inter, sans-serif">Браузер (Web UI)</text>
+          <text x="111" y="185" text-anchor="middle" fill="#fda4af" font-size="10.5" font-family="JetBrains Mono, monospace">:8080 Adminer · :8123 Play</text>
+
+          <rect x="22" y="212" width="178" height="52" rx="8" fill="#19243a" stroke="#a78bfa" stroke-width="1.1" />
+          <text x="111" y="233" text-anchor="middle" fill="#f1f5f9" font-size="12" font-weight="600" font-family="Inter, sans-serif">DBeaver / DataGrip</text>
+          <text x="111" y="251" text-anchor="middle" fill="#c4b5fd" font-size="10.5" font-family="JetBrains Mono, monospace">localhost:5432, 3306...</text>
+
+          <!-- Центральный блок: Docker db_net -->
+          <rect x="258" y="12" width="434" height="276" rx="12" fill="#131c2e" stroke="#38bdf8" stroke-dasharray="6 4" stroke-width="1.5" />
+          <text x="475" y="37" text-anchor="middle" fill="#7dd3fc" font-size="13" font-weight="700" font-family="Inter, sans-serif">Внутренняя сеть Docker: db_net (имена сервисов)</text>
+
+          <rect x="276" y="52" width="190" height="52" rx="8" fill="#0e1525" stroke="#22c55e" stroke-width="1.4" />
+          <text x="371" y="73" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700" font-family="JetBrains Mono, monospace">pg_primary (:5432)</text>
+          <text x="371" y="91" text-anchor="middle" fill="#cbd5e1" font-size="10.5" font-family="Inter, sans-serif">PostgreSQL 16 · Модули 1–6</text>
+
+          <rect x="484" y="52" width="190" height="52" rx="8" fill="#0e1525" stroke="#f59e0b" stroke-width="1.3" />
+          <text x="579" y="73" text-anchor="middle" fill="#fcd34d" font-size="12" font-weight="700" font-family="JetBrains Mono, monospace">mysql_innodb (:3306)</text>
+          <text x="579" y="91" text-anchor="middle" fill="#cbd5e1" font-size="10.5" font-family="Inter, sans-serif">MySQL 8.4 · Профиль mod4</text>
+
+          <rect x="276" y="118" width="190" height="48" rx="8" fill="#0e1525" stroke="#38bdf8" stroke-width="1.2" />
+          <text x="371" y="138" text-anchor="middle" fill="#7dd3fc" font-size="11.5" font-weight="700" font-family="JetBrains Mono, monospace">pg_standby (5433→5432)</text>
+          <text x="371" y="155" text-anchor="middle" fill="#94a3b8" font-size="10.5" font-family="Inter, sans-serif">Реплика RO · Профиль mod5</text>
+
+          <rect x="484" y="118" width="190" height="48" rx="8" fill="#0e1525" stroke="#38bdf8" stroke-width="1.2" />
+          <text x="579" y="138" text-anchor="middle" fill="#7dd3fc" font-size="11.5" font-weight="700" font-family="JetBrains Mono, monospace">pg_logical (5434→5432)</text>
+          <text x="579" y="155" text-anchor="middle" fill="#94a3b8" font-size="10.5" font-family="Inter, sans-serif">Subscriber · Профиль mod5</text>
+
+          <rect x="276" y="180" width="190" height="44" rx="8" fill="#0e1525" stroke="#38bdf8" stroke-width="1.2" />
+          <text x="371" y="198" text-anchor="middle" fill="#7dd3fc" font-size="11.5" font-weight="700" font-family="JetBrains Mono, monospace">pgbouncer (6432→5432)</text>
+          <text x="371" y="214" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="Inter, sans-serif">Пулер соединений · mod5</text>
+
+          <rect x="484" y="180" width="190" height="44" rx="8" fill="#0e1525" stroke="#a78bfa" stroke-width="1.2" />
+          <text x="579" y="198" text-anchor="middle" fill="#c4b5fd" font-size="11.5" font-weight="700" font-family="JetBrains Mono, monospace">clickhouse (:8123 / :9000)</text>
+          <text x="579" y="214" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="Inter, sans-serif">OLAP · Профиль mod6</text>
+
+          <rect x="360" y="236" width="230" height="38" rx="8" fill="#0e1525" stroke="#fb7185" stroke-width="1.2" />
+          <text x="475" y="253" text-anchor="middle" fill="#fda4af" font-size="11.5" font-weight="700" font-family="JetBrains Mono, monospace">adminer (:8080)</text>
+          <text x="475" y="267" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="Inter, sans-serif">Веб-клиент для PG/MySQL · ui</text>
+
+          <!-- Правый блок: Volumes -->
+          <rect x="734" y="34" width="178" height="232" rx="12" fill="#131c2e" stroke="#22c55e" stroke-width="1.4" />
+          <text x="823" y="60" text-anchor="middle" fill="#4ade80" font-size="13" font-weight="700" font-family="Inter, sans-serif">Тома («Флешки»)</text>
+          <text x="823" y="78" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="Inter, sans-serif">Данные переживают stop / down</text>
+
+          <text x="748" y="108" fill="#e2e8f0" font-size="11" font-family="JetBrains Mono, monospace">• pg_primary_data</text>
+          <text x="748" y="130" fill="#e2e8f0" font-size="11" font-family="JetBrains Mono, monospace">• pg_standby_data</text>
+          <text x="748" y="152" fill="#e2e8f0" font-size="11" font-family="JetBrains Mono, monospace">• pg_logical_data</text>
+          <text x="748" y="174" fill="#e2e8f0" font-size="11" font-family="JetBrains Mono, monospace">• mysql_data</text>
+          <text x="748" y="196" fill="#e2e8f0" font-size="11" font-family="JetBrains Mono, monospace">• clickhouse_data</text>
+          <line x1="746" y1="212" x2="898" y2="212" stroke="#26344d" />
+          <text x="748" y="233" fill="#fcd34d" font-size="11" font-weight="600" font-family="JetBrains Mono, monospace">• ./backups → /backups</text>
+          <text x="748" y="250" fill="#94a3b8" font-size="10" font-family="Inter, sans-serif">(папка на твоём ПК)</text>
+
+          <!-- Стрелки -->
+          <line x1="214" y1="150" x2="253" y2="150" stroke="#38bdf8" stroke-width="2" marker-end="url(#arr-blue)" />
+          <line x1="692" y1="150" x2="729" y2="150" stroke="#4ade80" stroke-width="2" marker-end="url(#arr-green)" />
+        </svg>
+        <figcaption class="diagram-caption">Рис. 1. Как твой компьютер, контейнеры внутри сети db_net и тома с данными связаны между собой.</figcaption>
+      </figure>
+
+      <div class="table-wrapper">
+        <table class="table-wide">
+          <thead>
+            <tr>
+              <th>Сервис / Контейнер</th>
+              <th>Профиль</th>
+              <th>С компьютера (DBeaver, браузер)</th>
+              <th>Внутри Docker (Adminer, мост)</th>
+              <th>База / Доступ</th>
+              <th>Уроки курса</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>pg_primary</code><br><small><code>course_pg_primary</code></small></td>
+              <td><span class="badge b-default">по умолчанию</span></td>
+              <td><code>localhost:5432</code></td>
+              <td><code>pg_primary:5432</code></td>
+              <td><code>learning_db</code></td>
+              <td>Модули 1–6 (базовый)</td>
+            </tr>
+            <tr>
+              <td><code>mysql_innodb</code><br><small><code>course_mysql_innodb</code></small></td>
+              <td><span class="badge b-mod4">mod4</span></td>
+              <td><code>localhost:3306</code></td>
+              <td><code>mysql_innodb:3306</code></td>
+              <td><code>learning_db</code><br><small>root: <code>root_pass</code></small></td>
+              <td>Урок 4.4 (PG vs MySQL)</td>
+            </tr>
+            <tr>
+              <td><code>pg_standby</code><br><small><code>course_pg_standby</code></small></td>
+              <td><span class="badge b-mod5">mod5</span></td>
+              <td><code>localhost:5433</code></td>
+              <td><code>pg_standby:5432</code></td>
+              <td><code>learning_db</code> (RO)</td>
+              <td>Уроки 5.1–5.3 (Репликация)</td>
+            </tr>
+            <tr>
+              <td><code>pg_logical</code><br><small><code>course_pg_logical</code></small></td>
+              <td><span class="badge b-mod5">mod5</span></td>
+              <td><code>localhost:5434</code></td>
+              <td><code>pg_logical:5432</code></td>
+              <td><code>learning_db</code></td>
+              <td>Урок 5.3 (Subscriber)</td>
+            </tr>
+            <tr>
+              <td><code>pgbouncer</code><br><small><code>course_pgbouncer</code></small></td>
+              <td><span class="badge b-mod5">mod5</span></td>
+              <td><code>localhost:6432</code></td>
+              <td><code>pgbouncer:5432</code></td>
+              <td><code>learning_db</code> (пулер)</td>
+              <td>Урок 5.4 (PgBouncer)</td>
+            </tr>
+            <tr>
+              <td><code>clickhouse</code><br><small><code>course_clickhouse</code></small></td>
+              <td><span class="badge b-mod6">mod6</span></td>
+              <td><code>localhost:8123</code> (HTTP)<br><code>localhost:9000</code> (Native)</td>
+              <td><code>clickhouse:8123</code></td>
+              <td><code>analytics_db</code><br><a class="ext-link" href="http://localhost:8123/play" target="_blank" rel="noopener">localhost:8123/play</a></td>
+              <td>Уроки 6.3–6.5 (OLAP)</td>
+            </tr>
+            <tr>
+              <td><code>adminer</code><br><small><code>course_adminer</code></small></td>
+              <td><span class="badge b-ui">ui</span></td>
+              <td><a class="ext-link" href="http://localhost:8080" target="_blank" rel="noopener">localhost:8080</a></td>
+              <td>—</td>
+              <td>Веб-клиент в браузере</td>
+              <td>Любой урок (опционально)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Ошибка в Adminer и ClickHouse</div>
+          <div class="compare-body">
+            <p>Писать <code>localhost</code> в поле «Сервер» Adminer или внутри <code>postgresql('localhost:5432', ...)</code> в ClickHouse.</p>
+            <p>Внутри контейнера <code>localhost</code> указывает на сам этот контейнер, а не на PostgreSQL → будет <code>Connection refused</code>.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Правильные адреса для GUI</div>
+          <div class="compare-body">
+            <p><strong>Внутри Docker</strong> (Adminer, ClickHouse, репликация): пиши имя сервиса — <code>pg_primary</code>, <code>pg_standby</code>, <code>mysql_innodb</code>.</p>
+            <p><strong>На компьютере</strong> (DBeaver, DataGrip, браузер): пиши <code>localhost</code> + внешний порт (<code>5432</code>, <code>5433</code>, <code>3306</code>, <code>8123</code>).</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Готовые настройки для Adminer (<a class="ext-link" href="http://localhost:8080" target="_blank" rel="noopener">http://localhost:8080</a>)</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Куда подключаемся</th>
+              <th>Система</th>
+              <th>Сервер</th>
+              <th>Пользователь / Пароль</th>
+              <th>База данных</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Основной PostgreSQL</td><td>PostgreSQL</td><td><code>pg_primary</code></td><td><code>student</code> / <code>student_pass</code></td><td><code>learning_db</code></td></tr>
+            <tr><td>Физическая реплика</td><td>PostgreSQL</td><td><code>pg_standby</code></td><td><code>student</code> / <code>student_pass</code></td><td><code>learning_db</code></td></tr>
+            <tr><td>Логический подписчик</td><td>PostgreSQL</td><td><code>pg_logical</code></td><td><code>student</code> / <code>student_pass</code></td><td><code>learning_db</code></td></tr>
+            <tr><td>MySQL 8.4 (InnoDB)</td><td>MySQL</td><td><code>mysql_innodb</code></td><td><code>student</code> / <code>student_pass</code></td><td><code>learning_db</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== 05. ВСЕ КОМАНДЫ ЗАПУСКА И ВХОДА ==================== -->
+    <section id="connect">
+      <h2><span class="sec-num">05</span> Шпаргалка команд: запуск, вход и 2 окна терминала</h2>
+      <p>Каждая кнопка «Копировать» копирует ровно одну команду — вставляй в терминал и нажимай <kbd>Enter</kbd>.</p>
+
+      <h3>Запуск и остановка стенда (в папке с <code>docker-compose.yaml</code>)</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · Модули 1–3, 4.1–4.3, 6.1–6.2 (только PostgreSQL)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker compose up -d</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · Модуль 4 (+ MySQL 8.4 InnoDB)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker compose --profile mod4 up -d</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · Модуль 5 (+ Standby, Logical, PgBouncer)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker compose --profile mod5 up -d</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · Модуль 6 (+ ClickHouse OLAP)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker compose --profile mod6 up -d</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · Добавить веб-клиент Adminer (:8080)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker compose --profile ui up -d</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · Запустить все сервисы курса сразу</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker compose --profile all up -d</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · Проверить список работающих контейнеров</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · Поставить все контейнеры на паузу (данные сохраняются!)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker compose --profile all stop</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · Остановить и убрать контейнеры (данные сохраняются!)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker compose --profile all down</code></pre>
+      </div>
+
+      <h3>Подключение к базам из терминала (работает из любой папки!)</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · PostgreSQL Primary (основная база)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · PostgreSQL Standby (реплика RO, Модуль 5)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec -it course_pg_standby psql -U student -d learning_db</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · PostgreSQL Logical (подписчик, Модуль 5)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec -it course_pg_logical psql -U student -d learning_db</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · PostgreSQL через пулер PgBouncer (Модуль 5)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec -it -e PGPASSWORD=student_pass course_pg_primary psql -h pgbouncer -p 5432 -U student -d learning_db</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · Админ-консоль PgBouncer (SHOW POOLS;, Модуль 5)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec -it -e PGPASSWORD=student_pass course_pg_primary psql -h pgbouncer -p 5432 -U student -d pgbouncer</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · MySQL 8.4 InnoDB (Модуль 4)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec -it course_mysql_innodb mysql -u student -pstudent_pass learning_db</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · ClickHouse CLI (Модуль 6)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec -it course_clickhouse clickhouse-client -u student --password student_pass -d analytics_db</code></pre>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <div class="callout-body">
+          <strong>Как работать в 2 окнах терминала (Уроки 4.1, 4.3, 4.4, 5.1–5.3, 6.5) и клавиши внутри консоли:</strong><br>
+          • Открой вторую вкладку терминала (в VS Code кнопка <code>+</code> или иконка разделения экрана) и вставь туда нужную команду входа.<br>
+          • Выход из базы: <code>\q</code> (PostgreSQL), <code>exit</code> (MySQL и ClickHouse) или <kbd>Ctrl</kbd>+<kbd>D</kbd>. Отмена зависшей строки: <kbd>Ctrl</kbd>+<kbd>C</kbd>.<br>
+          • Внутри <code>psql</code>: <code>\dt</code> — список таблиц, <code>\d имя</code> — колонки, <code>\l</code> — базы, <code>\timing</code> — таймер запросов.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 06. ПРОВЕРКИ, БЭКАПЫ, PITR И СБРОС ==================== -->
+    <section id="ops">
+      <h2><span class="sec-num">06</span> Smoke-тесты, бэкапы, PITR и сброс</h2>
+
+      <h3>Быстрая проверка работоспособности (Smoke-тесты)</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · 1. PostgreSQL Primary и настройки WAL</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec course_pg_primary psql -U student -d learning_db -c "SELECT version(); SHOW wal_level;"</code></pre>
+      </div>
+      <div class="output-block">
+        <div class="output-label">Ожидается</div>
+        <pre>PostgreSQL 16.x  |  wal_level = logical</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · 2. Потоковая репликация: статус на Primary (Mod 5)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec course_pg_primary psql -U student -d learning_db -c "SELECT client_addr, state, sync_state FROM pg_stat_replication;"</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · 2б. Потоковая репликация: режим на Standby (Mod 5)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec course_pg_standby psql -U student -d learning_db -c "SELECT pg_is_in_recovery();"</code></pre>
+      </div>
+      <div class="output-block">
+        <div class="output-label">Ожидается</div>
+        <pre>state = streaming  |  pg_is_in_recovery = t</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · 3. Пулер PgBouncer (Mod 5)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec -e PGPASSWORD=student_pass course_pg_primary psql -h pgbouncer -p 5432 -U student -d learning_db -c "SELECT current_database(), current_user;"</code></pre>
+      </div>
+      <div class="output-block">
+        <div class="output-label">Ожидается</div>
+        <pre>learning_db | student</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · 4. MySQL 8.4 InnoDB (Mod 4)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec course_mysql_innodb mysql -u student -pstudent_pass learning_db -e "SELECT VERSION(), @@default_storage_engine;"</code></pre>
+      </div>
+      <div class="output-block">
+        <div class="output-label">Ожидается</div>
+        <pre>8.4.x | InnoDB</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH · 5. ClickHouse OLAP (Mod 6)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-bash">docker exec course_clickhouse clickhouse-client -u student --password student_pass -d analytics_db --query "SELECT version(), currentDatabase();"</code></pre>
+      </div>
+      <div class="output-block">
+        <div class="output-label">Ожидается</div>
+        <pre>версия ClickHouse  |  analytics_db</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">SQL (в ClickHouse) · 6. Мост ClickHouse → PostgreSQL (Mod 6)</span><button class="copy-btn" type="button">Копировать</button></div>
+        <pre><code class="language-sql">SELECT *
+FROM postgresql('pg_primary:5432', 'learning_db', 'orders', 'student', 'student_pass')
+LIMIT 5;</code></pre>
+      </div>
+
+      <h3>Бэкапы, PITR (Урок 5.4), сброс реплики (Урок 5.3) и логи</h3>
+
+      <div class="task-card">
+        <div class="task-title">Логический бэкап через <code>pg_dump</code> и восстановление (Урок 5.4)</div>
+        <p>Папка <code>./backups</code> на компьютере примонтирована в <code>/backups</code> внутри <code>course_pg_primary</code> — все дампы появятся прямо в папке проекта.</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Создать сжатый дамп всей базы</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec course_pg_primary pg_dump -U student -d learning_db -F c -f /backups/learning_db.dump</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Создать тестовую БД для восстановления</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec course_pg_primary createdb -U student learning_db_restore</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Восстановить дамп в learning_db_restore</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec course_pg_primary pg_restore -U student -d learning_db_restore /backups/learning_db.dump</code></pre>
+        </div>
+      </div>
+
+      <div class="task-card" id="pitr-guide">
+        <div class="task-title">Включение PITR / архивирования WAL (Урок 5.4)</div>
+        <p>1) Открой <code>docker-compose.yaml</code> и в сервисе <code>pg_primary</code> (строки 34–37) убери <code>#</code> в начале 4 строк:</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">YAML · Фрагмент docker-compose.yaml (сервис pg_primary)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-yaml">      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=mkdir -p /backups/wal &amp;&amp; test ! -f /backups/wal/%f &amp;&amp; cp %p /backups/wal/%f</code></pre>
+        </div>
+        <p>2) Сохрани файл, пересоздай контейнер (данные сохранятся!) и проверь статус архиватора:</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Применить настройку PITR</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose up -d pg_primary</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Проверить, что archive_mode = on</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker exec course_pg_primary psql -U student -d learning_db -c "SHOW archive_mode;"</code></pre>
+        </div>
+      </div>
+
+      <div class="task-card" id="reset-standby">
+        <div class="task-title">Сброс реплики <code>pg_standby</code> после Failover (Урок 5.3)</div>
+        <p>Если ты перевёл <code>course_pg_standby</code> в режим записи (<code>SELECT pg_promote();</code>), удали только её контейнер и её том — при запуске она сама склонируется заново с Primary:</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · 1. Остановить и удалить контейнер реплики</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose --profile mod5 rm -sf pg_standby</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · 2. Удалить только том реплики</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker volume rm db-course_pg_standby_data</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · 3. Запустить заново (авто-клонирование)</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker compose --profile mod5 up -d pg_standby</code></pre>
+        </div>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Просмотр логов любого контейнера</div>
+        <p>Если контейнер ведёт себя странно — посмотри последние 30 строк логов (выйти из режима слежения <code>-f</code>: <kbd>Ctrl</kbd>+<kbd>C</kbd>):</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Логи PostgreSQL Primary</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker logs --tail=30 course_pg_primary</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">BASH · Логи реплики Standby в реальном времени</span><button class="copy-btn" type="button">Копировать</button></div>
+          <pre><code class="language-bash">docker logs -f --tail=30 course_pg_standby</code></pre>
+        </div>
+      </div>
+
+      <aside class="callout danger">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        <div class="callout-body">
+          <strong>Красная кнопка — полный сброс стенда (удаляет ВСЕ таблицы во всех базах!):</strong>
+          Используй только если хочешь начать курс с абсолютно чистого листа:
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">BASH · ОПАСНО: удалить контейнеры и все тома</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-bash">docker compose --profile all down -v</code></pre>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 07. ЕСЛИ ЧТО-ТО ПОШЛО НЕ ТАК ==================== -->
+    <section id="troubleshooting">
+      <h2><span class="sec-num">07</span> Если что-то пошло не так (частые ошибки новичков)</h2>
+      <p>Кликни на сообщение об ошибке из терминала — внутри готовое решение за 10 секунд:</p>
+
+      <div class="faq-list">
+        <details class="faq">
+          <summary><code>Cannot connect to the Docker daemon</code> / <code>error during connect</code></summary>
+          <div class="faq-body">
+            <p><strong>Причина:</strong> Docker Desktop не запущен или ещё загружается.</p>
+            <p><strong>Решение:</strong> Запусти приложение <strong>Docker Desktop</strong>, дождись зелёного статуса <em>Engine running</em> (15–30 секунд) и повтори команду. На Linux: <code>sudo systemctl start docker</code>.</p>
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary><code>no configuration file provided: not found</code></summary>
+          <div class="faq-body">
+            <p><strong>Причина:</strong> Терминал открыт не в той папке, где лежит <code>docker-compose.yaml</code>.</p>
+            <p><strong>Решение:</strong> Перейди в папку курса (<code>cd путь/к/папке</code>) или открой её в VS Code и запусти встроенный терминал. Проверь командой <code>ls docker-compose.yaml</code>.</p>
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary><code>role "postgres" does not exist</code> или <code>password authentication failed</code></summary>
+          <div class="faq-body">
+            <p><strong>Причина:</strong> По привычке указан логин <code>postgres</code> или неверный пароль.</p>
+            <p><strong>Решение:</strong> В нашем <code>docker-compose.yaml</code> везде используется логин <code>student</code> и пароль <code>student_pass</code> (root в MySQL — <code>root_pass</code>):</p>
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">BASH · Правильный вход</span><button class="copy-btn" type="button">Копировать</button></div>
+              <pre><code class="language-bash">docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+            </div>
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary><code>no such service: mysql_innodb</code> / <code>pg_standby</code> / <code>clickhouse</code></summary>
+          <div class="faq-body">
+            <p><strong>Причина:</strong> Эти сервисы включены только внутри своих профилей (<code>mod4</code>, <code>mod5</code>, <code>mod6</code>). Команды <code>docker compose exec/logs/rm</code> без флага <code>--profile</code> их не видят.</p>
+            <p><strong>Решение:</strong> Для входа и логов используй <code>docker exec -it course_...</code> и <code>docker logs course_...</code> (как в этом гиде) — им <code>--profile</code> не нужен. Для запуска/остановки всегда указывай профиль: <code>docker compose --profile mod5 up -d</code>.</p>
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary><code>Bind for 0.0.0.0:5432 failed: port is already allocated</code> (порт занят)</summary>
+          <div class="faq-body">
+            <p><strong>Причина:</strong> На твоём компьютере уже работает локальный PostgreSQL (или MySQL на <code>3306</code>) и занял этот порт.</p>
+            <p><strong>Решение:</strong> Открой <code>docker-compose.yaml</code>, найди в нужном сервисе секцию <code>ports:</code> и поменяй <strong>левое</strong> число (порт на ПК), например: <code>"5432:5432"</code> → <code>"55432:5432"</code> (правое число не трогай!), затем выполни <code>docker compose up -d</code>. Команда <code>docker exec</code> продолжит работать как раньше, а в DBeaver укажи новый порт <code>55432</code>.</p>
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary><code>Error response from daemon: container course_... is not running</code> (или <code>No such container</code>)</summary>
+          <div class="faq-body">
+            <p><strong>Причина:</strong> Контейнер ещё не запущен, стоит на паузе после <code>stop</code> или не включён нужный профиль.</p>
+            <p><strong>Решение:</strong> Подними нужный профиль (например, <code>docker compose up -d</code> для PostgreSQL или <code>docker compose --profile mod6 up -d</code> для ClickHouse) и подожди 5–10 секунд.</p>
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>Я «застрял» в терминале: вижу <code>learning_db=#</code> или <code>learning_db-#</code></summary>
+          <div class="faq-body">
+            <p><strong>Причина:</strong> Ты находишься <strong>внутри</strong> <code>psql</code>, а не в обычном терминале. Значок <code>-#</code> (минус вместо равно) означает, что ты начал SQL-команду и забыл поставить в конце <code>;</code>.</p>
+            <p><strong>Решение:</strong> Введи <code>;</code> и нажми <kbd>Enter</kbd> (или <kbd>Ctrl</kbd>+<kbd>C</kbd> для сброса строки). Чтобы полностью выйти из базы в обычный терминал, введи <code>\q</code> и нажми <kbd>Enter</kbd>.</p>
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>Adminer или ClickHouse выдаёт <code>Connection refused</code> при подключении к <code>localhost:5432</code></summary>
+          <div class="faq-body">
+            <p><strong>Причина:</strong> Внутри Docker слово <code>localhost</code> для каждого контейнера означает самого себя.</p>
+            <p><strong>Решение:</strong> В Adminer (поле «Сервер»), в функции <code>postgresql(...)</code> ClickHouse и в <code>CREATE SUBSCRIPTION</code> всегда пиши имя сервиса: <code>pg_primary</code> (или <code>mysql_innodb</code>, <code>pg_standby</code>), а не <code>localhost</code>.</p>
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>На Windows в Git Bash команда <code>docker exec -it</code> пишет ошибку про TTY</summary>
+          <div class="faq-body">
+            <p><strong>Причина:</strong> Старый Git Bash (MinGW) некорректно передаёт интерактивный ввод в Docker.</p>
+            <p><strong>Решение:</strong> Используй стандартный <strong>Windows Terminal / PowerShell</strong> (или встроенный терминал VS Code) — там <code>docker exec -it</code> работает сразу. Альтернатива в Git Bash: добавь <code>winpty</code> в начале (<code>winpty docker exec -it ...</code>).</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== ИТОГ ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Главное правило работы со стендом</span>
+      Пришёл учиться → <code>docker compose up -d</code> (или нужный <code>--profile</code>) → вошёл через <code>docker exec -it course_...</code> (или открыл Adminer / ClickHouse Play) → закончил учиться → <code>docker compose --profile all stop</code>. Все твои таблицы останутся в полной сохранности до следующего урока!
+    </div>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса (как в уроках курса)
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Автоматическая сборка оглавления из всех <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание гида</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 3. Копирование текста (с fallback для локального file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText.trim());
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+
+      // 4. Клик по плашкам реквизитов в шапке
+      document.querySelectorAll('.cred-pill[data-copy]').forEach((pill) => {
+        pill.addEventListener('click', async () => {
+          const val = pill.getAttribute('data-copy');
+          try {
+            await copyText(val);
+            pill.classList.add('copied');
+            setTimeout(() => pill.classList.remove('copied'), 1000);
+          } catch (_) {}
+        });
+      });
+
+      // 5. Интерактивный помощник по урокам
+      const tabs = document.querySelectorAll('.picker-tab');
+      const panels = document.querySelectorAll('.picker-panel');
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const targetId = tab.getAttribute('data-target');
+          tabs.forEach((t) => t.classList.toggle('active', t === tab));
+          panels.forEach((p) => p.classList.toggle('active', p.id === targetId));
+        });
+      });
+    });
+  </script>
+</body>
+</html>

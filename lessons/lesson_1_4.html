@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 1.4: Изменение и удаление данных (UPDATE, DELETE) и первое объединение таблиц (INNER JOIN)</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.8rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.85rem 1rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_1/practice.html#sec-1-4">Практикум 1.4</a>
+        <a class="course-nav-btn" href="../slides/module-1.html#1.4">Слайды урока 1.4</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 1 · Основы реляционных БД и SQL</span>
+        <span class="pill pill-neutral">Урок 1.4</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Урок 1.4: Изменение и удаление данных (UPDATE, DELETE) и первое объединение таблиц (INNER JOIN)</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Научишься точечно и массово менять строки через <code>UPDATE</code> и сразу видеть результат с помощью фишки PostgreSQL — <code>RETURNING</code>.</li>
+          <li>Освоишь безопасное удаление через <code>DELETE</code>, поймёшь, как <code>FOREIGN KEY</code> страхует базу от поломки, и узнаешь про «мягкое удаление» (soft delete).</li>
+          <li>Разберёшься, как склеивать две и три связанные таблицы в один понятный отчёт с помощью <code>INNER JOIN</code> и псевдонимов таблиц.</li>
+          <li>Закроешь полный цикл <strong>CRUD</strong> (Create, Read, Update, Delete) — фундамент любого веб-приложения и бэкенда.</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. ОСНОВНЫЕ РАЗДЕЛЫ ЛЕКЦИИ ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Подготовка связанных таблиц и редактирование через UPDATE</h2>
+      <p>
+        В жизни ни один магазин не застывает во времени: сегодня привезли новую партию ковриков для мыши, завтра объявили распродажу на одежду, а старый тестовый товар нужно вообще убрать с витрины. Кроме того, хранить название категории и имя её менеджера текстом в каждой строчке товара неудобно — если менеджер сменится, пришлось бы переписывать тысячи строк.
+      </p>
+      <p>
+        Поэтому в этом уроке мы вынесем категории в отдельную таблицу <code>categories</code> и свяжем с ней <code>products</code> через внешний ключ <code>category_id</code>. Запусти этот блок подготовки в своей базе <code>learning_db</code>, чтобы стартовые данные точно совпали со всеми примерами.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Подготовка связанных таблиц categories и products</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Удаляем старые таблицы в правильном порядке (сначала зависимые)
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS categories;
+
+CREATE TABLE categories (
+  id      INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name    TEXT NOT NULL UNIQUE,
+  manager TEXT NOT NULL
+);
+
+CREATE TABLE products (
+  id          INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  title       TEXT NOT NULL,
+  category_id INT REFERENCES categories(id), -- может быть NULL у черновиков
+  price       NUMERIC(10, 2) NOT NULL CHECK (price &gt; 0),
+  stock       INT NOT NULL DEFAULT 0 CHECK (stock &gt;= 0),
+  is_active   BOOLEAN NOT NULL DEFAULT true
+);
+
+INSERT INTO categories (name, manager) VALUES
+  ('Одежда',          'Алина'),
+  ('Аксессуары',      'Тимур'),
+  ('Книги',           'Алина'),
+  ('Гаджеты',         'Даниил'),
+  ('Настольные игры', 'Тимур'); -- пока без единого товара!
+
+INSERT INTO products (title, category_id, price, stock, is_active) VALUES
+  ('Худи «SQL Master»',          1, 14500.00,  12, true),
+  ('Футболка «SELECT *»',        1,  5900.00,  25, true),
+  ('Стикерпак «Postgres»',       2,  1200.00, 100, true),
+  ('Термокружка кодера',         2,  6900.00,   8, true),
+  ('Книга «SQL за 7 дней»',      3,  4200.00,  14, true),
+  ('Коврик для мыши XL',         2,  3500.00,   0, true),
+  ('Клавиатура «MechPro»',       4, 18900.00,   3, true),
+  ('Секретный мерч (черновик)', NULL, 990.00,   0, false),
+  ('Тестовый баг-товар',         2,   100.00,   0, false);</code></pre>
+      </div>
+
+      <h3>Как работает UPDATE: переклеиваем ценник на полке</h3>
+      <p>
+        Команда <code>UPDATE</code> похожа на работу продавца в магазине, которому сказали: «Найди товар №6, допиши к остатку +15 штук и переклей ценник на 3900». Тебе не нужно удалять строку и вставлять её заново — ты просто указываешь таблицу (<code>UPDATE</code>), какие колонки поменять (<code>SET</code>) и к каким именно строкам это относится (<code>WHERE</code>).
+      </p>
+      <p>
+        А в конце в PostgreSQL можно дописать суперполезное слово <code>RETURNING</code> — тогда база не просто сухо ответит <code>UPDATE 1</code>, а сразу вернёт тебе обновлённые строки, чтобы ты глазами убедился, что всё сработало идеально.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 1: точечное обновление товара и просмотр через RETURNING</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- На склад привезли 15 ковриков (id = 6), а цена выросла до 3900
+UPDATE products
+SET stock = stock + 15,
+    price = 3900.00
+WHERE id = 6
+RETURNING id, title, price, stock;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id |       title        |  price  | stock
+----+--------------------+---------+-------
+  6 | Коврик для мыши XL | 3900.00 |    15
+(1 row)
+
+UPDATE 1</pre>
+      </div>
+
+      <p>
+        А теперь давай устроим массовую акцию: снизим цену на <strong>10%</strong> сразу для всей одежды (<code>category_id = 1</code>). Внутри <code>SET</code> можно смело использовать текущее значение колонки и математические функции вроде <code>ROUND()</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 2: массовая скидка 10% на категорию «Одежда»</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Уменьшаем цену всех товаров из категории 1 (Одежда) на 10%
+UPDATE products
+SET price = ROUND(price * 0.9, 2)
+WHERE category_id = 1
+RETURNING id, title, price;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id |        title        |  price
+----+---------------------+----------
+  1 | Худи «SQL Master»   | 13050.00
+  2 | Футболка «SELECT *» |  5310.00
+(2 rows)
+
+UPDATE 2</pre>
+      </div>
+
+      <p>
+        Помнишь ограничения <code>CHECK</code> из Урока 1.2? Они бдительно дежурят не только при вставке <code>INSERT</code>, но и при каждом <code>UPDATE</code>. Если кто-то случайно попробует поставить отрицательную цену (<code>SET price = -100</code>), PostgreSQL остановит запрос и оставит старые данные в полной сохранности.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Проверка защиты: попытка записать отрицательную цену</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">UPDATE products
+SET price = -100.00
+WHERE id = 3;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  new row for relation "products" violates check constraint "products_price_check"
+DETAIL:  Failing row contains (3, Стикерпак «Postgres», 2, -100.00, 100, t).</pre>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- ЗАБЫЛИ WHERE!
+UPDATE products
+SET price = 1.00;</code></pre>
+            </div>
+            <p>Катастрофа! Без <code>WHERE</code> PostgreSQL молча выставит цену <strong>1 рубль</strong> абсолютно всем товарам в магазине. Настоящий кошмар начинающего разработчика.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- 1) Сначала проверяем SELECT-ом
+SELECT id, title, price
+FROM products WHERE id = 3;
+
+-- 2) Потом меняем ровно это
+UPDATE products
+SET price = 1500.00
+WHERE id = 3
+RETURNING id, title, price;</code></pre>
+            </div>
+            <p>Привычка сначала запускать <code>SELECT</code> с тем же <code>WHERE</code> спасает базы данных в самых ответственных проектах.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">02</span> Удаление записей (DELETE), охрана FOREIGN KEY и «мягкое удаление»</h2>
+      <p>
+        Если <code>UPDATE</code> — это правка карандашом и ластиком, то <code>DELETE</code> — это настоящий шредер для бумаг. Как только ты удалил строку и транзакция завершилась, кнопки «Ctrl+Z» в SQL нет. Поэтому правило «семь раз проверь <code>WHERE</code>, один раз нажми Enter» здесь ещё строже.
+      </p>
+      <p>
+        У нас в таблице болтается мусорная строка №9 — <code>'Тестовый баг-товар'</code>. Давай аккуратно отправим её в шредер и попросим базу через <code>RETURNING</code> подтвердить, кого именно она удалила.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 3: точечное удаление тестовой записи</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Удаляем строго тестовую строку по уникальному id
+DELETE FROM products
+WHERE id = 9
+RETURNING id, title;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id |       title
+----+--------------------
+  9 | Тестовый баг-товар
+(1 row)
+
+DELETE 1</pre>
+      </div>
+
+      <h3>Что будет, если удалить категорию, на которую ссылаются товары?</h3>
+      <p>
+        Представь школьную библиотеку: кто-то решил выбросить из каталога раздел «Книги» (<code>id = 3</code>), хотя на этой полке прямо сейчас стоит «Книга «SQL за 7 дней»». Чтобы в базе не появились «висящие в воздухе» ссылки на несуществующие категории, включается охранник <code>FOREIGN KEY</code> — и жёстко блокирует удаление!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Попытка удалить категорию «Книги», у которой есть товары</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DELETE FROM categories
+WHERE id = 3;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  update or delete on table "categories" violates foreign key constraint "products_category_id_fkey" on table "products"
+DETAIL:  Key (id)=(3) is still referenced from table "products".</pre>
+      </div>
+
+      <p>
+        Смотри, как вежливо и точно PostgreSQL объясняет проблему в строчке <code>DETAIL</code>: ключ <code>(id)=(3)</code> всё ещё используется в таблице <code>products</code>. А вот категорию <code>'Настольные игры'</code> (<code>id = 5</code>), к которой не привязан ни один товар, удалить можно без проблем (мы сделаем это в практикуме, а пока оставим её для опытов с <code>INNER JOIN</code>!).
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            A["1. Проверяем строки<br/>SELECT ... WHERE ..."] --> B{"Нужно стереть<br/>навсегда?"}
+            B -->|"Нет (история важна)"| C["Мягкое удаление<br/>UPDATE SET is_active = false"]
+            B -->|"Да (мусор / черновик)"| D["Физическое удаление<br/>DELETE ... WHERE ... RETURNING"]
+            D --> E{"Есть ссылки<br/>FOREIGN KEY?"}
+            E -->|"Нет"| F["Строка удалена"]
+            E -->|"Да"| G["Ошибка FK:<br/>сначала обнови/удали связи"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Безопасный алгоритм изменения и удаления данных в реальном проекте.</figcaption>
+      </figure>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет на будущее — «мягкое удаление» (Soft Delete):</strong> В настоящих интернет-магазинах, банках и играх строки редко удаляют физически через <code>DELETE</code>. Если товар сняли с продажи, но его уже кто-то покупал месяц назад, удаление сломает историю заказов! Вместо этого делают флаг <code>is_active = false</code> (или колонку <code>deleted_at</code>) через <code>UPDATE</code>, а на витрине просто фильтруют <code>WHERE is_active = true</code>.
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">03</span> Первое объединение таблиц: магия INNER JOIN</h2>
+      <p>
+        Если ты сейчас сделаешь <code>SELECT id, title, category_id FROM products</code>, то вместо понятных названий категорий увидишь сухие цифры: <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>. Компьютеру с цифрами удобно, а вот человеку на сайте нужно видеть «Одежда» и имя ответственного менеджера — «Алина».
+      </p>
+      <p>
+        Чтобы собрать полную картину из двух таблиц, в SQL существует команда <code>INNER JOIN</code> (внутреннее соединение). Представь себе <strong>школьный вечер танцев или сборку пазла</strong>: каждая строка из левой таблицы (<code>products</code>) ищет себе пару в правой таблице (<code>categories</code>) по общему ключу — условию <code>ON p.category_id = c.id</code>.
+      </p>
+      <ul>
+        <li>Нашлась пара? Отлично — обе строчки склеиваются в одну длинную строку и попадают в результат!</li>
+        <li>Пары нет? <code>INNER JOIN</code> работает строго: одиночки в финальный список <strong>не попадают</strong>. Поэтому наш черновик <code>'Секретный мерч'</code> (у которого <code>category_id IS NULL</code>) и пустая категория <code>'Настольные игры'</code> (у которой 0 товаров) останутся за кадром.</li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            subgraph P["Таблица products (p)"]
+              direction TB
+              P1["id=1 · Худи · cat_id=1"]
+              P3["id=3 · Стикерпак · cat_id=2"]
+              P8["id=8 · Черновик · cat_id=NULL"]
+            end
+            subgraph C["Таблица categories (c)"]
+              direction TB
+              C1["id=1 · Одежда · Алина"]
+              C2["id=2 · Аксессуары · Тимур"]
+              C5["id=5 · Настольные игры · Тимур"]
+            end
+            P1 ===|"p.category_id = c.id"| C1
+            P3 ===|"p.category_id = c.id"| C2
+            P8 -.-x|"Нет пары (NULL)"| X1["Не попадёт в INNER JOIN"]
+            C5 -.-x|"Нет товаров"| X2["Не попадёт в INNER JOIN"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Механика INNER JOIN: в результат попадают только те строки, которые смогли образовать пару по условию ON.</figcaption>
+      </figure>
+
+      <p>
+        Чтобы не писать каждый раз длинные названия таблиц <code>products.title</code> и <code>categories.name</code>, им дают короткие псевдонимы прямо в запросе: <code>products AS p</code> и <code>categories AS c</code> (слово <code>AS</code> для таблиц даже можно опускать, но для ясности на старте его удобно писать).
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 4: склеиваем товары и категории через INNER JOIN</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Склеиваем каждую строку товара (p) с её категорией (c)
+SELECT
+  p.id,
+  p.title,
+  c.name AS category_name,
+  c.manager,
+  p.price
+FROM products AS p
+INNER JOIN categories AS c
+  ON p.category_id = c.id
+ORDER BY p.id ASC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id |         title         | category_name | manager |  price
+----+-----------------------+---------------+---------+----------
+  1 | Худи «SQL Master»     | Одежда        | Алина   | 13050.00
+  2 | Футболка «SELECT *»   | Одежда        | Алина   |  5310.00
+  3 | Стикерпак «Postgres»  | Аксессуары    | Тимур   |  1200.00
+  4 | Термокружка кодера    | Аксессуары    | Тимур   |  6900.00
+  5 | Книга «SQL за 7 дней» | Книги         | Алина   |  4200.00
+  6 | Коврик для мыши XL    | Аксессуары    | Тимур   |  3900.00
+  7 | Клавиатура «MechPro»  | Гаджеты       | Даниил  | 18900.00
+(7 rows)</pre>
+      </div>
+
+      <p>
+        Обрати внимание: в таблице <code>products</code> осталось 8 товаров (после удаления тестового №9), а запрос вернул <strong>7 строк</strong>. Товар №8 (<code>'Секретный мерч (черновик)'</code>) не прошёл, потому что его <code>category_id</code> равен <code>NULL</code>, а <code>NULL = id</code> никогда не бывает <code>TRUE</code>!
+      </p>
+
+      <h3>Классическая ошибка новичка при JOIN: «двусмысленная колонка»</h3>
+      <p>
+        Если в обеих склеиваемых таблицах есть колонка с одинаковым именем — например, <code>id</code> есть и в <code>products</code>, и в <code>categories</code> — нельзя просто написать <code>SELECT id</code>. PostgreSQL остановится и вежливо спросит: «А какой именно <code>id</code> тебе нужен — товара или категории?».
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Забыли указать префикс таблицы перед общей колонкой id</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">SELECT id, title, name
+FROM products AS p
+INNER JOIN categories AS c ON p.category_id = c.id;</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  column reference "id" is ambiguous
+LINE 1: SELECT id, title, name
+               ^</pre>
+      </div>
+
+      <p>
+        Лечится за секунду: в запросах с <code>JOIN</code> всегда пиши перед каждой колонкой префикс псевдонима (<code>p.id</code>, <code>p.title</code>, <code>c.name</code>). Так и база никогда не запутается, и другой программист мгновенно поймёт, из какой таблицы взято каждое поле.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">04</span> Комбинируем всё вместе: JOIN + WHERE + третья таблица</h2>
+      <p>
+        После того как таблицы соединились на шаге <code>FROM ... INNER JOIN ...</code>, для PostgreSQL они превращаются в одну большую виртуальную таблицу. А значит, ты можешь применять к ней абсолютно все инструменты из Урока 1.3: фильтровать по колонкам <em>обеих</em> таблиц в <code>WHERE</code>, сортировать в <code>ORDER BY</code> и ограничивать через <code>LIMIT</code>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 5: активные товары менеджера Алины дешевле 15 000</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Фильтруем одновременно по колонке из categories (c.manager)
+-- и по колонкам из products (p.is_active, p.price)
+SELECT
+  p.title,
+  c.name AS category_name,
+  p.price,
+  p.stock
+FROM products AS p
+INNER JOIN categories AS c
+  ON p.category_id = c.id
+WHERE c.manager = 'Алина'
+  AND p.is_active = true
+  AND p.price &lt; 15000
+ORDER BY p.price DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre>         title         | category_name |  price   | stock
+-----------------------+---------------+----------+-------
+ Худи «SQL Master»     | Одежда        | 13050.00 |    12
+ Футболка «SELECT *»   | Одежда        |  5310.00 |    25
+ Книга «SQL за 7 дней» | Книги         |  4200.00 |    14
+(3 rows)</pre>
+      </div>
+
+      <h3>Собираем паровозик из трёх таблиц: заказы → товары → категории</h3>
+      <p>
+        На практике почти никогда не ограничиваются двумя таблицами. Представь, что в наш магазин начали приходить заказы от покупателей. Давай создадим таблицу <code>orders</code>, которая ссылается на <code>products</code>, и соберём красивый финансовый отчёт по всем <strong>оплаченным</strong> заказам — сразу с названием товара, его категорией и итоговой суммой!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Подготовка третьей таблицы orders</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">CREATE TABLE orders (
+  id         INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  customer   TEXT NOT NULL,
+  product_id INT NOT NULL REFERENCES products(id),
+  qty        INT NOT NULL CHECK (qty &gt; 0),
+  status     TEXT NOT NULL DEFAULT 'new'
+);
+
+INSERT INTO orders (customer, product_id, qty, status) VALUES
+  ('Максим', 1, 1, 'paid'),
+  ('София',  3, 5, 'paid'),
+  ('Артём',  7, 1, 'new'),
+  ('София',  5, 2, 'paid');</code></pre>
+      </div>
+
+      <p>
+        Объединение трёх таблиц выглядит как цепочка конструктора LEGO: сначала к <code>orders</code> пристёгиваем <code>products</code> по <code>o.product_id = p.id</code>, а затем к получившейся связке пристёгиваем <code>categories</code> по <code>p.category_id = c.id</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 6: отчёт по оплаченным заказам из 3 таблиц</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Склеиваем orders -&gt; products -&gt; categories и считаем сумму каждого заказа
+SELECT
+  o.id AS order_id,
+  o.customer,
+  p.title,
+  c.name AS category,
+  o.qty,
+  p.price * o.qty AS total_sum
+FROM orders AS o
+INNER JOIN products AS p
+  ON o.product_id = p.id
+INNER JOIN categories AS c
+  ON p.category_id = c.id
+WHERE o.status = 'paid'
+ORDER BY total_sum DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> order_id | customer |         title         |  category  | qty | total_sum
+----------+----------+-----------------------+------------+-----+-----------
+        1 | Максим   | Худи «SQL Master»     | Одежда     |   1 |  13050.00
+        4 | София    | Книга «SQL за 7 дней» | Книги      |   2 |   8400.00
+        2 | София    | Стикерпак «Postgres»  | Аксессуары |   5 |   6000.00
+(3 rows)</pre>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Устаревший стиль через запятую
+-- Если забыть условие связи в WHERE,
+-- каждый товар умножится на каждую категорию!
+SELECT p.title, c.name
+FROM products p, categories c;</code></pre>
+            </div>
+            <p>Такой запрос создаст <strong>декартово произведение</strong> (8 × 5 = 40 бессмысленных строк, где «Худи» окажется в категории «Книги» и «Гаджеты»).</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Современный явный INNER JOIN ... ON
+SELECT p.title, c.name
+FROM products AS p
+INNER JOIN categories AS c
+  ON p.category_id = c.id;</code></pre>
+            </div>
+            <p>Условие склейки всегда чётко отделено в <code>ON</code>, а бизнес-фильтры живут в <code>WHERE</code>. Забыть <code>ON</code> синтаксис SQL просто не позволит!</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Частая ошибка:</strong> Не путай простое слово <code>JOIN</code> с «каким-то другим типом соединения». В PostgreSQL (и стандарте SQL) короткая запись <code>JOIN</code> — это точный синоним <code>INNER JOIN</code>. Пока ты учишься, лучше писать <code>INNER JOIN</code> полностью, чтобы всегда помнить: строки без пары будут отброшены.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 3. БЛОК САМОПРОВЕРКИ ==================== -->
+    <section>
+      <h2><span class="sec-num">05</span> Мини-практикум для закрепления</h2>
+      <p>
+        Выполни 4 задания в своей базе <code>learning_db</code> на таблицах <code>categories</code>, <code>products</code> и <code>orders</code>. Не торопись открывать спойлер — сначала попробуй написать запрос самостоятельно и проверь ответ в <code>psql</code>.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовое · UPDATE). Подорожание гаджетов</div>
+        <p style="margin-bottom: 0;">
+          Увеличь цену всех товаров из категории <code>'Гаджеты'</code> (<code>category_id = 4</code>) ровно на <code>1000.00</code> рублей. С помощью <code>RETURNING</code> сразу выведи <code>id</code>, <code>title</code> и новую цену <code>price</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">UPDATE products
+SET price = price + 1000.00
+WHERE category_id = 4
+RETURNING id, title, price;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Безопасное удаление · UPDATE и DELETE). Архивация и уборка</div>
+        <p style="margin-bottom: 0;">
+          Выполни два отдельных запроса:<br />
+          1) Сделай «мягкое удаление» товара <code>'Термокружка кодера'</code> (<code>id = 4</code>) — переведи его колонку <code>is_active</code> в <code>false</code> и верни <code>id, title, is_active</code>.<br />
+          2) Полностью удали из таблицы <code>categories</code> пустую категорию <code>'Настольные игры'</code> (<code>id = 5</code>), вернув её <code>id</code> и <code>name</code>.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- 1. Мягкое удаление товара (история остаётся целой)
+UPDATE products
+SET is_active = false
+WHERE id = 4
+RETURNING id, title, is_active;
+
+-- 2. Физическое удаление пустой категории (ссылок на неё нет, FK пропустит)
+DELETE FROM categories
+WHERE id = 5
+RETURNING id, name;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (INNER JOIN + WHERE). История покупок Софии</div>
+        <p style="margin-bottom: 0;">
+          Объедини таблицы <code>orders</code> и <code>products</code>, чтобы вывести все заказы покупателя <code>'София'</code>. В результате покажи номер заказа (<code>o.id</code>), название товара (<code>p.title</code>), количество (<code>o.qty</code>) и статус (<code>o.status</code>). Отсортируй результат по номеру заказа по возрастанию.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  o.id AS order_id,
+  p.title,
+  o.qty,
+  o.status
+FROM orders AS o
+INNER JOIN products AS p
+  ON o.product_id = p.id
+WHERE o.customer = 'София'
+ORDER BY o.id ASC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Со звёздочкой · 3 таблицы + формула). Отчёт для менеджера Тимура</div>
+        <p style="margin-bottom: 0;">
+          Склей три таблицы (<code>orders</code>, <code>products</code>, <code>categories</code>) и выведи все заказы товаров из категорий, за которые отвечает менеджер <code>'Тимур'</code>. Покажи колонки: <code>order_id</code> (<code>o.id</code>), <code>customer</code>, <code>title</code>, <code>category_name</code> (<code>c.name</code>) и <code>total_sum</code> (<code>p.price * o.qty</code>). Отсортируй от самой большой суммы к меньшей.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  o.id AS order_id,
+  o.customer,
+  p.title,
+  c.name AS category_name,
+  p.price * o.qty AS total_sum
+FROM orders AS o
+INNER JOIN products AS p
+  ON o.product_id = p.id
+INNER JOIN categories AS c
+  ON p.category_id = c.id
+WHERE c.manager = 'Тимур'
+ORDER BY total_sum DESC, o.id ASC;</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_1/practice.html#sec-1-4"><strong>Практикум по Уроку 1.4 →</strong></a> — там 14 заданий на <code>UPDATE</code>, <code>DELETE</code>, защиту <code>FOREIGN KEY</code> и <code>INNER JOIN</code> для 2, 3 и 4 таблиц.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока и Модуля 1</span>
+      Поздравляю — ты прошёл весь первый модуль и полностью освоил базовый цикл работы с данными <strong>CRUD</strong>! Теперь ты умеешь запускать PostgreSQL, проектировать таблицы с ограничениями, добавлять данные (<code>INSERT</code>), искать и сортировать их (<code>SELECT</code>, <code>WHERE</code>, <code>ORDER BY</code>, <code>LIMIT/OFFSET</code>), безопасно обновлять и удалять строки (<code>UPDATE</code>, <code>DELETE</code>, <code>RETURNING</code>, soft delete), а также объединять несколько таблиц через <code>INNER JOIN</code>. А в следующем модуле мы выйдем на уровень настоящей аналитики: узнаем, как <strong>не терять</strong> строки без пары (например, пустые категории и товары без заказов) с помощью <code>LEFT JOIN</code>, и научимся считать выручку, средние чеки и отчёты через группировку <code>GROUP BY</code> и агрегатные функции!
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_1_3.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">1.3 · Чтение, фильтрация и сортировка — SELECT, WHERE…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_2_1.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">2.1 · Нормализация (1НФ–3НФ), связи «многие-ко-многим»…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          try {
+            await navigator.clipboard.writeText(codeEl.innerText);
+            const originalText = btn.textContent;
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

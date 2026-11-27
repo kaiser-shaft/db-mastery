@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок 6.1: OLTP vs OLAP и размерное моделирование («Звезда» и «Снежинка»)</title>
+
+  <!-- Шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-body: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --tip-bg: #f0fdf4;
+      --tip-border: #16a34a;
+      --tip-text: #166534;
+      --err-bg: #fef2f2;
+      --err-border: #dc2626;
+      --err-text: #991b1b;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --code-header-bg: #161b22;
+      --code-border: #30363d;
+      --inline-code-bg: #f1f5f9;
+      --inline-code-text: #be123c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16.5px;
+      line-height: 1.75;
+      background-color: var(--bg);
+      color: var(--text-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Основной контейнер лекции: оптимальная ширина строки для чтения */
+    .lecture {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    /* ==================== ШАПКА УРОКА ==================== */
+    .lecture-header {
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .pill-primary {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill-neutral {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 2.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--text);
+    }
+
+    /* Карточка целей/фокуса урока */
+    .focus-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+    }
+
+    .focus-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+
+    .focus-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .focus-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .focus-box li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Автоматическое оглавление урока */
+    .toc-box {
+      margin-top: 1.1rem;
+      padding: 0.95rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+
+    .toc-box:empty {
+      display: none;
+    }
+
+    .toc-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .toc-list li {
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-weight: 500;
+      line-height: 1.45;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .toc-list a:hover {
+      background: #f8fafc;
+      color: var(--accent);
+    }
+
+    .toc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.8rem;
+      padding: 0.06rem 0.38rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
+    section {
+      margin-top: 3rem;
+      scroll-margin-top: 1.5rem;
+    }
+
+    section:first-of-type {
+      margin-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 0 0 1.1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.42rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.45rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 2rem 0 0.75rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1.15rem;
+    }
+
+    ul, ol {
+      margin: 0 0 1.35rem;
+      padding-left: 1.45rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    li strong, p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
+    code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 0.16em 0.42em;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      margin: 1.35rem 0 1.6rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: var(--code-header-bg);
+      border-bottom: 1px solid var(--code-border);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    .code-lang {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: "Inter", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.22rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .copy-btn:hover {
+      background: #21262d;
+      border-color: #8b949e;
+      color: #ffffff;
+    }
+
+    .copy-btn.copied {
+      border-color: #238636;
+      color: #3fb950;
+    }
+
+    .code-block pre {
+      margin: 0;
+      padding: 1.15rem 1.35rem;
+      overflow-x: auto;
+      background: var(--code-bg) !important;
+      color: var(--code-text);
+      color-scheme: dark;
+      scrollbar-width: thin;
+      scrollbar-color: #30363d #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .code-block pre::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 999px;
+    }
+
+    .code-block pre::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .code-block pre code,
+    .code-block pre code.hljs {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    .code-block pre code:not(.hljs) {
+      color: var(--code-text);
+    }
+
+    /* ==================== ВЫВОД КОНСОЛИ И ОШИБКИ POSTGRESQL ==================== */
+    .output-block,
+    .error-block {
+      margin: -0.95rem 0 1.6rem;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    /* Если блок вывода стоит отдельно (не сразу после .code-block) */
+    .output-block.standalone,
+    .error-block.standalone {
+      margin-top: 1.25rem;
+    }
+
+    .output-block {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .error-block {
+      background: var(--err-bg);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--err-border);
+      color: var(--err-text);
+    }
+
+    .output-label {
+      padding: 0.35rem 1rem;
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    .output-block .output-label {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .error-block .output-label {
+      background: #fee2e2;
+      color: var(--err-text);
+    }
+
+    .output-block pre,
+    .error-block pre {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: inherit;
+      scrollbar-width: thin;
+    }
+
+    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    /* Для длинных SQL-примеров можно ставить карточки друг под другом */
+    .compare-grid.stacked {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compare-head {
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-card.bad {
+      border-color: #fecaca;
+    }
+
+    .compare-card.bad .compare-head {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .compare-card.good {
+      border-color: #bbf7d0;
+    }
+
+    .compare-card.good .compare-head {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border-bottom: 1px solid #bbf7d0;
+    }
+
+    .compare-body {
+      padding: 0.95rem 1rem 1rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .compare-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body .code-block {
+      margin: 0 0 0.85rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .code-block pre {
+      padding: 0.8rem 0.95rem;
+    }
+
+    .compare-body .code-block pre code,
+    .compare-body .code-block pre code.hljs {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .compare-body .table-wrapper {
+      margin: 0 0 0.75rem;
+      border-radius: 8px;
+    }
+
+    .compare-body .table-wrapper:last-child {
+      margin-bottom: 0;
+    }
+
+    .compare-body table {
+      font-size: 0.83rem;
+    }
+
+    .compare-body th,
+    .compare-body td {
+      padding: 0.5rem 0.65rem;
+    }
+
+    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
+    .diagram-box {
+      margin: 1.6rem 0 1.85rem;
+      padding: 1.35rem 1.25rem 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
+    .callout {
+      display: flex;
+      gap: 0.9rem;
+      margin: 1.6rem 0;
+      padding: 1.1rem 1.3rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 0.96rem;
+      line-height: 1.65;
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.15rem;
+      color: var(--accent);
+    }
+
+    .callout-body strong {
+      color: #1e40af;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: var(--warn-border);
+    }
+
+    .callout.warn .callout-icon {
+      color: var(--warn-border);
+    }
+
+    .callout.warn .callout-body strong {
+      color: var(--warn-text);
+    }
+
+    .callout.tip {
+      background: var(--tip-bg);
+      border-left-color: var(--tip-border);
+    }
+
+    .callout.tip .callout-icon {
+      color: var(--tip-border);
+    }
+
+    .callout.tip .callout-body strong {
+      color: var(--tip-text);
+    }
+
+    /* ==================== ТАБЛИЦЫ ==================== */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.35rem 0 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    /* Класс для широких таблиц с 5+ колонками, которым нужен скролл на мобильных */
+    table.table-wide {
+      min-width: 560px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==================== ПРАКТИКУМ И СПОЙЛЕРЫ РЕШЕНИЙ ==================== */
+    .task-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      margin: 1.25rem 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+    }
+
+    details.solution {
+      margin-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.75rem;
+    }
+
+    details.solution summary {
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      user-select: none;
+    }
+
+    details.solution summary:hover {
+      text-decoration: underline;
+    }
+
+    details.solution .code-block {
+      margin: 0.8rem 0 0;
+    }
+
+    /* ==================== ИТОГ УРОКА ==================== */
+    .takeaway {
+      margin-top: 3rem;
+      padding: 1.35rem 1.5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-body);
+      font-size: 0.97rem;
+    }
+
+    .takeaway-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
+    @media (max-width: 740px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem 0.75rem 3rem;
+        font-size: 15.5px;
+      }
+      .lecture {
+        padding: 1.65rem 1.35rem;
+        border-radius: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+
+    /* ==================== НАВИГАЦИЯ ПО КУРСУ ==================== */
+    .course-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-bottom: 1.15rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .course-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .course-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.36rem 0.72rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-body);
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .course-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .course-nav-btn.primary {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    .lesson-pager {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+      margin-top: 2.25rem;
+      padding-top: 1.65rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pager-link {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .pager-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .pager-link.next {
+      text-align: right;
+    }
+
+    .pager-link.center {
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.05rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+    }
+
+    .pager-dir {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .pager-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 720px) {
+      .lesson-pager {
+        grid-template-columns: 1fr;
+      }
+      .pager-link.next {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .copy-btn,
+      .course-nav,
+      .lesson-pager {
+        display: none !important;
+      }
+      .lecture {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .code-block,
+      .output-block,
+      .error-block,
+      .compare-grid,
+      .diagram-box,
+      .task-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../practice/module_6/practice.html#sec-6-1">Практикум 6.1</a>
+        <a class="course-nav-btn" href="../slides/module-6.html#6.1">Слайды урока 6.1</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль 6 · Архитектура DWH, OLAP-движки и итоговый проект</span>
+        <span class="pill pill-neutral">Урок 6.1</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>OLTP vs OLAP и размерное моделирование («Звезда» и «Снежинка»)</h1>
+
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Поймёшь разницу между «кассовой» базой (<code>OLTP</code>) и базой для отчётов и графиков (<code>OLAP</code> / <code>DWH</code>).</li>
+          <li>Научишься проектировать <strong>таблицы фактов</strong> (<code>fact_*</code>), <strong>таблицы измерений</strong> (<code>dim_*</code>), выбирать правильное <strong>зерно</strong> (<code>Grain</code>) и суррогатные ключи.</li>
+          <li>Соберёшь в <code>learning_db</code> реальную схему <strong>«Звезда»</strong> (<code>Star Schema</code>) и схему <strong>«Снежинка»</strong> (<code>Snowflake Schema</code>) из сырого интернет-магазина.</li>
+          <li>Узнаешь две главные ловушки аналитиков: перезапись истории цен и задвоение выручки из-за смешивания гранулярностей (<code>Fan-out</code>).</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. ОСНОВНЫЕ РАЗДЕЛЫ ЛЕКЦИИ ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Зачем делить базы на «кассу» и «кабинет директора» (OLTP vs OLAP)</h2>
+      <p>
+        Представь большой супермаркет вечером в пятницу. У десяти касс стоят очереди, и каждая касса делает одно и то же: быстро сканирует штрих-код, списывает деньги и выдаёт чек. Главная цель кассира — обслужить одного покупателя за <strong>2 секунды</strong> и ничего не потерять.
+      </p>
+      <p>
+        А теперь представь, что в этот же момент в зал заходит директор сети и говорит кассиру: <em>«Подожди пробивать покупки! Перебери-ка все бумажные чеки за последние три года и скажи, в какой день недели в магазинах Алматы чаще всего покупали шоколад с орехами вместе с кофе»</em>. Что произойдёт? Очередь встанет намертво, покупатели уйдут к конкурентам, а директор всё равно будет ждать ответ до ночи.
+      </p>
+      <p>
+        В мире баз данных происходит ровно то же самое. Поэтому инженеры разделили нагрузку на два разных мира:
+      </p>
+      <ul>
+        <li><strong>OLTP (Online Transaction Processing)</strong> — это «касса». Боевая база сайта, игры или банковского приложения. В ней каждую секунду прилетают тысячи крошечных операций: «создать заказ», «списать 500 тенге», «обновить адрес доставки». Здесь важна скорость одной короткой транзакции и строгий порядок без дубликатов (нормализация, <code>3НФ</code>).</li>
+        <li><strong>OLAP (Online Analytical Processing)</strong> — это «кабинет директора и аналитиков». Сюда периодически копируют данные из кассы, приводят их в удобный для расчётов вид и складывают в специальное <strong>хранилище данных (DWH — Data Warehouse)</strong>. Здесь почти ничего не меняют по одной строчке, зато часто запускают тяжёлые запросы с <code>SUM</code>, <code>AVG</code> и <code>GROUP BY</code> по миллионам строк за годы работы.</li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            A["Покупатели на сайте"] -->|"1000 мелких INSERT / UPDATE"| B[("OLTP-база: Касса\n(нормализованная 3НФ)")]
+            B -->|"Выгрузка данных (ELT)"| C[("OLAP / DWH: Штаб аналитики\n(Звезда / Снежинка)")]
+            C -->|"Тяжёлые SUM / GROUP BY"| D["Дашборды директора и BI"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Разделение контуров: тяжёлые отчёты аналитиков не мешают покупателям оформлять заказы.</figcaption>
+      </figure>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Критерий</th>
+              <th>OLTP (Касса)</th>
+              <th>OLAP / DWH (Аналитика)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Кто пользуется</strong></td>
+              <td>Пользователи сайта, приложения, игроки</td>
+              <td>Аналитики, директора, BI-графики, ML-модели</td>
+            </tr>
+            <tr>
+              <td><strong>Типичные запросы</strong></td>
+              <td>Много коротких <code>INSERT</code>, <code>UPDATE</code>, точечных <code>SELECT</code> по <code>id</code></td>
+              <td>Мало запросов, но огромные <code>SELECT</code> с <code>GROUP BY</code> и <code>SUM</code></td>
+            </tr>
+            <tr>
+              <td><strong>Сколько строк читает запрос</strong></td>
+              <td>От 1 до 50 строк</td>
+              <td>От сотен тысяч до миллиардов строк</td>
+            </tr>
+            <tr>
+              <td><strong>Устройство таблиц</strong></td>
+              <td>Нормализовано (<code>3НФ</code>) — минимум дублирования</td>
+              <td>Денормализовано («Звезда» / «Снежинка») — минимум <code>JOIN</code></td>
+            </tr>
+            <tr>
+              <td><strong>Глубина истории</strong></td>
+              <td>Обычно актуальные данные (месяцы)</td>
+              <td>Архив за 3–10 лет для сравнения год к году</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Школьная аналогия:</strong> <code>OLTP</code> — это твой текущий бумажный дневник, куда учитель каждый день быстро ставит новые оценки и может исправить опечатку. <code>OLAP</code> — это сводная таблица завуча в конце учебного года, где собраны оценки всех классов за пять лет, чтобы сравнить, как изменилась успеваемость по математике.
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">02</span> Боль аналитики в OLTP: собираем «боевой» магазин</h2>
+      <p>
+        Чтобы не верить на слово, давай сами почувствуем, почему строить отчёты прямо по нормализованной <code>OLTP</code>-базе неудобно. Запусти контейнер с <code>PostgreSQL 16</code> и подключись к нашей учебной базе <code>learning_db</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash · Подключение к PostgreSQL</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-bash">docker compose up -d
+docker exec -it course_pg_primary psql -U student -d learning_db</code></pre>
+      </div>
+
+      <p>
+        Представь, что у нас есть интернет-магазин гик-товаров «ПиксельМаркет». Программисты бэкенда спроектировали базу по всем правилам третьей нормальной формы (<code>3НФ</code>): страны лежат отдельно от городов, города отдельно от клиентов, категории отдельно от товаров, а шапка заказа отдельно от списка позиций в чеке. Получилось <strong>7 связанных таблиц</strong>.
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Таблица в <code>oltp_shop</code></th>
+              <th>Что хранит</th>
+              <th>С кем связана</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>countries</code> и <code>cities</code></td>
+              <td>Справочники стран и городов</td>
+              <td><code>cities.country_id</code> → <code>countries.id</code></td>
+            </tr>
+            <tr>
+              <td><code>categories</code> и <code>products</code></td>
+              <td>Категории и текущий каталог товаров</td>
+              <td><code>products.category_id</code> → <code>categories.id</code></td>
+            </tr>
+            <tr>
+              <td><code>customers</code></td>
+              <td>Покупатели и их город</td>
+              <td><code>customers.city_id</code> → <code>cities.id</code></td>
+            </tr>
+            <tr>
+              <td><code>orders</code> и <code>order_items</code></td>
+              <td>Заказы и купленные позиции в чеке</td>
+              <td><code>order_items</code> → <code>orders</code>, <code>products</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Пример 1. Подготовка учебной OLTP-схемы</h3>
+      <p>
+        Этот скрипт можно безопасно перезапускать сколько угодно раз благодаря <code>DROP SCHEMA IF EXISTS ... CASCADE</code>. Обрати внимание на заказ №1004 (он отменён) и заказ №1007 (он прошёл уже во 2-м квартале) — они пригодятся для проверки точности отчётов.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Подготовка данных OLTP</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP SCHEMA IF EXISTS oltp_shop CASCADE;
+CREATE SCHEMA oltp_shop;
+
+-- 1. География (нормализована на 2 уровня)
+CREATE TABLE oltp_shop.countries (
+    id   INT PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE oltp_shop.cities (
+    id         INT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    country_id INT NOT NULL REFERENCES oltp_shop.countries(id)
+);
+
+-- 2. Каталог товаров (нормализован на 2 уровня)
+CREATE TABLE oltp_shop.categories (
+    id   INT PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE oltp_shop.products (
+    id            INT PRIMARY KEY,
+    title         TEXT NOT NULL,
+    category_id   INT NOT NULL REFERENCES oltp_shop.categories(id),
+    current_price NUMERIC(10, 2) NOT NULL
+);
+
+-- 3. Покупатели и заказы
+CREATE TABLE oltp_shop.customers (
+    id        INT PRIMARY KEY,
+    full_name TEXT NOT NULL,
+    city_id   INT NOT NULL REFERENCES oltp_shop.cities(id),
+    segment   TEXT NOT NULL
+);
+
+CREATE TABLE oltp_shop.orders (
+    id          INT PRIMARY KEY,
+    customer_id INT NOT NULL REFERENCES oltp_shop.customers(id),
+    order_date  DATE NOT NULL,
+    status      TEXT NOT NULL
+);
+
+CREATE TABLE oltp_shop.order_items (
+    id                INT PRIMARY KEY,
+    order_id          INT NOT NULL REFERENCES oltp_shop.orders(id),
+    product_id        INT NOT NULL REFERENCES oltp_shop.products(id),
+    qty               INT NOT NULL,
+    price_at_purchase NUMERIC(10, 2) NOT NULL,
+    discount          NUMERIC(10, 2) NOT NULL DEFAULT 0
+);
+
+-- Наполняем магазин тестовыми данными
+INSERT INTO oltp_shop.countries VALUES
+    (1, 'Казахстан'),
+    (2, 'Россия');
+
+INSERT INTO oltp_shop.cities VALUES
+    (1, 'Костанай', 1),
+    (2, 'Алматы',   1),
+    (3, 'Астана',   1),
+    (4, 'Москва',   2);
+
+INSERT INTO oltp_shop.categories VALUES
+    (1, 'Электроника'),
+    (2, 'Мерч'),
+    (3, 'Аксессуары');
+
+INSERT INTO oltp_shop.products VALUES
+    (101, 'Механическая клавиатура', 1, 35000.00),
+    (102, 'Беспроводная мышь',       1, 18000.00),
+    (103, 'Худи «SQL Master»',       2, 22000.00),
+    (104, 'Термокружка кодера',      3,  8000.00),
+    (105, 'Коврик для мыши XL',      3,  6000.00);
+
+INSERT INTO oltp_shop.customers VALUES
+    (1, 'Айгерим Сатова',  2, 'VIP'),
+    (2, 'Тимур Искаков',   1, 'Standard'),
+    (3, 'Елена Морозова',  4, 'VIP'),
+    (4, 'Данияр Алимов',   3, 'Standard');
+
+INSERT INTO oltp_shop.orders VALUES
+    (1001, 1, '2026-01-10', 'paid'),      -- Q1, суббота
+    (1002, 2, '2026-01-15', 'paid'),      -- Q1, четверг
+    (1003, 3, '2026-02-07', 'paid'),      -- Q1, суббота
+    (1004, 4, '2026-02-18', 'cancelled'), -- Q1, отменён!
+    (1005, 1, '2026-03-14', 'paid'),      -- Q1, суббота
+    (1006, 2, '2026-03-20', 'paid'),      -- Q1, пятница
+    (1007, 3, '2026-04-05', 'paid');      -- Q2, воскресенье
+
+INSERT INTO oltp_shop.order_items VALUES
+    (1,  1001, 101, 1, 32000.00, 2000.00), -- старая цена до подорожания!
+    (2,  1001, 104, 2,  8000.00,    0.00),
+    (3,  1002, 103, 1, 22000.00,    0.00),
+    (4,  1002, 105, 1,  6000.00,  500.00),
+    (5,  1003, 101, 1, 35000.00,    0.00),
+    (6,  1003, 102, 2, 18000.00, 1000.00),
+    (7,  1004, 101, 3, 35000.00,    0.00), -- отменённый заказ
+    (8,  1005, 103, 2, 22000.00, 4000.00),
+    (9,  1006, 102, 1, 18000.00,    0.00),
+    (10, 1006, 104, 1,  8000.00,    0.00),
+    (11, 1007, 103, 1, 22000.00,    0.00);</code></pre>
+      </div>
+
+      <h3>Пример 2. Отчёт директора напрямую по OLTP-таблицам</h3>
+      <p>
+        Теперь директор просит простой отчёт: <em>«Покажи выручку и количество проданных штук по городам и категориям за 1-й квартал 2026 года, только по оплаченным заказам»</em>. Посмотри, сколько цепочек <code>JOIN</code> приходится сплести в нормализованной базе ради одного базового вопроса:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Тяжёлый отчёт в OLTP (5 JOIN)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">SELECT
+    ci.name AS city_name,
+    cat.name AS category_name,
+    SUM(oi.qty) AS items_sold,
+    SUM(oi.qty * oi.price_at_purchase - oi.discount) AS revenue
+FROM oltp_shop.order_items oi
+JOIN oltp_shop.orders     o   ON o.id   = oi.order_id
+JOIN oltp_shop.customers  cu  ON cu.id  = o.customer_id
+JOIN oltp_shop.cities     ci  ON ci.id  = cu.city_id
+JOIN oltp_shop.products   p   ON p.id   = oi.product_id
+JOIN oltp_shop.categories cat ON cat.id = p.category_id
+WHERE o.status = 'paid'
+  AND o.order_date &gt;= DATE '2026-01-01'
+  AND o.order_date &lt;  DATE '2026-04-01'
+GROUP BY ci.name, cat.name
+ORDER BY revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> city_name | category_name | items_sold | revenue  
+-----------+---------------+------------+----------
+ Москва    | Электроника   |          3 | 70000.00
+ Алматы    | Мерч          |          2 | 40000.00
+ Алматы    | Электроника   |          1 | 30000.00
+ Костанай  | Мерч          |          1 | 22000.00
+ Костанай  | Электроника   |          1 | 18000.00
+ Алматы    | Аксессуары    |          2 | 16000.00
+ Костанай  | Аксессуары    |          2 | 13500.00
+(7 rows)</pre>
+      </div>
+
+      <p>
+        Пока строк всего одиннадцать, запрос кажется безобидным. Но вернёмся к нашей проблеме из начала раздела: в реальном магазине таких таблиц не 7, а 80, и в <code>order_items</code> лежат <strong>десятки миллионов строк</strong>. Каждому аналитику приходится помнить кучу хрупких правил: не забыть <code>status = 'paid'</code>, не забыть вычесть <code>discount</code>, соединить 6 таблиц и при этом не положить боевую кассу. Чтобы решить эту боль раз и навсегда, придумали <strong>размерное моделирование</strong>.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">03</span> Размерное моделирование: Факты, Измерения и Зерно</h2>
+      <p>
+        Представь экран статистики в компьютерной игре после матча. В центре на табло горят <strong>числа</strong> — сколько голов ты забил, сколько урона нанёс, сколько монет заработал. Их можно складывать и считать среднее. А по бокам написан <strong>контекст</strong> — за какого героя ты играл, на какой карте, в какой день и против какой команды. По контексту удобно фильтровать («покажи мои матчи только на карте Dust2 за прошлую неделю»).
+      </p>
+      <p>
+        Ровно так же Ральф Кимбалл предложил делить все таблицы в аналитическом хранилище (<code>Dimensional Modeling</code>):
+      </p>
+      <ul>
+        <li><strong>Таблица фактов (Fact Table, префикс <code>fact_</code>)</strong> — хранит события бизнеса и измеримые числа-метрики (выручка, количество, скидка, вес). В ней миллионы строк, но сами строки узкие: в основном числа и ссылки на справочники.</li>
+        <li><strong>Таблица измерений (Dimension Table, префикс <code>dim_</code>)</strong> — отвечает на вопросы <em>«Кто? Что? Где? Когда?»</em> (<code>dim_customer</code>, <code>dim_product</code>, <code>dim_date</code>). Строк в ней немного, зато колонок с понятными текстовыми описаниями много.</li>
+        <li><strong>Зерно / Гранулярность (Grain)</strong> — самый важный термин в проектировании DWH! Зерно чётко отвечает на вопрос: <em>«Что именно описывает ОДНА строка таблицы фактов?»</em> Например: одна позиция одного товара в одном оплаченном чеке.</li>
+        <li><strong>Суррогатный ключ (Surrogate Key, суффикс <code>_sk</code>)</strong> — искусственный числовой ID внутри хранилища (например, <code>product_sk</code>), не привязанный к бизнес-ключам из OLTP (<code>product_bk</code>). Если завтра магазин переедет на новую кассовую программу с другими артикулами, хранилище не сломается!</li>
+      </ul>
+
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Цена берётся из каталога!
+SELECT SUM(f.qty * p.price)
+FROM fact_sales f
+JOIN dim_product p
+  ON p.id = f.product_id;</code></pre>
+            </div>
+            <p>Как только клавиатура подорожает с 32 000 до 35 000, выручка за прошлый январь <strong>волшебным образом вырастет</strong>. История испорчена!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Сумма зафиксирована в факте
+SELECT SUM(f.total_amount)
+FROM fact_sales f;</code></pre>
+            </div>
+            <p>Цена продажи, скидка и итоговая сумма сохраняются прямо в строке <code>fact_sales</code> на момент покупки и никогда не плывут.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Золотое правило зерна:</strong> Никогда не пиши <code>CREATE TABLE fact_...</code>, пока не сформулируешь вслух одно предложение о зерне таблицы. Нельзя в одну таблицу фактов одновременно класть и строки товаров из чека, и итоговую сумму доставки на весь заказ — при подсчёте <code>SUM()</code> ты получишь ложные цифры.
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">04</span> Схема «Звезда» (Star Schema) — золотой стандарт аналитики</h2>
+      <p>
+        Представь школьный двор в день ярмарки. В самом центре стоит главный стенд с кассой, куда стекаются все билеты о покупках. А прямо вокруг него на расстоянии одного шага стоят четыре аккуратных столика: «Календарь», «Товары», «Покупатели» и «Магазины». Тебе не нужно бежать через три коридора, чтобы узнать, из какого города покупатель — вся информация о нём лежит на одном столике!
+      </p>
+      <p>
+        Если нарисовать такую структуру таблиц, получится <strong>схема «Звезда» (Star Schema)</strong>: в центре лежит таблица фактов <code>fact_sales</code>, а от неё во все стороны расходятся лучи к плоским (денормализованным) таблицам измерений.
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart TB
+            D1["dim_date\n(date_sk, full_date, year, quarter, is_weekend)"]
+            D2["dim_product\n(product_sk, product_bk, title, category_name)"]
+            D3["dim_customer\n(customer_sk, customer_bk, full_name, city_name, country_name)"]
+            F[("fact_sales (Центр)\ndate_sk | product_sk | customer_sk\nqty | unit_price | discount_amount | total_amount")]
+
+            D1 -->|"1 : N"| F
+            D2 -->|"1 : N"| F
+            D3 -->|"1 : N"| F
+        </div>
+        <figcaption class="diagram-caption">Рис. 2. Схема «Звезда»: от таблицы фактов до любого атрибута (города, страны, категории, квартала) ровно 1 JOIN.</figcaption>
+      </figure>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Что было в <code>oltp_shop</code> (7 таблиц)</th>
+              <th>Что стало в <code>dwh_star</code> (4 таблицы)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>products</code> + <code>categories</code></td>
+              <td>Одна плоская <code>dim_product</code> (категория уже внутри!)</td>
+            </tr>
+            <tr>
+              <td><code>customers</code> + <code>cities</code> + <code>countries</code></td>
+              <td>Одна плоская <code>dim_customer</code> (город и страна уже внутри!)</td>
+            </tr>
+            <tr>
+              <td>Только колонка <code>order_date</code></td>
+              <td>Готовый справочник <code>dim_date</code> с кварталами, днями недели и флагом выходного</td>
+            </tr>
+            <tr>
+              <td><code>orders</code> + <code>order_items</code> (включая отменённые)</td>
+              <td>Чистая <code>fact_sales</code> с зерном «1 позиция в оплаченном заказе» и готовой <code>total_amount</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Пример 3. Создаём схему «Звезда» в PostgreSQL</h3>
+      <p>
+        Обрати внимание на хитрый инженерный трюк с ключом <code>date_sk</code>: вместо случайных номеров <code>1, 2, 3</code> в DWH используют целое число формата <code>ГГГГММДД</code> (например, <code>20260110</code>). Его легко читать глазами, удобно сортировать и быстро фильтровать по диапазонам!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Создание таблиц схемы «Звезда»</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP SCHEMA IF EXISTS dwh_star CASCADE;
+CREATE SCHEMA dwh_star;
+
+-- Измерение 1: Календарь (Date Dimension)
+CREATE TABLE dwh_star.dim_date (
+    date_sk     INT PRIMARY KEY,      -- формат YYYYMMDD, например 20260110
+    full_date   DATE NOT NULL UNIQUE,
+    year_num    INT NOT NULL,
+    quarter_num INT NOT NULL,
+    month_num   INT NOT NULL,
+    day_of_week INT NOT NULL,         -- 1 = Пн ... 7 = Вс
+    is_weekend  BOOLEAN NOT NULL
+);
+
+-- Измерение 2: Товары (денормализовано вместе с категорией)
+CREATE TABLE dwh_star.dim_product (
+    product_sk    SERIAL PRIMARY KEY, -- суррогатный ключ DWH
+    product_bk    INT NOT NULL UNIQUE,-- бизнес-ключ из OLTP
+    product_title TEXT NOT NULL,
+    category_name TEXT NOT NULL
+);
+
+-- Измерение 3: Покупатели (денормализовано вместе с городом и страной)
+CREATE TABLE dwh_star.dim_customer (
+    customer_sk   SERIAL PRIMARY KEY,
+    customer_bk   INT NOT NULL UNIQUE,
+    full_name     TEXT NOT NULL,
+    segment       TEXT NOT NULL,
+    city_name     TEXT NOT NULL,
+    country_name  TEXT NOT NULL
+);
+
+-- Таблица фактов: Зерно = 1 позиция товара в оплаченном заказе
+CREATE TABLE dwh_star.fact_sales (
+    sale_sk         BIGSERIAL PRIMARY KEY,
+    order_bk        INT NOT NULL,     -- вырожденное измерение (номер чека)
+    date_sk         INT NOT NULL REFERENCES dwh_star.dim_date(date_sk),
+    product_sk      INT NOT NULL REFERENCES dwh_star.dim_product(product_sk),
+    customer_sk     INT NOT NULL REFERENCES dwh_star.dim_customer(customer_sk),
+    qty             INT NOT NULL CHECK (qty &gt; 0),
+    unit_price      NUMERIC(10, 2) NOT NULL,
+    discount_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    total_amount    NUMERIC(10, 2) NOT NULL
+);</code></pre>
+      </div>
+
+      <h3>Пример 4. Ловушка порядка загрузки и наполнение «Звезды»</h3>
+      <p>
+        Новички часто пытаются сначала загрузить данные в таблицу фактов, а справочники заполнить «потом». Давай посмотрим, как <code>PostgreSQL</code> мгновенно пресечёт такую попытку:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Попытка загрузить факт раньше измерений</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Пытаемся вставить продажу, пока dim_date и dim_product пустые
+INSERT INTO dwh_star.fact_sales
+    (order_bk, date_sk, product_sk, customer_sk, qty, unit_price, discount_amount, total_amount)
+VALUES
+    (1001, 20260110, 1, 1, 1, 32000.00, 2000.00, 30000.00);</code></pre>
+      </div>
+
+      <div class="error-block">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  insert or update on table "fact_sales" violates foreign key constraint "fact_sales_date_sk_fkey"
+DETAIL:  Key (date_sk)=(20260110) is not present in table "dim_date".</pre>
+      </div>
+
+      <p>
+        Причина проста: внешний ключ (<code>FOREIGN KEY</code>) защищает хранилище от «сиротских» фактов, у которых нет описания в справочниках. Отсюда железное правило любого пайплайна загрузки данных: <strong>сначала всегда наполняем измерения (<code>dim_*</code>), и только потом — таблицу фактов (<code>fact_*</code>)</strong>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Правильная загрузка «Звезды» из OLTP</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Шаг 1. Генерируем календарь на весь 2026 год одной командой
+INSERT INTO dwh_star.dim_date
+    (date_sk, full_date, year_num, quarter_num, month_num, day_of_week, is_weekend)
+SELECT
+    TO_CHAR(d, 'YYYYMMDD')::INT,
+    d::DATE,
+    EXTRACT(YEAR FROM d)::INT,
+    EXTRACT(QUARTER FROM d)::INT,
+    EXTRACT(MONTH FROM d)::INT,
+    EXTRACT(ISODOW FROM d)::INT,
+    EXTRACT(ISODOW FROM d) IN (6, 7)
+FROM generate_series(DATE '2026-01-01', DATE '2026-12-31', INTERVAL '1 day') AS d
+ON CONFLICT (date_sk) DO NOTHING;
+
+-- Шаг 2. Загружаем плоский справочник товаров (соединяем products + categories)
+INSERT INTO dwh_star.dim_product (product_bk, product_title, category_name)
+SELECT p.id, p.title, c.name
+FROM oltp_shop.products p
+JOIN oltp_shop.categories c ON c.id = p.category_id
+ON CONFLICT (product_bk) DO NOTHING;
+
+-- Шаг 3. Загружаем плоский справочник покупателей (customers + cities + countries)
+INSERT INTO dwh_star.dim_customer (customer_bk, full_name, segment, city_name, country_name)
+SELECT cu.id, cu.full_name, cu.segment, ci.name, co.name
+FROM oltp_shop.customers cu
+JOIN oltp_shop.cities    ci ON ci.id = cu.city_id
+JOIN oltp_shop.countries co ON co.id = ci.country_id
+ON CONFLICT (customer_bk) DO NOTHING;
+
+-- Шаг 4. Загружаем факты: только оплаченные заказы + подставляем суррогатные ключи
+INSERT INTO dwh_star.fact_sales
+    (order_bk, date_sk, product_sk, customer_sk, qty, unit_price, discount_amount, total_amount)
+SELECT
+    o.id,
+    TO_CHAR(o.order_date, 'YYYYMMDD')::INT AS date_sk,
+    dp.product_sk,
+    dc.customer_sk,
+    oi.qty,
+    oi.price_at_purchase,
+    oi.discount,
+    (oi.qty * oi.price_at_purchase - oi.discount) AS total_amount
+FROM oltp_shop.order_items oi
+JOIN oltp_shop.orders o ON o.id = oi.order_id
+JOIN dwh_star.dim_product  dp ON dp.product_bk  = oi.product_id
+JOIN dwh_star.dim_customer dc ON dc.customer_bk = o.customer_id
+WHERE o.status = 'paid';
+
+-- Проверим, сколько строк попало в таблицу фактов
+SELECT COUNT(*) AS loaded_facts, SUM(total_amount) AS total_2026_revenue
+FROM dwh_star.fact_sales;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> loaded_facts | total_2026_revenue 
+--------------+--------------------
+           10 |          231500.00
+(1 row)</pre>
+      </div>
+
+      <h3>Пример 5. Тот самый отчёт директора — теперь по схеме «Звезда»</h3>
+      <p>
+        Посмотри, как преобразился запрос для отчёта за 1-й квартал 2026 года. Никаких длинных цепочек <code>JOIN</code>, никаких вычислений формулы выручки на лету, никаких ручных проверок статуса <code>'paid'</code> и никаких границ дат <code>&gt;= '2026-01-01'</code> — достаточно спросить <code>quarter_num = 1</code>!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Чистый аналитический запрос в схеме «Звезда»</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">SELECT
+    dc.city_name,
+    dp.category_name,
+    SUM(f.qty)          AS items_sold,
+    SUM(f.total_amount) AS revenue
+FROM dwh_star.fact_sales f
+JOIN dwh_star.dim_date     dd ON dd.date_sk     = f.date_sk
+JOIN dwh_star.dim_product  dp ON dp.product_sk  = f.product_sk
+JOIN dwh_star.dim_customer dc ON dc.customer_sk = f.customer_sk
+WHERE dd.year_num = 2026
+  AND dd.quarter_num = 1
+GROUP BY dc.city_name, dp.category_name
+ORDER BY revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> city_name | category_name | items_sold | revenue  
+-----------+---------------+------------+----------
+ Москва    | Электроника   |          3 | 70000.00
+ Алматы    | Мерч          |          2 | 40000.00
+ Алматы    | Электроника   |          1 | 30000.00
+ Костанай  | Мерч          |          1 | 22000.00
+ Костанай  | Электроника   |          1 | 18000.00
+ Алматы    | Аксессуары    |          2 | 16000.00
+ Костанай  | Аксессуары    |          2 | 13500.00
+(7 rows)</pre>
+      </div>
+
+      <p>
+        Цифры совпали до последней копейки, но проблема из Раздела 02 решена полностью: аналитик пишет запрос вдвое короче, не боится ошибиться в формуле скидки, а боевая касса <code>oltp_shop</code> спокойно обслуживает новых покупателей.
+      </p>
+
+      <div class="compare-grid stacked">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо · Ловушка гранулярности (Fan-out / задвоение сумм)</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Заказ 1001 содержит 2 позиции, а доставка (1500) указана на весь заказ!
+-- Наивный JOIN размножит строку доставки на каждую позицию в чеке:
+SELECT o.id, SUM(o.delivery_fee) AS broken_delivery, SUM(oi.qty * oi.price_at_purchase) AS items_sum
+FROM orders_with_delivery o
+JOIN oltp_shop.order_items oi ON oi.order_id = o.id
+GROUP BY o.id; -- Для заказа 1001 выдаст 3000 вместо 1500!</code></pre>
+            </div>
+            <p>Когда соединяют две таблицы с <strong>разным зерном</strong> («1 строка = 1 заказ» и «1 строка = 1 товар в заказе»), метрики верхнего уровня (доставка, бонус на чек) незаметно умножаются на число товаров. Это самая дорогая ошибка в отчётности!</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно · Разделять зерно или агрегировать до JOIN</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">-- Сначала свёртываем позиции до зерна "1 заказ", и только потом соединяем с доставкой:
+WITH items_by_order AS (
+    SELECT order_id, SUM(qty * price_at_purchase - discount) AS items_sum
+    FROM oltp_shop.order_items
+    GROUP BY order_id
+)
+SELECT o.id, o.delivery_fee, i.items_sum
+FROM orders_with_delivery o
+JOIN items_by_order i ON i.order_id = o.id;</code></pre>
+            </div>
+            <p>В DWH для метрик разного зерна создают <strong>две отдельные таблицы фактов</strong> (<code>fact_sales</code> по товарам и <code>fact_orders</code> по заказам), либо честно распределяют доставку пропорционально по каждой строке товара.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">05</span> Схема «Снежинка» (Snowflake Schema) — когда лучи ветвятся</h2>
+      <p>
+        Посмотри ещё раз на таблицу <code>dwh_star.dim_customer</code> из нашей «Звезды». Если в магазине миллион покупателей из Алматы, то слово <code>'Алматы'</code> и слово <code>'Казахстан'</code> будут повторены в таблице миллион раз. А если нам ещё нужно хранить население города, часовой пояс и код валюты страны?
+      </p>
+      <p>
+        Если начать выносить повторяющиеся атрибуты из таблиц измерений в отдельные под-таблицы (<code>dim_customer</code> → <code>dim_city</code> → <code>dim_country</code>), то лучи нашей звезды начнут ветвиться, как кристаллы настоящей снежинки. Так появляется <strong>схема «Снежинка» (Snowflake Schema)</strong> — это та же «Звезда», но с <em>нормализованными измерениями</em>.
+      </p>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            F[("fact_sales")]
+            DD["dim_date"]
+            DP["dim_product"]
+            DCAT["dim_category"]
+            DCU["dim_customer"]
+            DCI["dim_city"]
+            DCO["dim_country"]
+
+            DD --> F
+            DP --> F
+            DCAT --> DP
+            DCU --> F
+            DCI --> DCU
+            DCO --> DCI
+        </div>
+        <figcaption class="diagram-caption">Рис. 3. Схема «Снежинка»: измерения разбиты на иерархии справочников, чтобы не дублировать текст.</figcaption>
+      </figure>
+
+      <h3>Пример 6. Собираем «Снежинку» и сравниваем со «Звездой»</h3>
+      <p>
+        Давай соберём схему <code>dwh_snow</code> из тех же данных <code>oltp_shop</code> и выполним точно такой же отчёт директора. Обрати внимание, что таблица <code>fact_sales</code> в центре вообще не изменилась — изменились только «лучи» вокруг неё!
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Схема «Снежинка» и аналитический запрос</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">DROP SCHEMA IF EXISTS dwh_snow CASCADE;
+CREATE SCHEMA dwh_snow;
+
+-- Ветка географии: country &lt;- city &lt;- customer
+CREATE TABLE dwh_snow.dim_country (
+    country_sk   SERIAL PRIMARY KEY,
+    country_bk   INT NOT NULL UNIQUE,
+    country_name TEXT NOT NULL
+);
+
+CREATE TABLE dwh_snow.dim_city (
+    city_sk    SERIAL PRIMARY KEY,
+    city_bk    INT NOT NULL UNIQUE,
+    city_name  TEXT NOT NULL,
+    country_sk INT NOT NULL REFERENCES dwh_snow.dim_country(country_sk)
+);
+
+CREATE TABLE dwh_snow.dim_customer (
+    customer_sk SERIAL PRIMARY KEY,
+    customer_bk INT NOT NULL UNIQUE,
+    full_name   TEXT NOT NULL,
+    segment     TEXT NOT NULL,
+    city_sk     INT NOT NULL REFERENCES dwh_snow.dim_city(city_sk)
+);
+
+-- Ветка товаров: category &lt;- product
+CREATE TABLE dwh_snow.dim_category (
+    category_sk   SERIAL PRIMARY KEY,
+    category_bk   INT NOT NULL UNIQUE,
+    category_name TEXT NOT NULL
+);
+
+CREATE TABLE dwh_snow.dim_product (
+    product_sk    SERIAL PRIMARY KEY,
+    product_bk    INT NOT NULL UNIQUE,
+    product_title TEXT NOT NULL,
+    category_sk   INT NOT NULL REFERENCES dwh_snow.dim_category(category_sk)
+);
+
+-- Календарь и таблица фактов (такие же, как в «Звезде»)
+CREATE TABLE dwh_snow.dim_date AS TABLE dwh_star.dim_date;
+ALTER TABLE dwh_snow.dim_date ADD PRIMARY KEY (date_sk);
+
+CREATE TABLE dwh_snow.fact_sales (
+    sale_sk      BIGSERIAL PRIMARY KEY,
+    order_bk     INT NOT NULL,
+    date_sk      INT NOT NULL REFERENCES dwh_snow.dim_date(date_sk),
+    product_sk   INT NOT NULL REFERENCES dwh_snow.dim_product(product_sk),
+    customer_sk  INT NOT NULL REFERENCES dwh_snow.dim_customer(customer_sk),
+    qty          INT NOT NULL,
+    total_amount NUMERIC(10, 2) NOT NULL
+);
+
+-- Загружаем ветки от корней (стран и категорий) к листьям, затем факты
+INSERT INTO dwh_snow.dim_country (country_bk, country_name)
+SELECT id, name FROM oltp_shop.countries;
+
+INSERT INTO dwh_snow.dim_city (city_bk, city_name, country_sk)
+SELECT ci.id, ci.name, dco.country_sk
+FROM oltp_shop.cities ci
+JOIN dwh_snow.dim_country dco ON dco.country_bk = ci.country_id;
+
+INSERT INTO dwh_snow.dim_customer (customer_bk, full_name, segment, city_sk)
+SELECT cu.id, cu.full_name, cu.segment, dci.city_sk
+FROM oltp_shop.customers cu
+JOIN dwh_snow.dim_city dci ON dci.city_bk = cu.city_id;
+
+INSERT INTO dwh_snow.dim_category (category_bk, category_name)
+SELECT id, name FROM oltp_shop.categories;
+
+INSERT INTO dwh_snow.dim_product (product_bk, product_title, category_sk)
+SELECT p.id, p.title, dcat.category_sk
+FROM oltp_shop.products p
+JOIN dwh_snow.dim_category dcat ON dcat.category_bk = p.category_id;
+
+INSERT INTO dwh_snow.fact_sales (order_bk, date_sk, product_sk, customer_sk, qty, total_amount)
+SELECT
+    o.id,
+    TO_CHAR(o.order_date, 'YYYYMMDD')::INT,
+    dp.product_sk,
+    dc.customer_sk,
+    oi.qty,
+    (oi.qty * oi.price_at_purchase - oi.discount)
+FROM oltp_shop.order_items oi
+JOIN oltp_shop.orders o ON o.id = oi.order_id
+JOIN dwh_snow.dim_product  dp ON dp.product_bk  = oi.product_id
+JOIN dwh_snow.dim_customer dc ON dc.customer_bk = o.customer_id
+WHERE o.status = 'paid';
+
+-- Тот же отчёт директора в «Снежинке»: уже 5 JOIN вместо 3!
+SELECT
+    dci.city_name,
+    dcat.category_name,
+    SUM(f.qty)          AS items_sold,
+    SUM(f.total_amount) AS revenue
+FROM dwh_snow.fact_sales f
+JOIN dwh_snow.dim_date     dd   ON dd.date_sk     = f.date_sk
+JOIN dwh_snow.dim_product  dp   ON dp.product_sk  = f.product_sk
+JOIN dwh_snow.dim_category dcat ON dcat.category_sk = dp.category_sk
+JOIN dwh_snow.dim_customer dcu  ON dcu.customer_sk  = f.customer_sk
+JOIN dwh_snow.dim_city     dci  ON dci.city_sk      = dcu.city_sk
+WHERE dd.year_num = 2026
+  AND dd.quarter_num = 1
+GROUP BY dci.city_name, dcat.category_name
+ORDER BY revenue DESC;</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> city_name | category_name | items_sold | revenue  
+-----------+---------------+------------+----------
+ Москва    | Электроника   |          3 | 70000.00
+ Алматы    | Мерч          |          2 | 40000.00
+ Алматы    | Электроника   |          1 | 30000.00
+ Костанай  | Мерч          |          1 | 22000.00
+ Костанай  | Электроника   |          1 | 18000.00
+ Алматы    | Аксессуары    |          2 | 16000.00
+ Костанай  | Аксессуары    |          2 | 13500.00
+(7 rows)</pre>
+      </div>
+
+      <p>
+        Сравни два подхода бок о бок, чтобы безошибочно выбирать архитектуру под конкретную задачу:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Параметр</th>
+              <th>Схема «Звезда» (Star)</th>
+              <th>Схема «Снежинка» (Snowflake)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Количество <code>JOIN</code></strong></td>
+              <td>Минимальное (1 шаг до атрибута)</td>
+              <td>Больше (цепочки по 2–4 шага)</td>
+            </tr>
+            <tr>
+              <td><strong>Скорость чтения отчётов</strong></td>
+              <td>Выше — планировщику проще строить план</td>
+              <td>Ниже из-за дополнительных соединений</td>
+            </tr>
+            <tr>
+              <td><strong>Место на диске</strong></td>
+              <td>Чуть больше (дублируются названия городов/категорий)</td>
+              <td>Экономнее за счёт нормализации справочников</td>
+            </tr>
+            <tr>
+              <td><strong>Обновление справочника</strong></td>
+              <td>При переименовании города нужно обновить все строки клиентов в нём</td>
+              <td>Меняешь 1 строку в <code>dim_city</code> — и всё обновилось</td>
+            </tr>
+            <tr>
+              <td><strong>Удобство для BI-аналитиков</strong></td>
+              <td>Максимальное — всё понятно с первого взгляда</td>
+              <td>Сложнее — нужно знать иерархию таблиц</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет для реальных проектов:</strong> В 90% аналитических задач выбирай <strong>«Звезду»</strong>. Дисковое пространство сегодня стоит копейки (тем более таблицы измерений крошечные по сравнению с таблицами фактов), а простота SQL и скорость дашбордов экономят команде сотни часов. Используй «Снежинку» точечно — только если у тебя гигантская и часто меняющаяся многоуровневая иерархия (например, сложная оргструктура корпорации или справочник адресов с 30 полями).
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">06</span> Шпаргалка урока перед практикой</h2>
+      <p>
+        Перед тем как перейти к заданиям, пробегись глазами по пяти главным опорам этого урока:
+      </p>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Термин / Правило</th>
+              <th>Короткий смысл</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>OLTP vs OLAP</strong></td>
+              <td><code>OLTP</code> — быстрая «касса» (3НФ, много мелких записей). <code>OLAP / DWH</code> — «штаб аналитики» (мало записей, огромные чтения с <code>GROUP BY</code>).</td>
+            </tr>
+            <tr>
+              <td><strong>Fact &amp; Dimension</strong></td>
+              <td><code>fact_*</code> хранит числа-метрики (суммы, штуки) и ключи. <code>dim_*</code> хранит текстовый контекст («кто, что, где, когда»).</td>
+            </tr>
+            <tr>
+              <td><strong>Зерно (Grain)</strong></td>
+              <td>Строгий ответ на вопрос «что означает 1 строка в таблице фактов». Не смешивай разные зёрна в одном <code>JOIN</code> без предварительной группировки!</td>
+            </tr>
+            <tr>
+              <td><strong>Порядок загрузки</strong></td>
+              <td>Всегда сначала загружай справочники (<code>dim_*</code>), и только потом — таблицу фактов (<code>fact_*</code>).</td>
+            </tr>
+            <tr>
+              <td><strong>Звезда vs Снежинка</strong></td>
+              <td>«Звезда» — плоские измерения и быстрый SQL (выбор по умолчанию). «Снежинка» — нормализованные ветвистые измерения ради экономии и единой точки правки.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== 3. БЛОК САМОПРОВЕРКИ ==================== -->
+    <section>
+      <h2><span class="sec-num">07</span> Мини-практикум для закрепления</h2>
+      <p>
+        Выполни 4 автономных задания в базе <code>learning_db</code>. Каждое задание работает независимо от остальных — можешь решать их в любом порядке, но сначала попробуй написать SQL сам, прежде чем открывать решение.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1 (Базовый). Выходные против будней в схеме «Звезда»</div>
+        <p style="margin-bottom: 0;">
+          Используя схему <code>dwh_star</code> (таблицы <code>fact_sales</code> и <code>dim_date</code>), посчитай за весь 2026 год: сколько штук товаров продано (<code>total_qty</code>) и какую выручку (<code>revenue</code>) магазин получил отдельно в выходные дни (<code>is_weekend = true</code>) и в будние (<code>is_weekend = false</code>). Отсортируй результат по убыванию выручки.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 1</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+    CASE WHEN dd.is_weekend THEN 'Выходные' ELSE 'Будни' END AS day_type,
+    SUM(f.qty)          AS total_qty,
+    SUM(f.total_amount) AS revenue
+FROM dwh_star.fact_sales f
+JOIN dwh_star.dim_date dd ON dd.date_sk = f.date_sk
+WHERE dd.year_num = 2026
+GROUP BY dd.is_weekend
+ORDER BY revenue DESC;
+-- Ожидаемый результат: Выходные (9 шт, 178000.00), Будни (4 шт, 53500.00)</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 2 (Средний). Новое измерение «Канал продаж»</div>
+        <p style="margin-bottom: 0;">
+          Представь, что маркетологи хотят сравнивать продажи на сайте, в мобильном приложении и в розничном магазине. Создай в схеме <code>dwh_star</code> две автономные таблицы: <code>dim_channel</code> (<code>channel_sk</code>, <code>channel_code</code>, <code>channel_name</code>) и <code>fact_channel_sales</code> (<code>sale_sk</code>, <code>channel_sk</code>, <code>order_amount</code>). Добавь 3 канала, 5 продаж и посчитай <strong>количество продаж</strong> и <strong>средний чек</strong> (округлённый до 2 знаков) по каждому каналу.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 2</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS dwh_star.fact_channel_sales;
+DROP TABLE IF EXISTS dwh_star.dim_channel;
+
+-- 1. Сначала измерение
+CREATE TABLE dwh_star.dim_channel (
+    channel_sk   SERIAL PRIMARY KEY,
+    channel_code TEXT NOT NULL UNIQUE,
+    channel_name TEXT NOT NULL
+);
+
+-- 2. Затем таблица фактов
+CREATE TABLE dwh_star.fact_channel_sales (
+    sale_sk      SERIAL PRIMARY KEY,
+    channel_sk   INT NOT NULL REFERENCES dwh_star.dim_channel(channel_sk),
+    order_amount NUMERIC(10, 2) NOT NULL CHECK (order_amount &gt; 0)
+);
+
+-- 3. Наполняем сначала dim, потом fact
+INSERT INTO dwh_star.dim_channel (channel_code, channel_name) VALUES
+    ('web',    'Веб-сайт'),
+    ('mobile', 'Мобильное приложение'),
+    ('store',  'Розничный магазин');
+
+INSERT INTO dwh_star.fact_channel_sales (channel_sk, order_amount) VALUES
+    (1, 25000.00),
+    (1, 35000.00),
+    (2, 18000.00),
+    (2, 12000.00),
+    (3, 42000.00);
+
+-- 4. Отчёт по каналам
+SELECT
+    ch.channel_name,
+    COUNT(*)                        AS sales_count,
+    ROUND(AVG(f.order_amount), 2)   AS avg_check
+FROM dwh_star.fact_channel_sales f
+JOIN dwh_star.dim_channel ch ON ch.channel_sk = f.channel_sk
+GROUP BY ch.channel_name
+ORDER BY avg_check DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 3 (Продвинутый). Поймай и исправь ловушку гранулярности (Fan-out)</div>
+        <p style="margin-bottom: 0;">
+          Создай две автономные тренировочные таблицы: <code>dwh_star.lab_orders</code> (зерно = 1 заказ: <code>order_id</code>, <code>delivery_fee</code>) и <code>dwh_star.lab_items</code> (зерно = 1 товар в заказе: <code>item_id</code>, <code>order_id</code>, <code>item_total</code>). Вставь 2 заказа: в первом 3 товара и доставка 1500, во втором 2 товара и доставка 1000. Напиши <strong>правильный запрос</strong>, который вернёт общую сумму всех товаров и честную общую сумму доставки (<strong>2500</strong>, а не 6500!).
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 3</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS dwh_star.lab_items;
+DROP TABLE IF EXISTS dwh_star.lab_orders;
+
+CREATE TABLE dwh_star.lab_orders (
+    order_id     INT PRIMARY KEY,
+    delivery_fee NUMERIC(10, 2) NOT NULL
+);
+
+CREATE TABLE dwh_star.lab_items (
+    item_id    INT PRIMARY KEY,
+    order_id   INT NOT NULL REFERENCES dwh_star.lab_orders(order_id),
+    item_total NUMERIC(10, 2) NOT NULL
+);
+
+INSERT INTO dwh_star.lab_orders VALUES
+    (1, 1500.00),
+    (2, 1000.00);
+
+INSERT INTO dwh_star.lab_items VALUES
+    (1, 1, 10000.00),
+    (2, 1,  5000.00),
+    (3, 1,  3000.00),
+    (4, 2,  7000.00),
+    (5, 2,  4000.00);
+
+-- Правильно: сначала приводим позиции к зерну "1 заказ", затем соединяем
+WITH items_agg AS (
+    SELECT order_id, SUM(item_total) AS order_items_sum
+    FROM dwh_star.lab_items
+    GROUP BY order_id
+)
+SELECT
+    SUM(i.order_items_sum) AS total_items_revenue,
+    SUM(o.delivery_fee)    AS total_delivery_fee
+FROM dwh_star.lab_orders o
+JOIN items_agg i ON i.order_id = o.order_id;
+-- Ожидаемый результат: total_items_revenue = 29000.00, total_delivery_fee = 2500.00</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <div class="task-card">
+        <div class="task-title">Задание 4 (Проектирование). Сплющиваем «Снежинку» в витрину без JOIN</div>
+        <p style="margin-bottom: 0;">
+          BI-аналитики пожаловались, что в схеме <code>dwh_snow</code> приходится писать по 6 <code>JOIN</code>, чтобы получить страну покупателя и категорию товара. Создай поверх <code>dwh_snow</code> плоское представление <code>dwh_snow.v_sales_mart</code> (витрину), объединяющее факты со всеми ветками снежинки, и напиши к этой витрине запрос <strong>без единого <code>JOIN</code></strong>, который выведет выручку по странам и категориям за 2026 год.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение задания 4</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">CREATE OR REPLACE VIEW dwh_snow.v_sales_mart AS
+SELECT
+    f.sale_sk,
+    f.order_bk,
+    dd.full_date,
+    dd.year_num,
+    dd.quarter_num,
+    dco.country_name,
+    dci.city_name,
+    dcu.segment,
+    dcat.category_name,
+    dp.product_title,
+    f.qty,
+    f.total_amount
+FROM dwh_snow.fact_sales f
+JOIN dwh_snow.dim_date     dd   ON dd.date_sk       = f.date_sk
+JOIN dwh_snow.dim_product  dp   ON dp.product_sk    = f.product_sk
+JOIN dwh_snow.dim_category dcat ON dcat.category_sk = dp.category_sk
+JOIN dwh_snow.dim_customer dcu  ON dcu.customer_sk  = f.customer_sk
+JOIN dwh_snow.dim_city     dci  ON dci.city_sk      = dcu.city_sk
+JOIN dwh_snow.dim_country  dco  ON dco.country_sk   = dci.country_sk;
+
+-- Теперь аналитик строит отчёт вообще без JOIN!
+SELECT
+    country_name,
+    category_name,
+    SUM(qty)          AS total_qty,
+    SUM(total_amount) AS revenue
+FROM dwh_snow.v_sales_mart
+WHERE year_num = 2026
+GROUP BY country_name, category_name
+ORDER BY revenue DESC;</code></pre>
+          </div>
+        </details>
+      </div>
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_6/practice.html#sec-6-1"><strong>Практикум по Уроку 6.1 →</strong></a> — там 10 пошаговых заданий с ответами на аналитику по схеме «Звезда», поиск клиентов без оплат, ловушки перезаписи цен и гранулярности (<code>Fan-out</code>) и создание плоских BI-витрин.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 4. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока и мостик дальше</span>
+      Сегодня ты разделил мир на «кассу» (<code>OLTP</code>) и «штаб аналитики» (<code>OLAP / DWH</code>), научился проектировать таблицы фактов и измерений с чётким зерном и собрал в <code>PostgreSQL</code> обе классические модели — «Звезду» и «Снежинку». Сейчас в нашей <code>fact_sales</code> всего 10 строк, и любой запрос выполняется за миллисекунду, но что случится, когда за 5 лет работы в ней накопится 200 миллионов покупок? В следующем <strong>Уроке 6.2</strong> мы разберём, как резать огромные таблицы фактов на удобные «ломтики» по датам (<strong>партиционирование</strong>) и сохранять готовые тяжёлые расчёты заранее через <strong>материализованные представления</strong> в PostgreSQL, чтобы дашборды директора летали даже на гигантских объёмах данных.
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="lesson_5_4.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">5.4 · Резервное копирование и PITR (почему репликация…</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="lesson_6_2.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">6.2 · Партиционирование таблиц и материализованные пред…</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js: подсветка кода -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Mermaid.js: диаграммы и блок-схемы -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Подсветка синтаксиса во всех блоках кода
+      if (window.hljs) {
+        hljs.highlightAll();
+      }
+
+      // 2. Инициализация схем Mermaid в светлой палитре шаблона
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'base',
+          themeVariables: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#0f172a',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#64748b',
+            secondaryColor: '#f8fafc',
+            tertiaryColor: '#f0fdf4'
+          }
+        });
+      }
+
+      // 3. Автоматическая сборка оглавления из всех заголовков <h2>
+      const tocEl = document.getElementById('toc');
+      const sections = document.querySelectorAll('article.lecture > section');
+      if (tocEl && sections.length > 0) {
+        const items = [];
+        sections.forEach((sec, idx) => {
+          const h2 = sec.querySelector('h2');
+          if (!h2) return;
+          const id = sec.id || `sec-${idx + 1}`;
+          sec.id = id;
+          const numEl = h2.querySelector('.sec-num');
+          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
+          const clone = h2.cloneNode(true);
+          const cloneNum = clone.querySelector('.sec-num');
+          if (cloneNum) cloneNum.remove();
+          const titleText = clone.textContent.trim();
+          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
+        });
+        if (items.length > 0) {
+          tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+        }
+      }
+
+      // 4. Работа кнопок копирования кода (с fallback для локального открытия file://)
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (!ok) throw new Error('Copy failed');
+      }
+
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const codeEl = btn.closest('.code-block').querySelector('code');
+          const originalText = btn.textContent;
+          try {
+            await copyText(codeEl.innerText);
+            btn.textContent = 'Скопировано ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (err) {
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+              btn.textContent = originalText;
+            }, 1800);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
