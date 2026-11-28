@@ -1,0 +1,469 @@
+/* =========================================================================
+   Общие стили для диаграмм (Mermaid / SVG) и полноэкранного просмотрщика
+   ========================================================================= */
+
+.diagram-box {
+  position: relative;
+  margin: 1.6rem 0 1.85rem;
+  padding: 1rem 1.2rem 0.95rem;
+  background: var(--diagram-bg, var(--surface-3, #f8fafc));
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  text-align: center;
+  transition: box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+/* Условный вынос за границы узкой колонки .lecture — только для реально широких схем */
+@media (min-width: 960px) {
+  .diagram-box.is-wide {
+    position: relative;
+    z-index: 2;
+    width: min(var(--diagram-wide-width, 1140px), 1140px, calc(100vw - 4rem));
+    margin-left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface, #ffffff);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  }
+}
+
+.diagram-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.diagram-scroll-hint {
+  display: none;
+  margin-right: auto;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--muted, #64748b);
+  user-select: none;
+}
+
+.diagram-box.has-scroll .diagram-scroll-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.diagram-zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.7rem;
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.diagram-zoom-btn:hover,
+.diagram-zoom-btn:focus-visible {
+  color: var(--accent, #2563eb);
+  border-color: var(--accent, #2563eb);
+  background: var(--accent-soft, #eff6ff);
+  outline: none;
+}
+
+/* Обёртка скролла + мягкие индикаторы-градиенты по краям */
+.diagram-scroll-wrap {
+  position: relative;
+}
+
+.diagram-scroll-wrap::before,
+.diagram-scroll-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  z-index: 3;
+}
+
+.diagram-scroll-wrap::before {
+  left: 0;
+  background: linear-gradient(to right, var(--diagram-bg, var(--surface-3, #f8fafc)), transparent);
+}
+
+.diagram-scroll-wrap::after {
+  right: 0;
+  background: linear-gradient(to left, var(--diagram-bg, var(--surface-3, #f8fafc)), transparent);
+}
+
+.diagram-box.is-wide .diagram-scroll-wrap::before {
+  background: linear-gradient(to right, var(--surface, #ffffff), transparent);
+}
+
+.diagram-box.is-wide .diagram-scroll-wrap::after {
+  background: linear-gradient(to left, var(--surface, #ffffff), transparent);
+}
+
+.diagram-scroll-wrap.can-scroll-left::before {
+  opacity: 1;
+}
+
+.diagram-scroll-wrap.can-scroll-right::after {
+  opacity: 1;
+}
+
+.diagram-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+  -webkit-overflow-scrolling: touch;
+  cursor: zoom-in;
+}
+
+.diagram-box .mermaid {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  margin: 0 auto;
+}
+
+.diagram-box .mermaid svg {
+  max-width: none !important;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* ==================== УЛУЧШЕННЫЙ ВИЗУАЛ MERMAID (В СТИЛЕ PRACTICE) ==================== */
+.diagram-box .mermaid svg,
+.diagram-modal-canvas svg {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.diagram-box .mermaid svg .node rect,
+.diagram-box .mermaid svg .node polygon,
+.diagram-box .mermaid svg .node circle,
+.diagram-box .mermaid svg .node path,
+.diagram-modal-canvas svg .node rect,
+.diagram-modal-canvas svg .node polygon,
+.diagram-modal-canvas svg .node circle,
+.diagram-modal-canvas svg .node path {
+  stroke-width: 1.5px;
+  filter: drop-shadow(0 2px 5px rgba(15, 23, 42, 0.06));
+}
+
+.diagram-box .mermaid svg .node rect,
+.diagram-modal-canvas svg .node rect {
+  rx: 10px;
+  ry: 10px;
+}
+
+.diagram-box .mermaid svg .nodeLabel,
+.diagram-modal-canvas svg .nodeLabel {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
+  color: #0f172a;
+}
+
+.diagram-box .mermaid svg .nodeLabel p,
+.diagram-modal-canvas svg .nodeLabel p {
+  margin: 0;
+}
+
+.diagram-box .mermaid svg .cluster rect,
+.diagram-modal-canvas svg .cluster rect {
+  rx: 12px;
+  ry: 12px;
+  fill: #eff6ff !important;
+  stroke: #bfdbfe !important;
+  stroke-width: 1.5px !important;
+}
+
+.diagram-box .mermaid svg .cluster-label .nodeLabel,
+.diagram-box .mermaid svg .cluster-label span,
+.diagram-modal-canvas svg .cluster-label .nodeLabel,
+.diagram-modal-canvas svg .cluster-label span {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  color: #1e3a8a;
+}
+
+.diagram-box .mermaid svg .flowchart-link,
+.diagram-box .mermaid svg .edgePath path,
+.diagram-modal-canvas svg .flowchart-link,
+.diagram-modal-canvas svg .edgePath path {
+  stroke: #64748b;
+  stroke-width: 1.75px;
+}
+
+.diagram-box .mermaid svg .arrowheadPath,
+.diagram-box .mermaid svg marker path,
+.diagram-modal-canvas svg .arrowheadPath,
+.diagram-modal-canvas svg marker path {
+  fill: #64748b;
+  stroke: #64748b;
+}
+
+.diagram-box .mermaid svg .edgeLabel .labelBkg,
+.diagram-modal-canvas svg .edgeLabel .labelBkg {
+  background-color: transparent !important;
+}
+
+.diagram-box .mermaid svg foreignObject .edgeLabel,
+.diagram-modal-canvas svg foreignObject .edgeLabel {
+  display: inline-block;
+  padding: 2px 8px;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.diagram-box .mermaid svg foreignObject .edgeLabel p,
+.diagram-modal-canvas svg foreignObject .edgeLabel p {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.diagram-box .mermaid svg .edgeLabel rect,
+.diagram-modal-canvas svg .edgeLabel rect {
+  fill: #ffffff !important;
+  stroke: #cbd5e1 !important;
+  stroke-width: 1px !important;
+  rx: 6px;
+  ry: 6px;
+}
+
+/* Sequence diagrams */
+.diagram-box .mermaid svg rect.actor,
+.diagram-modal-canvas svg rect.actor {
+  rx: 8px;
+  ry: 8px;
+  stroke-width: 1.5px;
+  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.05));
+}
+
+.diagram-box .mermaid svg text.actor > tspan,
+.diagram-modal-canvas svg text.actor > tspan {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.diagram-box .mermaid svg .messageText,
+.diagram-modal-canvas svg .messageText {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+/* Ручные SVG внутри .diagram-box (например, с viewBox без Mermaid) */
+.diagram-box > .diagram-scroll-wrap > .diagram-scroll > svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.diagram-svg-placeholder {
+  margin: 0 auto;
+  border: 1px dashed var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.diagram-caption {
+  margin-top: 0.7rem;
+  font-size: 0.84rem;
+  color: var(--muted, #64748b);
+  font-style: italic;
+}
+
+/* ==================== ПОЛНОЭКРАННЫЙ ПРОСМОТР ДИАГРАММ ==================== */
+.diagram-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.diagram-modal.open {
+  display: flex;
+}
+
+.diagram-modal-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 1.15rem;
+  background: var(--surface, #ffffff);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.diagram-modal-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diagram-modal-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.diagram-modal-btn {
+  padding: 0.35rem 0.68rem;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text, #0f172a);
+  background: var(--bg, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 7px;
+  cursor: pointer;
+  min-width: 2.1rem;
+  text-align: center;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.diagram-modal-btn:hover,
+.diagram-modal-btn:focus-visible {
+  border-color: var(--accent, #2563eb);
+  color: var(--accent, #2563eb);
+  background: var(--accent-soft, #eff6ff);
+  outline: none;
+}
+
+.diagram-modal-stage {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+  background: var(--diagram-bg, var(--surface-3, #f8fafc));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+}
+
+.diagram-modal-stage.dragging {
+  cursor: grabbing;
+}
+
+.diagram-modal-canvas {
+  transform-origin: center center;
+  will-change: transform;
+  padding: 2rem;
+}
+
+.diagram-modal-canvas.is-animating {
+  transition: transform 0.14s ease-out;
+}
+
+.diagram-modal-canvas svg {
+  max-width: none !important;
+  height: auto;
+  display: block;
+}
+
+.diagram-modal-hint {
+  position: absolute;
+  bottom: 0.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.32rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #f8fafc;
+  font-size: 0.74rem;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .diagram-modal-bar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+  }
+  .diagram-modal-title {
+    width: 100%;
+    font-size: 0.84rem;
+  }
+  .diagram-modal-controls {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .diagram-modal-hint {
+    display: none;
+  }
+}
+
+/* ==================== ПЕЧАТЬ / ЭКСПОРТ В PDF ==================== */
+@media print {
+  .diagram-actions,
+  .diagram-modal,
+  .diagram-scroll-wrap::before,
+  .diagram-scroll-wrap::after {
+    display: none !important;
+  }
+
+  .diagram-box,
+  .diagram-box.is-wide {
+    width: auto !important;
+    margin-left: 0 !important;
+    transform: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+    break-inside: avoid;
+  }
+
+  .diagram-scroll {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .diagram-box .mermaid {
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  .diagram-box .mermaid svg,
+  .diagram-box svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
