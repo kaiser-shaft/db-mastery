@@ -124,12 +124,30 @@
       max-width: 72ch;
     }
 
-    /* Кнопка быстрого продолжения */
+    /* Кнопка быстрого продолжения и карточки справочников */
     .quick-grid {
       display: grid;
       grid-template-columns: 1fr;
       gap: 0.85rem;
       margin-bottom: 1.5rem;
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .quick-card.tool-card {
+      padding: 0.85rem 1rem;
+    }
+
+    .quick-card.tool-card .quick-title {
+      font-size: 0.9rem;
+    }
+
+    .quick-card.tool-card .quick-desc {
+      font-size: 0.8rem;
     }
 
     .quick-card {
@@ -621,7 +639,8 @@
     }
 
     @media (max-width: 780px) {
-      .quick-grid {
+      .quick-grid,
+      .tools-grid {
         grid-template-columns: 1fr;
       }
       .toolbar {
@@ -674,6 +693,20 @@
           <span class="quick-title"><span id="continue-title">Начать с Урока 1.1</span> <span>→</span></span>
           <span class="quick-desc" id="continue-desc">Как устроены реляционные БД и запуск PostgreSQL</span>
         </a>
+        <div class="tools-grid" aria-label="Справочники и инструменты курса">
+          <a class="quick-card tool-card" href="sql_functions.html">
+            <span class="quick-title"><span>Арсенал функций SQL</span> <span>→</span></span>
+            <span class="quick-desc">Кросс-СУБД справочник: ANSI SQL, строки, даты, окна и диалекты</span>
+          </a>
+          <a class="quick-card tool-card" href="handout.html" target="_blank" rel="noopener noreferrer">
+            <span class="quick-title"><span>Шпаргалка курса</span> <span>→</span></span>
+            <span class="quick-desc">Сводный справочник по всем 6 модулям (удобно для печати A4)</span>
+          </a>
+          <a class="quick-card tool-card" href="docker_guide.html">
+            <span class="quick-title"><span>Гид по Docker-стенду</span> <span>→</span></span>
+            <span class="quick-desc">Порты, профили PG / MySQL / ClickHouse и разбор проблем</span>
+          </a>
+        </div>
       </div>
 
       <div class="toolbar">

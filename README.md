@@ -2,7 +2,7 @@
 
 Практический офлайн-курс по базам данных: **6 модулей, 26 уроков**, презентации, практикумы и Docker-стенд (`PostgreSQL 16`, `MySQL 8.4`, `ClickHouse`, `PgBouncer`, `Adminer`). Работает прямо в браузере без интернета и сборки.
 
-**Точки входа:** [`index.html`](index.html) (оглавление и прогресс) · [`handout.html`](handout.html) (шпаргалка) · [`docker_guide.html`](docker_guide.html) (гид по стенду)  
+**Точки входа:** [`index.html`](index.html) (оглавление и прогресс) · [`sql_functions.html`](sql_functions.html) (арсенал функций SQL) · [`handout.html`](handout.html) (шпаргалка) · [`docker_guide.html`](docker_guide.html) (гид по стенду)  
 **Навигация:** [Старт за 30 секунд](#старт-за-30-секунд) · [Модули и стенд](#модули-и-стенд) · [Подключения и порты](#подключения-и-порты) · [Команды стенда](#команды-стенда) · [Все уроки и структура](#справочник-файлов)
 
 ## Старт за 30 секунд
@@ -141,6 +141,7 @@ docker exec -it course_clickhouse clickhouse-client -u student --password studen
 ```text
 db-mastery/
 ├── index.html             # Главная страница курса (оглавление, поиск, прогресс)
+├── sql_functions.html     # Кросс-СУБД справочник «Арсенал функций SQL» (ANSI + диалекты)
 ├── handout.html           # Сводный справочник (PostgreSQL, MySQL, ClickHouse, DWH)
 ├── docker_guide.html      # Гид по Docker-стенду и диагностике проблем
 ├── docker-compose.yaml    # Сервисы, профили и volumes стенда

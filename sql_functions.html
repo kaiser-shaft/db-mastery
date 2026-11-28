@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="ru" data-page="sql-functions">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Арсенал функций SQL — Кросс-СУБД справочник курса</title>
+
+  <!-- Локальные шрифты: Inter и JetBrains Mono -->
+  <link rel="stylesheet" href="assets/vendor/fonts/fonts.css" />
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="assets/vendor/highlightjs/github-dark.min.css" />
+  <!-- Общие стили уроков и единой темы -->
+  <link rel="stylesheet" href="assets/css/lesson.css" />
+  <link rel="stylesheet" href="assets/css/theme.css" />
+  <script src="assets/js/theme.js"></script>
+
+  <style>
+    /* Специфичные стили справочника поверх lesson.css и theme.css */
+    :root {
+      --purple-bg: #f5f3ff;
+      --purple-text: #6d28d9;
+      --purple-border: #ddd6fe;
+    }
+
+    .lecture {
+      max-width: 960px;
+      padding: 2.75rem 3.25rem;
+    }
+
+    .hero-lead {
+      margin: 0 0 1.45rem;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.65;
+      max-width: 76ch;
+    }
+
+    /* Легенда переносимости */
+    .legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem 1.1rem;
+      align-items: center;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.85rem 1.1rem;
+      margin-bottom: 1.35rem;
+      font-size: 0.86rem;
+      color: var(--text-body);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    /* Панель поиска и фильтров */
+    .fn-controls {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.15rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .fn-search-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .fn-search-box {
+      position: relative;
+      flex: 1 1 280px;
+    }
+
+    .fn-search-icon {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .fn-search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      padding: 0.62rem 0.9rem 0.62rem 2.45rem;
+      font-family: inherit;
+      font-size: 0.92rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .fn-search-input::placeholder {
+      color: var(--muted);
+    }
+
+    .fn-search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .fn-count-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .fn-count-wrap strong {
+      color: var(--text);
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    .fn-reset-btn {
+      appearance: none;
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.25rem 0.6rem;
+      border-radius: 7px;
+      cursor: pointer;
+      display: none;
+      transition: border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .fn-reset-btn.visible {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .fn-reset-btn:hover {
+      border-color: var(--err-text);
+      color: var(--err-text);
+    }
+
+    .filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.42rem;
+    }
+
+    .filter-label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin-right: 0.2rem;
+    }
+
+    .filter-pill {
+      appearance: none;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      color: var(--text-body);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.3rem 0.72rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-pill:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .filter-pill.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    :root[data-theme="dark"] .filter-pill.active {
+      color: #0b1120;
+    }
+
+    /* Бейджи переносимости */
+    .port-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .port-ansi {
+      background: var(--tip-bg);
+      color: var(--tip-text);
+      border: 1px solid var(--tip-border-soft);
+    }
+
+    .port-wide {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid var(--accent-border);
+    }
+
+    .port-dialect {
+      background: var(--warn-bg);
+      color: var(--warn-text);
+      border: 1px solid var(--warn-border-soft);
+    }
+
+    /* Секции и карточки функций */
+    .fn-section {
+      scroll-margin-top: 1.2rem;
+    }
+
+    .fn-section.hidden {
+      display: none;
+    }
+
+    .section-intro {
+      margin: -0.35rem 0 1.25rem;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .fn-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.15rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .fn-card {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.2rem 1.35rem;
+      transition: border-color 0.15s ease;
+    }
+
+    .fn-card:hover {
+      border-color: var(--border-strong);
+    }
+
+    .fn-card.hidden {
+      display: none;
+    }
+
+    .fn-card-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.55rem 0.9rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .fn-sig {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.03rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.015em;
+    }
+
+    .fn-desc {
+      margin: 0 0 0.85rem;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text-body);
+    }
+
+    .fn-card .code-block {
+      margin: 0.6rem 0 0.75rem;
+    }
+
+    /* Строка «Было → Стало» */
+    .fn-io {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.35rem 0.6rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 0.52rem 0.85rem;
+      font-size: 0.86rem;
+      line-height: 1.5;
+      color: var(--text-body);
+      margin-bottom: 0.8rem;
+    }
+
+    .fn-io-label {
+      font-size: 0.73rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    .fn-io-arrow {
+      color: var(--accent);
+      font-weight: 700;
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    /* Совместимость по СУБД */
+    .db-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.38rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .db-row-label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin-right: 0.25rem;
+    }
+
+    .db-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.73rem;
+      font-weight: 600;
+      padding: 0.16rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-body);
+    }
+
+    .db-chip.ok {
+      border-color: var(--tip-border-soft);
+      background: var(--tip-bg);
+      color: var(--tip-text);
+    }
+
+    .db-chip.note {
+      border-color: var(--warn-border-soft);
+      background: var(--warn-bg);
+      color: var(--warn-text);
+    }
+
+    .db-chip.alt {
+      border-color: var(--accent-border);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    /* Компактная заметка о ловушке */
+    .fn-pitfall {
+      font-size: 0.87rem;
+      line-height: 1.55;
+      color: var(--text-body);
+      background: var(--surface);
+      border-left: 3px solid var(--warn-border);
+      border-radius: 0 8px 8px 0;
+      padding: 0.55rem 0.85rem;
+      margin-top: 0.55rem;
+    }
+
+    .fn-pitfall strong {
+      color: var(--warn-text);
+    }
+
+    .fn-pitfall.tip {
+      border-left-color: var(--tip-border);
+    }
+
+    .fn-pitfall.tip strong {
+      color: var(--tip-text);
+    }
+
+    /* Таблица-переводчик диалектов */
+    .dialect-table td,
+    .dialect-table th {
+      font-size: 0.82rem;
+      padding: 0.55rem 0.65rem;
+    }
+
+    .dialect-table code {
+      font-size: 0.79rem;
+      white-space: nowrap;
+    }
+
+    /* Пустой результат поиска */
+    .fn-empty {
+      display: none;
+      text-align: center;
+      padding: 2.25rem 1.5rem;
+      background: var(--surface-soft);
+      border: 1px dashed var(--border-strong);
+      border-radius: 14px;
+      color: var(--muted);
+      margin: 1.5rem 0;
+    }
+
+    .fn-empty.visible {
+      display: block;
+    }
+
+    @media (max-width: 720px) {
+      .lecture {
+        padding: 1.6rem 1.15rem;
+      }
+      .fn-card {
+        padding: 1rem 1rem;
+      }
+      .fn-sig {
+        font-size: 0.94rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="handout.html" target="_blank" rel="noopener noreferrer">Шпаргалка курса</a>
+        <a class="course-nav-btn" href="docker_guide.html">Гид по Docker</a>
+      </div>
+    </nav>
+
+    <!-- ==================== ШАПКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Справочник курса</span>
+        <span class="pill pill-tip">Кросс-СУБД · ANSI SQL</span>
+        <span class="pill pill-neutral">PostgreSQL · MySQL 8 · SQLite · MS SQL · ClickHouse</span>
+      </div>
+      <h1>Арсенал функций SQL</h1>
+      <p class="hero-lead">
+        Практический справочник часто используемых встроенных функций SQL, которые пригодятся не только в PostgreSQL, но и при переходе на MySQL, SQLite, MS SQL Server, Oracle или ClickHouse. У каждой функции показан живой пример, статус переносимости и частые ловушки диалектов.
+      </p>
+
+      <div class="legend-bar" aria-label="Обозначения переносимости">
+        <span class="legend-item">
+          <span class="port-badge port-ansi">ANSI SQL</span>
+          <span>единый синтаксис почти везде</span>
+        </span>
+        <span class="legend-item">
+          <span class="port-badge port-wide">Почти везде</span>
+          <span>общая идея, есть мелкие нюансы</span>
+        </span>
+        <span class="legend-item">
+          <span class="port-badge port-dialect">Зависит от СУБД</span>
+          <span>разные имена или аргументы по диалектам</span>
+        </span>
+      </div>
+
+      <!-- Поиск и фильтры -->
+      <div class="fn-controls" aria-label="Поиск и фильтрация функций">
+        <div class="fn-search-row">
+          <div class="fn-search-box">
+            <svg class="fn-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              type="search"
+              class="fn-search-input"
+              id="fn-search"
+              placeholder="Поиск по функции или задаче: деление на ноль, пробелы, NULLIF, месяц, склеить..."
+              autocomplete="off"
+            />
+          </div>
+          <div class="fn-count-wrap">
+            <span>Показано: <strong id="fn-count">32 / 32</strong></span>
+            <button type="button" class="fn-reset-btn" id="fn-reset">Сбросить</button>
+          </div>
+        </div>
+
+        <div class="filter-group" id="cat-filters" role="group" aria-label="Фильтр по категориям">
+          <span class="filter-label">Раздел:</span>
+          <button type="button" class="filter-pill active" data-cat="all">Все</button>
+          <button type="button" class="filter-pill" data-cat="null">NULL и условия</button>
+          <button type="button" class="filter-pill" data-cat="string">Строки</button>
+          <button type="button" class="filter-pill" data-cat="math">Числа и типы</button>
+          <button type="button" class="filter-pill" data-cat="date">Даты и время</button>
+          <button type="button" class="filter-pill" data-cat="agg">Агрегация</button>
+          <button type="button" class="filter-pill" data-cat="window">Оконные</button>
+          <button type="button" class="filter-pill" data-cat="dialects">Таблица диалектов</button>
+        </div>
+
+        <div class="filter-group" id="port-filters" role="group" aria-label="Фильтр по переносимости">
+          <span class="filter-label">Совместимость:</span>
+          <button type="button" class="filter-pill active" data-port="all">Все уровни</button>
+          <button type="button" class="filter-pill" data-port="ansi">ANSI SQL</button>
+          <button type="button" class="filter-pill" data-port="wide">Почти везде</button>
+          <button type="button" class="filter-pill" data-port="dialect">Зависит от СУБД</button>
+        </div>
+      </div>
+
+      <!-- Автоматическое оглавление из всех <h2> -->
+      <nav class="toc-box" id="toc" data-toc-title="Разделы справочника" aria-label="Разделы справочника"></nav>
+    </header>
+
+    <div class="fn-empty" id="fn-empty">
+      По вашему запросу функции не найдены. Попробуйте другое слово (например, <strong>NULL</strong>, <strong>строка</strong>, <strong>округление</strong>, <strong>дата</strong> или <strong>окно</strong>) или сбросьте фильтры.
+    </div>
+
+    <!-- ==================== 01. NULL И УСЛОВНАЯ ЛОГИКА ==================== -->
+    <section class="fn-section" id="sec-null" data-cat="null">
+      <h2><span class="sec-num">01</span> NULL и условная логика</h2>
+      <p class="section-intro">
+        Базовый набор защиты от пустых значений, деления на ноль и ветвления логики прямо внутри запроса.
+      </p>
+
+      <div class="fn-list">
+
+        <div class="fn-card" data-cat="null" data-port="ansi" data-keywords="coalesce null замена пустое значение fallback ifnull isnull nvl дефолт">
+          <div class="fn-card-head">
+            <span class="fn-sig">COALESCE(a, b, ...)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Возвращает первый аргумент слева направо, который не равен <code>NULL</code>. Универсальная замена диалектным <code>IFNULL</code> (MySQL/SQLite), <code>ISNULL</code> (MS SQL) и <code>NVL</code> (Oracle).
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Подстановка значения по умолчанию</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  name,
+  COALESCE(phone, email, 'Нет контакта') AS primary_contact,
+  COALESCE(discount, 0) AS discount_pct
+FROM customers;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>phone = NULL, email = 'a@b.ru'</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'a@b.ru'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip ok">SQLite ✓</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка:</strong> все аргументы должны приводиться к одному типу данных — <code>COALESCE(age, 'не указан')</code> упадёт в строгих СУБД (PG, MS SQL), пока число не привести через <code>CAST(age AS VARCHAR)</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="null" data-port="ansi" data-keywords="nullif деление на ноль пустая строка ошибка zero division защита">
+          <div class="fn-card-head">
+            <span class="fn-sig">NULLIF(a, b)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Возвращает <code>NULL</code>, если <code>a = b</code>, иначе возвращает <code>a</code>. Главный переносимый способ защититься от деления на ноль и превратить пустые строки <code>''</code> в честный <code>NULL</code>.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Безопасное деление и очистка пустых строк</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  COALESCE(ROUND(revenue / NULLIF(orders_cnt, 0), 2), 0) AS avg_check,
+  NULLIF(TRIM(comment), '') AS clean_comment
+FROM daily_stats;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>revenue = 1500, orders_cnt = 0</code>
+            <span class="fn-io-arrow">→</span>
+            <code>NULLIF(0, 0) = NULL</code>
+            <span class="fn-io-arrow">→</span>
+            <code>0 (без ошибки!)</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip ok">SQLite ✓</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall tip">
+            <strong>Паттерн:</strong> связка <code>COALESCE(a / NULLIF(b, 0), 0)</code> работает одинаково во всех реляционных СУБД — держите её в мышечной памяти для расчёта конверсий и средних чеков.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="null" data-port="ansi" data-keywords="case when then else end если условие ветвление сегментация if iif">
+          <div class="fn-card-head">
+            <span class="fn-sig">CASE WHEN ... THEN ... ELSE ... END</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Универсальное условное выражение («если-то-иначе»). Работает в <code>SELECT</code>, <code>WHERE</code>, <code>ORDER BY</code>, <code>GROUP BY</code> и <code>UPDATE</code>. Заменяет диалектные <code>IF()</code> (MySQL/CH) и <code>IIF()</code> (MS SQL).
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Сегментация заказов по сумме</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  id,
+  amount,
+  CASE
+    WHEN amount &gt;= 50000 THEN 'VIP'
+    WHEN amount &gt;= 10000 THEN 'Standard'
+    ELSE 'Small'
+  END AS order_tier
+FROM orders;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>amount = 14500</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'Standard'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip ok">SQLite ✓</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка:</strong> ветки проверяются строго сверху вниз до первого <code>TRUE</code>; если опустить <code>ELSE</code>, несовпавшие строки получат <code>NULL</code>. Не пишите <code>CASE col WHEN NULL</code> — равенство с <code>NULL</code> не сработает, используйте <code>CASE WHEN col IS NULL</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="null" data-port="wide" data-keywords="greatest least максимум минимум в строке ограничение clamp потолок пол">
+          <div class="fn-card-head">
+            <span class="fn-sig">GREATEST(a, b, ...) / LEAST(a, b, ...)</span>
+            <span class="port-badge port-wide">Почти везде</span>
+          </div>
+          <p class="fn-desc">
+            Выбирают наибольшее или наименьшее значение среди нескольких выражений <em>внутри одной строки</em> (в отличие от <code>MAX</code>/<code>MIN</code>, которые схлопывают строки вертикально).
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Ограничение итоговой цены и остатка на складе</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  product_id,
+  GREATEST(price - COALESCE(coupon, 0), 0) AS final_price,
+  LEAST(requested_qty, stock_qty) AS allowed_qty
+FROM cart_items;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>price = 500, coupon = 800</code>
+            <span class="fn-io-arrow">→</span>
+            <code>0 (цена не уходит в минус)</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip note">MySQL 8 (NULL!)</span>
+            <span class="db-chip alt">SQLite: MAX(a,b) / MIN(a,b)</span>
+            <span class="db-chip ok">MS SQL 2022+ ✓</span>
+            <span class="db-chip note">ClickHouse (2 арг.)</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Критическая ловушка по <code>NULL</code>:</strong> в PostgreSQL и MS SQL 2022 <code>GREATEST(10, NULL)</code> игнорирует <code>NULL</code> и вернёт <code>10</code>, а в <strong>MySQL 8 и Oracle</strong> вернёт <code>NULL</code>! Всегда оборачивайте nullable-колонки в <code>COALESCE</code>.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== 02. РАБОТА СО СТРОКАМИ ==================== -->
+    <section class="fn-section" id="sec-string" data-cat="string">
+      <h2><span class="sec-num">02</span> Работа со строками</h2>
+      <p class="section-intro">
+        Очистка пользовательского ввода, поиск подстрок, склейка и форматирование текстов с учётом особенностей кириллицы и UTF-8.
+      </p>
+
+      <div class="fn-list">
+
+        <div class="fn-card" data-cat="string" data-port="ansi" data-keywords="lower upper регистр строчные заглавные нормализация email кириллица">
+          <div class="fn-card-head">
+            <span class="fn-sig">LOWER(str) / UPPER(str)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Переводят строку в нижний или верхний регистр. Стандартный инструмент для нормализации email, кодов стран и переносимого регистронезависимого поиска.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Нормализация email и кодов</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  LOWER(TRIM(email)) AS normalized_email,
+  UPPER(country_code) AS country_iso
+FROM customers
+WHERE LOWER(email) = 'alex@example.com';</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>'Alex@Example.COM'</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'alex@example.com'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip note">SQLite (ASCII)</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip note">CH: lowerUTF8()</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка кириллицы:</strong> в <strong>SQLite</strong> без расширения ICU встроенный <code>LOWER('Привет')</code> не меняет русские буквы, а в <strong>ClickHouse</strong> для UTF-8 нужно использовать <code>lowerUTF8()</code> и <code>upperUTF8()</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="string" data-port="ansi" data-keywords="trim ltrim rtrim пробелы обрезать очистка строки края">
+          <div class="fn-card-head">
+            <span class="fn-sig">TRIM(str) / LTRIM / RTRIM</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Удаляют лишние пробелы (или указанные символы) в начале и конце строки. <code>LTRIM</code> чистит только слева, <code>RTRIM</code> — только справа.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Убираем пробелы и крайние слэши</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  TRIM(full_name) AS clean_name,
+  TRIM(BOTH '/' FROM url_path) AS clean_slug
+FROM pages;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>'  /blog/sql/  '</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'blog/sql'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip note">SQLite: TRIM(s, '/')</span>
+            <span class="db-chip ok">MS SQL 2017+ ✓</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка:</strong> <code>TRIM</code> убирает символы только <em>по краям</em> — двойные пробелы внутри строки остаются на месте (их чистят через <code>REPLACE</code> или <code>REGEXP_REPLACE</code>).
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="string" data-port="wide" data-keywords="char_length length len длина строки количество символов байты utf8 кириллица">
+          <div class="fn-card-head">
+            <span class="fn-sig">CHAR_LENGTH(str) / LENGTH(str)</span>
+            <span class="port-badge port-wide">Почти везде</span>
+          </div>
+          <p class="fn-desc">
+            Возвращают длину строки. В кросс-СУБД запросах критически важно различать длину в <strong>символах</strong> и длину в <strong>байтах</strong>.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Проверка длины названия товара в символах</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT id, title, CHAR_LENGTH(title) AS chars_cnt
+FROM products
+WHERE CHAR_LENGTH(title) &gt; 40;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>CHAR_LENGTH('Привет')</code>
+            <span class="fn-io-arrow">→</span>
+            <code>6 символов (но 12 байт в UTF-8!)</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG: оба в символах</span>
+            <span class="db-chip note">MySQL: CHAR_LENGTH (симв.) / LENGTH (байты)</span>
+            <span class="db-chip alt">SQLite: LENGTH</span>
+            <span class="db-chip note">MS SQL: LEN (без пробелов справа!)</span>
+            <span class="db-chip note">CH: lengthUTF8</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Две ловушки:</strong> в <strong>MySQL</strong> и <strong>ClickHouse</strong> <code>LENGTH('Привет')</code> вернёт <code>12</code> (байты), а в <strong>MS SQL</strong> <code>LEN('abc   ')</code> вернёт <code>3</code>, молча отбрасывая хвостовые пробелы.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="string" data-port="ansi" data-keywords="substring substr вырезать подстроку часть строки срез">
+          <div class="fn-card-head">
+            <span class="fn-sig">SUBSTRING(str FROM pos FOR len)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Вырезает фрагмент строки длиной <code>len</code>, начиная с позиции <code>pos</code>. Альтернативная форма с запятыми <code>SUBSTRING(str, pos, len)</code> поддерживается почти во всех базах.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Извлечение года и кода партии из артикула</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Стандартная ANSI-запись (PG, MySQL) и компактная форма
+SELECT
+  SUBSTRING(sku FROM 1 FOR 3) AS brand_code,
+  SUBSTRING(sku, 5, 4) AS year_part
+FROM products;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>sku = 'PRO-2026-XL'</code>
+            <span class="fn-io-arrow">→</span>
+            <code>brand_code = 'PRO', year_part = '2026'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓ (обе формы)</span>
+            <span class="db-chip ok">MySQL 8 ✓ (обе)</span>
+            <span class="db-chip alt">SQLite: SUBSTR(s, pos, len)</span>
+            <span class="db-chip note">MS SQL: SUBSTRING(s, pos, len)</span>
+            <span class="db-chip note">CH: substringUTF8</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка:</strong> в SQL индексация символов начинается с <strong>1</strong>, а не с 0! В MS SQL третий аргумент (<code>len</code>) обязателен, а в SQLite используется короткое имя <code>SUBSTR</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="string" data-port="wide" data-keywords="replace заменить текст подстрока очистка телефон пробелы">
+          <div class="fn-card-head">
+            <span class="fn-sig">REPLACE(str, old_sub, new_sub)</span>
+            <span class="port-badge port-wide">Почти везде</span>
+          </div>
+          <p class="fn-desc">
+            Заменяет все точные вхождения подстроки <code>old_sub</code> на <code>new_sub</code>. Удобна для быстрой очистки номеров телефонов, SKU и форматирования.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Очистка телефона от дефисов и пробелов</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  REPLACE(REPLACE(phone, '-', ''), ' ', '') AS clean_phone
+FROM customers;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>'+7 701-555-01-02'</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'+77015550102'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip ok">SQLite ✓</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip alt">CH: replaceAll()</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка:</strong> <code>REPLACE</code> не понимает регулярные выражения и чувствительна к регистру (кроме MS SQL с CI-коллацией). Для шаблонов используйте <code>REGEXP_REPLACE</code> (PG, MySQL 8, Oracle, CH).
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="string" data-port="dialect" data-keywords="concat concat_ws || склеить объединить строки конкатенация null">
+          <div class="fn-card-head">
+            <span class="fn-sig">CONCAT(a, b, ...) / CONCAT_WS(sep, ...) / a || b</span>
+            <span class="port-badge port-dialect">Зависит от СУБД</span>
+          </div>
+          <p class="fn-desc">
+            Склеивают несколько строк в одну. <code>CONCAT_WS</code> («with separator») ставит разделитель между непустыми значениями и аккуратно пропускает <code>NULL</code>.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Сборка полного имени и адреса без лишних запятых</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  CONCAT(first_name, ' ', last_name) AS full_name,
+  CONCAT_WS(', ', city, street, apt) AS full_address
+FROM customers;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>city = 'Алматы', street = 'Абая 15', apt = NULL</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'Алматы, Абая 15'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG: CONCAT / ||</span>
+            <span class="db-chip note">MySQL: CONCAT (|| = OR!)</span>
+            <span class="db-chip alt">SQLite: только ||</span>
+            <span class="db-chip ok">MS SQL: CONCAT / +</span>
+            <span class="db-chip note">CH: concat / ||</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Двойная ловушка:</strong> 1) В <strong>MySQL</strong> по умолчанию <code>'A' || 'B'</code> означает логическое <code>OR</code> и вернёт <code>0</code>! 2) <code>CONCAT('A', NULL)</code> в <strong>PostgreSQL и MS SQL</strong> вернёт <code>'A'</code>, а в <strong>MySQL и ClickHouse</strong> вернёт <code>NULL</code>! Самый предсказуемый вариант с <code>NULL</code> — <code>CONCAT_WS</code> (PG, MySQL, MS SQL) или явный <code>COALESCE</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="string" data-port="wide" data-keywords="left right начало конец первые последние символы строки">
+          <div class="fn-card-head">
+            <span class="fn-sig">LEFT(str, n) / RIGHT(str, n)</span>
+            <span class="port-badge port-wide">Почти везде</span>
+          </div>
+          <p class="fn-desc">
+            Берут первые <code>n</code> или последние <code>n</code> символов строки. Гораздо читабельнее, чем вычислять смещение внутри <code>SUBSTRING</code>.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Маскировка карты и префикс артикула</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  LEFT(sku, 3) AS category_prefix,
+  CONCAT('**** ', RIGHT(card_number, 4)) AS masked_card
+FROM payments;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>card_number = '4400112233449876'</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'**** 9876'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip alt">SQLite: SUBSTR(s, 1, n) / SUBSTR(s, -n)</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip note">CH: leftUTF8 / rightUTF8</span>
+          </div>
+          <div class="fn-pitfall tip">
+            <strong>Если нужен 100% переносимый код (включая SQLite и Oracle):</strong> заменяйте <code>LEFT(s, n)</code> на <code>SUBSTR(s, 1, n)</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="string" data-port="dialect" data-keywords="position instr charindex strpos найти индекс позицию символа в строке домен email">
+          <div class="fn-card-head">
+            <span class="fn-sig">POSITION(sub IN str)</span>
+            <span class="port-badge port-dialect">Зависит от СУБД</span>
+          </div>
+          <p class="fn-desc">
+            Возвращает номер первого вхождения подстроки (начиная с 1) или <code>0</code>, если подстрока не найдена. В паре с <code>SUBSTRING</code> позволяет разбирать строки без регулярных выражений.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Извлечение почтового домена после символа @</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Стандартная связка (PG, MySQL 8):
+SELECT
+  email,
+  SUBSTRING(email FROM POSITION('@' IN email) + 1) AS email_domain
+FROM customers;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>'maria@mail.kz'</code>
+            <span class="fn-io-arrow">→</span>
+            <code>POSITION = 6</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'mail.kz'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG: POSITION / STRPOS</span>
+            <span class="db-chip ok">MySQL 8: POSITION / LOCATE</span>
+            <span class="db-chip alt">SQLite: INSTR(str, sub)</span>
+            <span class="db-chip alt">MS SQL: CHARINDEX(sub, str)</span>
+            <span class="db-chip note">CH: positionUTF8(str, sub)</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка порядка аргументов:</strong> в <code>POSITION(sub IN str)</code> и <code>CHARINDEX(sub, str)</code> сначала идёт <em>что ищем</em>, а в <code>INSTR(str, sub)</code>, <code>STRPOS(str, sub)</code> и ClickHouse <code>position(str, sub)</code> — сначала <em>где ищем</em>!
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="string" data-port="wide" data-keywords="lpad rpad дополнить нулями выравнивание код счета инвойс фиксированная длина">
+          <div class="fn-card-head">
+            <span class="fn-sig">LPAD(str, len, pad) / RPAD(str, len, pad)</span>
+            <span class="port-badge port-wide">Почти везде</span>
+          </div>
+          <p class="fn-desc">
+            Дополняют строку слева или справа указанным символом до фиксированной длины <code>len</code>. Часто используются для красивых номеров счетов и сортируемых кодов.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Формирование номера счёта с ведущими нулями</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  CONCAT('INV-', LPAD(CAST(id AS VARCHAR(10)), 6, '0')) AS invoice_no
+FROM invoices;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>id = 42</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'INV-000042'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip alt">SQLite: printf('%06d', id)</span>
+            <span class="db-chip alt">MS SQL: FORMAT(id, '000000')</span>
+            <span class="db-chip alt">CH: leftPad()</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка:</strong> если исходная строка уже длиннее <code>len</code>, <code>LPAD</code> и <code>RPAD</code> молча <strong>обрежут</strong> её до <code>len</code> символов! Например, <code>LPAD('1234567', 6, '0')</code> даст <code>'123456'</code>.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== 03. МАТЕМАТИКА И ПРИВЕДЕНИЕ ТИПОВ ==================== -->
+    <section class="fn-section" id="sec-math" data-cat="math">
+      <h2><span class="sec-num">03</span> Математика и приведение типов</h2>
+      <p class="section-intro">
+        Переносимая конвертация типов, округление денежных сумм и защита от скрытых различий в арифметике между СУБД.
+      </p>
+
+      <div class="fn-list">
+
+        <div class="fn-card" data-cat="math" data-port="ansi" data-keywords="cast конвертация приведение типа преобразование :: convert decimal int date">
+          <div class="fn-card-head">
+            <span class="fn-sig">CAST(expr AS type)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Стандартное преобразование значения из одного типа данных в другой. Главная переносимая замена PostgreSQL-синтаксису <code>expr::type</code>.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Приведение текста к числу и метки времени к дате</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  CAST('1490.50' AS DECIMAL(10, 2)) AS parsed_price,
+  CAST(created_at AS DATE) AS order_date,
+  CAST(id AS CHAR(10)) AS id_text
+FROM orders;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>'2026-03-15 13:15:00'</code>
+            <span class="fn-io-arrow">→</span>
+            <code>2026-03-15 (DATE)</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓ (и ::)</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip ok">SQLite ✓</span>
+            <span class="db-chip ok">MS SQL ✓ (+ TRY_CAST)</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка:</strong> оператор <code>::</code> работает в PostgreSQL и ClickHouse, но вызовет синтаксическую ошибку в MySQL, SQLite и MS SQL. Для строкового типа в <code>CAST</code> учитывайте: MySQL ждёт <code>CHAR</code>, а PG/SQLite/MS SQL — <code>VARCHAR</code> / <code>TEXT</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="math" data-port="ansi" data-keywords="round округление знаки после запятой деньги проценты">
+          <div class="fn-card-head">
+            <span class="fn-sig">ROUND(x, digits)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Округляет число до <code>digits</code> знаков после запятой (при <code>0</code> — до целого; при отрицательном числе, например <code>-2</code>, — до сотен).
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Округление до копеек и до сотен</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  ROUND(CAST(AVG(price) AS DECIMAL(10, 2)), 2) AS avg_price,
+  ROUND(14870, -2) AS rounded_hundreds
+FROM products;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>ROUND(14870, -2)</code>
+            <span class="fn-io-arrow">→</span>
+            <code>14900</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip note">PG (2 арг. только для NUMERIC)</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip note">SQLite (digits &ge; 0)</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка PostgreSQL:</strong> <code>ROUND(double_col, 2)</code> вернёт ошибку <em>function round(double precision, integer) does not exist</em> — сначала приведите число к <code>NUMERIC</code> / <code>DECIMAL</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="math" data-port="ansi" data-keywords="floor ceil ceiling округление вниз вверх потолок пол корзины страницы пагинация">
+          <div class="fn-card-head">
+            <span class="fn-sig">FLOOR(x) / CEILING(x)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            <code>FLOOR</code> округляет строго вниз до целого, <code>CEILING</code> (сокращённо <code>CEIL</code>) — строго вверх. Идеальны для ценовых корзин и расчёта числа страниц пагинации.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Ценовые корзины по 1000 и число страниц по 20 записей</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  FLOOR(price / 1000) * 1000 AS price_bucket,
+  CEILING(COUNT(*) * 1.0 / 20) AS total_pages
+FROM products
+GROUP BY FLOOR(price / 1000) * 1000;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>price = 3990 → 3000</code> · <code>41 строка / 20 → 3 страницы</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓ (CEIL/CEILING)</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip ok">SQLite 3.35+ ✓</span>
+            <span class="db-chip note">MS SQL: только CEILING</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Нюанс:</strong> в MS SQL нет короткого псевдонима <code>CEIL</code> — пишите полное <code>CEILING()</code>, оно работает во всех перечисленных СУБД (кроме Oracle, где только <code>CEIL</code>).
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="math" data-port="wide" data-keywords="abs mod % модуль остаток от деления четный нечетный шардинг батчи">
+          <div class="fn-card-head">
+            <span class="fn-sig">ABS(x) / MOD(a, b)</span>
+            <span class="port-badge port-wide">Почти везде</span>
+          </div>
+          <p class="fn-desc">
+            <code>ABS</code> возвращает модуль числа (отклонение без знака), <code>MOD(a, b)</code> или <code>a % b</code> — остаток от деления (проверка чётности, разбиение по бакетам/шардам).
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Отклонение план/факт и распределение по 4 батчам</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  id,
+  ABS(actual_amount - planned_amount) AS abs_diff,
+  MOD(id, 4) AS worker_bucket
+FROM shipments;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>ABS(-450) → 450</code> · <code>MOD(10, 4) → 2</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG: MOD и %</span>
+            <span class="db-chip ok">MySQL 8: MOD и %</span>
+            <span class="db-chip ok">SQLite: % (MOD 3.35+)</span>
+            <span class="db-chip alt">MS SQL: только %</span>
+            <span class="db-chip ok">CH: % / modulo()</span>
+          </div>
+          <div class="fn-pitfall tip">
+            <strong>Переносимость:</strong> оператор <code>a % b</code> работает в PostgreSQL, MySQL, SQLite, MS SQL и ClickHouse (только Oracle требует <code>MOD(a, b)</code>).
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="math" data-port="dialect" data-keywords="trunc truncate отбросить дробную часть без округления">
+          <div class="fn-card-head">
+            <span class="fn-sig">TRUNC(x, n) / TRUNCATE(x, n)</span>
+            <span class="port-badge port-dialect">Зависит от СУБД</span>
+          </div>
+          <p class="fn-desc">
+            Отбрасывают дробную часть после <code>n</code>-го знака <em>без математического округления</em> (просто отрезают хвост к нулю).
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Отрезаем дробные знаки без округления вверх</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- PostgreSQL / Oracle / ClickHouse:
+SELECT TRUNC(19.987, 2) AS cut_val;      -- 19.98
+
+-- MySQL 8:
+-- SELECT TRUNCATE(19.987, 2);           -- 19.98</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Разница на минусах:</span>
+            <code>FLOOR(-2.3) → -3</code>
+            <span class="fn-io-arrow">vs</span>
+            <code>TRUNC(-2.3) → -2</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG: TRUNC</span>
+            <span class="db-chip alt">MySQL 8: TRUNCATE(x, n)</span>
+            <span class="db-chip note">SQLite 3.35+: TRUNC(x)</span>
+            <span class="db-chip alt">MS SQL: ROUND(x, n, 1)</span>
+            <span class="db-chip ok">CH: trunc(x, n)</span>
+          </div>
+        </div>
+
+        <aside class="callout warn" style="margin: 0.25rem 0 0;">
+          <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <div class="callout-body">
+            <strong>Главная арифметическая ловушка разных СУБД — целочисленное деление <code>10 / 3</code>:</strong>
+            в <strong>PostgreSQL</strong>, <strong>SQLite</strong> и <strong>MS SQL</strong> деление целых чисел отбрасывает остаток (<code>10 / 3 = 3</code>, а конверсия <code>5 / 100 = 0</code>!). В <strong>MySQL</strong> и <strong>ClickHouse</strong> результат сразу дробный (<code>3.3333</code>). Чтобы формула работала одинаково везде, умножайте числитель на <code>1.0</code>: <code>paid * 100.0 / NULLIF(total, 0)</code>.
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- ==================== 04. ДАТЫ И ВРЕМЯ ==================== -->
+    <section class="fn-section" id="sec-date" data-cat="date">
+      <h2><span class="sec-num">04</span> Даты и время</h2>
+      <p class="section-intro">
+        Самая «разношёрстная» область SQL: базовые функции стандарта работают почти везде, а усечение, форматирование и разница дат различаются — здесь собраны и стандарт, и готовые аналоги.
+      </p>
+
+      <div class="fn-list">
+
+        <div class="fn-card" data-cat="date" data-port="ansi" data-keywords="current_date current_timestamp now getdate today текущая дата время сейчас">
+          <div class="fn-card-head">
+            <span class="fn-sig">CURRENT_DATE / CURRENT_TIMESTAMP</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Возвращают текущую дату и текущую дату со временем. В стандарте ANSI пишутся <strong>без скобок</strong>, в отличие от <code>NOW()</code> (PG/MySQL/CH) и <code>GETDATE()</code> (MS SQL).
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Метка времени по умолчанию и фильтр за сегодня</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  CURRENT_DATE AS report_date,
+  CURRENT_TIMESTAMP AS generated_at;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>report_date = 2026-03-15</code> · <code>generated_at = 2026-03-15 14:22:08+05</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip note">SQLite ✓ (UTC!)</span>
+            <span class="db-chip note">MS SQL: CURRENT_TIMESTAMP (дату через CAST)</span>
+            <span class="db-chip alt">CH: today() / now()</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка:</strong> в SQLite <code>CURRENT_DATE</code> и <code>CURRENT_TIMESTAMP</code> всегда возвращают время по <strong>UTC</strong>, а не локальное время сервера.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="date" data-port="ansi" data-keywords="extract year month day hour dow год месяц день час извлечь из даты">
+          <div class="fn-card-head">
+            <span class="fn-sig">EXTRACT(field FROM dt)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Извлекает числовую часть даты или времени: <code>YEAR</code>, <code>MONTH</code>, <code>DAY</code>, <code>HOUR</code>, <code>MINUTE</code>.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Группировка продаж по году и месяцу</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  EXTRACT(YEAR FROM created_at) AS yr,
+  EXTRACT(MONTH FROM created_at) AS mon,
+  COUNT(*) AS orders_cnt
+FROM orders
+GROUP BY yr, mon
+ORDER BY yr, mon;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>'2026-03-15 10:20:00'</code>
+            <span class="fn-io-arrow">→</span>
+            <code>yr = 2026, mon = 3</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip alt">SQLite: strftime('%Y', dt)</span>
+            <span class="db-chip alt">MS SQL: DATEPART(year, dt)</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка индексов:</strong> не пишите в <code>WHERE</code> условие <code>EXTRACT(YEAR FROM created_at) = 2026</code> — обёртка функцией отключает обычный B-Tree индекс! Всегда фильтруйте полуоткрытым диапазоном: <code>created_at &gt;= '2026-01-01' AND created_at &lt; '2027-01-01'</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="date" data-port="dialect" data-keywords="date_trunc datetrunc усечь дату округлить до месяца недели дня помесячно когорта">
+          <div class="fn-card-head">
+            <span class="fn-sig">DATE_TRUNC('month', dt) и аналоги</span>
+            <span class="port-badge port-dialect">Зависит от СУБД</span>
+          </div>
+          <p class="fn-desc">
+            «Срезает» дату до начала месяца, недели, дня или часа — главный приём для графиков, когорт и отчётов по периодам.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Приведение к началу месяца в разных СУБД</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- PostgreSQL / ClickHouse:
+SELECT DATE_TRUNC('month', created_at) AS month_start FROM orders;
+
+-- MySQL 8:      DATE_FORMAT(created_at, '%Y-%m-01')
+-- SQLite:       strftime('%Y-%m-01', created_at)
+-- MS SQL 2022+: DATETRUNC(month, created_at)</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>'2026-03-15 17:45:00'</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'2026-03-01 00:00:00'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG: DATE_TRUNC</span>
+            <span class="db-chip alt">MySQL 8: DATE_FORMAT</span>
+            <span class="db-chip alt">SQLite: strftime</span>
+            <span class="db-chip alt">MS SQL: DATETRUNC</span>
+            <span class="db-chip ok">CH: dateTrunc / toStartOfMonth</span>
+          </div>
+          <div class="fn-pitfall tip">
+            <strong>Почему <code>DATE_TRUNC</code> лучше форматирования:</strong> результат остаётся нативной датой/временем, а не строкой — к нему можно сразу прибавлять интервалы и строить временные оси в BI.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="date" data-port="dialect" data-keywords="interval date_add dateadd datediff разница между датами прибавить дни месяцы вычесть">
+          <div class="fn-card-head">
+            <span class="fn-sig">Арифметика дат: INTERVAL / DATE_ADD / DATEDIFF</span>
+            <span class="port-badge port-dialect">Зависит от СУБД</span>
+          </div>
+          <p class="fn-desc">
+            Прибавление и вычитание отрезков времени (например, «последние 30 дней») и подсчёт числа дней между двумя событиями.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Сдвиг даты и разница в днях по диалектам</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- PostgreSQL:
+SELECT created_at + INTERVAL '7 days', CAST(paid_at AS DATE) - CAST(created_at AS DATE) FROM orders;
+
+-- MySQL 8:    DATE_ADD(created_at, INTERVAL 7 DAY)   | DATEDIFF(paid_at, created_at)
+-- SQLite:     date(created_at, '+7 days')            | julianday(paid_at) - julianday(created_at)
+-- MS SQL:     DATEADD(day, 7, created_at)            | DATEDIFF(day, created_at, paid_at)
+-- ClickHouse: created_at + INTERVAL 7 DAY            | dateDiff('day', created_at, paid_at)</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>2026-03-01 + 7 дней</code>
+            <span class="fn-io-arrow">→</span>
+            <code>2026-03-08</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip alt">PG: INTERVAL '7 days'</span>
+            <span class="db-chip alt">MySQL: INTERVAL 7 DAY</span>
+            <span class="db-chip alt">SQLite: date(..., '+7 days')</span>
+            <span class="db-chip alt">MS SQL: DATEADD / DATEDIFF</span>
+            <span class="db-chip alt">CH: INTERVAL 7 DAY / dateDiff</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Коварная разница знака:</strong> в <strong>MySQL</strong> <code>DATEDIFF(a, b)</code> считает <code>a - b</code> (сначала конечная дата), а в <strong>MS SQL</strong> и <strong>ClickHouse</strong> <code>DATEDIFF(day, a, b)</code> считает <code>b - a</code> (сначала начальная дата)!
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="date" data-port="dialect" data-keywords="to_char date_format strftime format форматировать дату в строку шаблон">
+          <div class="fn-card-head">
+            <span class="fn-sig">TO_CHAR / DATE_FORMAT / strftime</span>
+            <span class="port-badge port-dialect">Зависит от СУБД</span>
+          </div>
+          <p class="fn-desc">
+            Превращают дату или число в красиво отформатированную строку для отчётов и витрин (например, <code>'15.03.2026'</code> или <code>'2026-Q1'</code>).
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Форматирование даты в вид ДД.ММ.ГГГГ</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- PostgreSQL / Oracle:
+SELECT TO_CHAR(created_at, 'DD.MM.YYYY') AS nice_date FROM orders;
+
+-- MySQL 8:    DATE_FORMAT(created_at, '%d.%m.%Y')
+-- SQLite:     strftime('%d.%m.%Y', created_at)
+-- MS SQL:     FORMAT(created_at, 'dd.MM.yyyy')
+-- ClickHouse: formatDateTime(created_at, '%d.%m.%Y')</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>2026-03-15</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'15.03.2026'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip alt">PG/Oracle: TO_CHAR</span>
+            <span class="db-chip alt">MySQL: DATE_FORMAT</span>
+            <span class="db-chip alt">SQLite: strftime</span>
+            <span class="db-chip alt">MS SQL: FORMAT</span>
+            <span class="db-chip alt">CH: formatDateTime</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка сортировки:</strong> формат <code>'DD.MM.YYYY'</code> сортируется по алфавиту неправильно (<code>'02.05.2026'</code> окажется раньше <code>'15.01.2026'</code>). Сортируйте по исходной дате или по ISO-формату <code>'YYYY-MM-DD'</code>.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== 05. АГРЕГАТНЫЕ ФУНКЦИИ ==================== -->
+    <section class="fn-section" id="sec-agg" data-cat="agg">
+      <h2><span class="sec-num">05</span> Агрегатные функции</h2>
+      <p class="section-intro">
+        Свёртка множества строк в итоговые метрики, переносимая условная агрегация и сборка значений группы в одну строку.
+      </p>
+
+      <div class="fn-list">
+
+        <div class="fn-card" data-cat="agg" data-port="ansi" data-keywords="count count(*) count distinct посчитать количество строк уникальные значения">
+          <div class="fn-card-head">
+            <span class="fn-sig">COUNT(*) / COUNT(col) / COUNT(DISTINCT col)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            <code>COUNT(*)</code> считает все строки группы, <code>COUNT(col)</code> — только строки с непустым значением, <code>COUNT(DISTINCT col)</code> — число уникальных значений.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Три вида подсчёта в одном отчёте</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  COUNT(*) AS total_orders,
+  COUNT(promo_code) AS orders_with_promo,
+  COUNT(DISTINCT customer_id) AS unique_buyers
+FROM orders;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>5 заказов, 2 промокода, 3 разных клиента</code>
+            <span class="fn-io-arrow">→</span>
+            <code>5 | 2 | 3</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip ok">SQLite ✓</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip ok">ClickHouse ✓ (+ uniqExact)</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Классическая ловушка <code>LEFT JOIN</code>:</strong> если написать <code>COUNT(*)</code> после <code>LEFT JOIN orders o</code>, клиент без единого заказа получит <code>1</code> вместо <code>0</code>! Всегда считайте по ключу правой таблицы: <code>COUNT(o.id)</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="agg" data-port="ansi" data-keywords="sum avg min max сумма среднее минимум максимум агрегация group by">
+          <div class="fn-card-head">
+            <span class="fn-sig">SUM(x) / AVG(x) / MIN(x) / MAX(x)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Четыре базовых агрегата для любых числовых (а <code>MIN</code>/<code>MAX</code> — также для строковых и датовых) колонок. Все четыре автоматически пропускают <code>NULL</code>.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Сводка по категориям товаров</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  category,
+  COALESCE(SUM(amount), 0) AS total_revenue,
+  ROUND(AVG(amount), 2) AS avg_order,
+  MIN(created_at) AS first_sale,
+  MAX(created_at) AS last_sale
+FROM orders
+GROUP BY category;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Нюанс NULL:</span>
+            <code>AVG([10, 20, NULL])</code>
+            <span class="fn-io-arrow">→</span>
+            <code>15 (а не 10!)</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip ok">SQLite ✓</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка:</strong> если <code>NULL</code> в колонке означает «0 рублей», <code>AVG(col)</code> завысит среднее — пишите <code>AVG(COALESCE(col, 0))</code>. Также на пустой выборке <code>SUM</code> вернёт <code>NULL</code> (кроме ClickHouse, где <code>sum</code> даёт <code>0</code>).
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="agg" data-port="ansi" data-keywords="условная агрегация pivot sum case when filter countif воронка статусы">
+          <div class="fn-card-head">
+            <span class="fn-sig">SUM(CASE WHEN cond THEN val ELSE 0 END)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Условная агрегация — позволяет за один проход по таблице посчитать несколько метрик с разными условиями (воронка, разбивка по статусам, сводная таблица). Работает везде, в отличие от <code>FILTER (WHERE ...)</code>.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Портативная разбивка заказов по статусам</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  city,
+  COUNT(*) AS total_orders,
+  SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_cnt,
+  SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS paid_revenue,
+  COUNT(CASE WHEN status = 'cancelled' THEN 1 END) AS cancelled_cnt
+FROM orders
+GROUP BY city;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>1 проход по таблице</code>
+            <span class="fn-io-arrow">→</span>
+            <code>сразу 4 колонки метрик по каждому городу</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓ (+ FILTER)</span>
+            <span class="db-chip ok">MySQL 8 ✓</span>
+            <span class="db-chip ok">SQLite ✓ (+ FILTER)</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip ok">ClickHouse ✓ (+ sumIf/countIf)</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Частая ошибка:</strong> внутри <code>COUNT(CASE WHEN ... THEN 1 END)</code> <strong>нельзя</strong> писать <code>ELSE 0</code> — функция <code>COUNT</code> считает любые не-<code>NULL</code> значения, включая ноль! Для <code>COUNT</code> оставляйте <code>NULL</code>, для <code>SUM</code> пишите <code>ELSE 0</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="agg" data-port="dialect" data-keywords="string_agg group_concat listagg склеить строки в группе через запятую список тегов">
+          <div class="fn-card-head">
+            <span class="fn-sig">STRING_AGG / GROUP_CONCAT / LISTAGG</span>
+            <span class="port-badge port-dialect">Зависит от СУБД</span>
+          </div>
+          <p class="fn-desc">
+            Собирают значения из нескольких строк одной группы в единую строку через разделитель (например, список всех товаров в заказе или тегов статьи).
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Сбор позиций каждого заказа в одну строку</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- PostgreSQL / SQLite 3.44+:
+SELECT order_id, STRING_AGG(title, ', ' ORDER BY title) AS items_list
+FROM order_items GROUP BY order_id;
+
+-- MySQL 8:    GROUP_CONCAT(title ORDER BY title SEPARATOR ', ')
+-- MS SQL:     STRING_AGG(title, ', ') WITHIN GROUP (ORDER BY title)
+-- Oracle:     LISTAGG(title, ', ') WITHIN GROUP (ORDER BY title)
+-- ClickHouse: arrayStringConcat(groupArray(title), ', ')</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>3 строки ('Худи', 'Кружка', 'Стикер')</code>
+            <span class="fn-io-arrow">→</span>
+            <code>'Кружка, Стикер, Худи'</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG: STRING_AGG</span>
+            <span class="db-chip alt">MySQL 8: GROUP_CONCAT</span>
+            <span class="db-chip ok">SQLite: GROUP_CONCAT / STRING_AGG</span>
+            <span class="db-chip ok">MS SQL 2017+: STRING_AGG</span>
+            <span class="db-chip alt">CH: arrayStringConcat</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка MySQL:</strong> <code>GROUP_CONCAT</code> по умолчанию молча обрезает итоговую строку на длине <strong>1024 байта</strong> (лечится параметром <code>group_concat_max_len</code>). А без <code>ORDER BY</code> порядок склейки не гарантирован.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== 06. ОКОННЫЕ ФУНКЦИИ ==================== -->
+    <section class="fn-section" id="sec-window" data-cat="window">
+      <h2><span class="sec-num">06</span> Оконные функции (стандарт SQL:2003)</h2>
+      <p class="section-intro">
+        Аналитика поверх строк без их схлопывания: рейтинги, сравнение с предыдущим периодом, накопительные итоги и разбиение на квантили. Сегодня поддерживаются во всех основных СУБД.
+      </p>
+
+      <div class="fn-list">
+
+        <div class="fn-card" data-cat="window" data-port="ansi" data-keywords="row_number rank dense_rank рейтинг топ top n дедупликация нумерация строк окно">
+          <div class="fn-card-head">
+            <span class="fn-sig">ROW_NUMBER() / RANK() / DENSE_RANK()</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Нумеруют строки внутри каждой группы (<code>PARTITION BY</code>): <code>ROW_NUMBER</code> даёт строго уникальные номера <code>1,2,3,4</code>; <code>RANK</code> оставляет пропуск после дублей <code>1,2,2,4</code>; <code>DENSE_RANK</code> не пропускает <code>1,2,2,3</code>.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Топ-3 самых дорогих товара в каждой категории</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">WITH ranked AS (
+  SELECT
+    category, title, price,
+    ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC, id) AS rn
+  FROM products
+)
+SELECT category, title, price
+FROM ranked
+WHERE rn &lt;= 3;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Ничья (100, 90, 90, 80):</span>
+            <code>ROW_NUMBER → 1,2,3,4</code> · <code>RANK → 1,2,2,4</code> · <code>DENSE_RANK → 1,2,2,3</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8+ ✓</span>
+            <span class="db-chip ok">SQLite 3.25+ ✓</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Две ловушки:</strong> 1) Фильтровать оконную функцию в <code>WHERE</code> напрямую нельзя — выносите её в CTE/подзапрос. 2) Для <code>ROW_NUMBER()</code> всегда добавляйте уникальный tie-breaker (например, <code>id</code>) в <code>ORDER BY</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="window" data-port="ansi" data-keywords="lag lead предыдущая следующая строка mom динамика рост дельта интервал между покупками">
+          <div class="fn-card-head">
+            <span class="fn-sig">LAG(col, offset, default) / LEAD(col, offset, default)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Заглядывают в предыдущую (<code>LAG</code>) или следующую (<code>LEAD</code>) строку окна без дорогих самосоединений (<code>SELF JOIN</code>). Незаменимы для расчёта роста MoM/YoY и пауз между событиями.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Прирост выручки по сравнению с прошлым месяцем</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  month_start,
+  revenue,
+  LAG(revenue, 1) OVER (ORDER BY month_start) AS prev_revenue,
+  ROUND(
+    (revenue - LAG(revenue, 1) OVER (ORDER BY month_start)) * 100.0
+    / NULLIF(LAG(revenue, 1) OVER (ORDER BY month_start), 0),
+    1
+  ) AS mom_pct
+FROM monthly_sales;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>янв = 100, фев = 125</code>
+            <span class="fn-io-arrow">→</span>
+            <code>prev = 100, mom_pct = +25.0%</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8+ ✓</span>
+            <span class="db-chip ok">SQLite 3.25+ ✓</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip alt">CH: lagInFrame / leadInFrame</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Нюанс ClickHouse:</strong> вместо <code>LAG</code>/<code>LEAD</code> там используются <code>lagInFrame</code> и <code>leadInFrame</code> (причём для <code>leadInFrame</code> нужно явно расширить рамку до <code>UNBOUNDED FOLLOWING</code>).
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="window" data-port="ansi" data-keywords="sum over avg over накопительный итог running total скользящее среднее moving average доля от общего rows between">
+          <div class="fn-card-head">
+            <span class="fn-sig">SUM(x) / AVG(x) OVER (PARTITION BY ... ORDER BY ... ROWS BETWEEN ...)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Оконные агрегаты считают накопительный итог, скользящее среднее за N строк и долю каждой строки в общей сумме без потери детализации.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Накопительный итог, скользящее среднее за 3 дня и доля</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  sale_date,
+  revenue,
+  SUM(revenue) OVER (ORDER BY sale_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_total,
+  ROUND(AVG(revenue) OVER (ORDER BY sale_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2) AS ma_3d,
+  ROUND(revenue * 100.0 / NULLIF(SUM(revenue) OVER (), 0), 2) AS share_pct
+FROM daily_sales;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>[10, 20, 30]</code>
+            <span class="fn-io-arrow">→</span>
+            <code>running_total: [10, 30, 60]</code> · <code>ma_3d: [10, 15, 20]</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8+ ✓</span>
+            <span class="db-chip ok">SQLite 3.25+ ✓</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Ловушка <code>RANGE</code> по умолчанию:</strong> если написать просто <code>SUM(x) OVER (ORDER BY dt)</code> без <code>ROWS BETWEEN</code>, стандарт применяет <code>RANGE</code> и суммирует все строки с одинаковой датой <code>dt</code> сразу. Для строго построчного накопления всегда указывайте <code>ROWS BETWEEN</code>.
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="window" data-port="ansi" data-keywords="first_value last_value первое последнее значение в группе окне рамка">
+          <div class="fn-card-head">
+            <span class="fn-sig">FIRST_VALUE(col) / LAST_VALUE(col)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Возвращают первое или последнее значение в текущей рамке окна — удобно, чтобы рядом с каждым заказом вывести сумму первой или последней покупки клиента.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Сравнение заказа с первым и последним заказом клиента</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  customer_id, created_at, amount,
+  FIRST_VALUE(amount) OVER (
+    PARTITION BY customer_id ORDER BY created_at
+  ) AS first_amt,
+  LAST_VALUE(amount) OVER (
+    PARTITION BY customer_id ORDER BY created_at
+    ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+  ) AS last_amt
+FROM orders;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>заказы клиента [1000, 2500, 4000]</code>
+            <span class="fn-io-arrow">→</span>
+            <code>first_amt = 1000, last_amt = 4000</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8+ ✓</span>
+            <span class="db-chip ok">SQLite 3.25+ ✓</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Самая частая ловушка оконных функций:</strong> без явного <code>ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</code> рамка заканчивается на <em>текущей строке</em>, поэтому <code>LAST_VALUE(amount)</code> будет возвращать просто текущее значение <code>amount</code>!
+          </div>
+        </div>
+
+        <div class="fn-card" data-cat="window" data-port="ansi" data-keywords="ntile квартили квантили децили бакеты rfm сегментация разбить на группы">
+          <div class="fn-card-head">
+            <span class="fn-sig">NTILE(n)</span>
+            <span class="port-badge port-ansi">ANSI SQL</span>
+          </div>
+          <p class="fn-desc">
+            Делит отсортированный набор строк на <code>n</code> примерно равных корзин (квартили при <code>n=4</code>, децили при <code>n=10</code>). Классика для RFM-анализа и сегментации клиентов.
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Разбиение клиентов на 4 равных квартиля по тратам</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT
+  customer_id,
+  total_spent,
+  NTILE(4) OVER (ORDER BY total_spent DESC) AS spend_quartile
+FROM customer_totals;</code></pre>
+          </div>
+          <div class="fn-io">
+            <span class="fn-io-label">Результат:</span>
+            <code>топ-25% клиентов</code>
+            <span class="fn-io-arrow">→</span>
+            <code>spend_quartile = 1</code>
+          </div>
+          <div class="db-row">
+            <span class="db-row-label">Поддержка:</span>
+            <span class="db-chip ok">PG ✓</span>
+            <span class="db-chip ok">MySQL 8+ ✓</span>
+            <span class="db-chip ok">SQLite 3.25+ ✓</span>
+            <span class="db-chip ok">MS SQL ✓</span>
+            <span class="db-chip ok">ClickHouse ✓</span>
+          </div>
+          <div class="fn-pitfall">
+            <strong>Нюанс:</strong> <code>NTILE</code> делит строго по числу строк, поэтому два клиента с одинаковой суммой на границе могут попасть в соседние квартили. Если важен точный процентиль по значению — используйте <code>PERCENT_RANK()</code>.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== 07. ТАБЛИЦА-ПЕРЕВОДЧИК ДИАЛЕКТОВ ==================== -->
+    <section class="fn-section" id="sec-dialects" data-cat="dialects">
+      <h2><span class="sec-num">07</span> Шпаргалка-переводчик диалектов</h2>
+      <p class="section-intro">
+        12 самых частых задач, в которых синтаксис расходится между популярными СУБД. Держите под рукой при переключении между проектами.
+      </p>
+
+      <div class="table-wrapper">
+        <table class="dialect-table">
+          <thead>
+            <tr>
+              <th>Задача</th>
+              <th>PostgreSQL</th>
+              <th>MySQL 8</th>
+              <th>SQLite</th>
+              <th>MS SQL</th>
+              <th>ClickHouse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Лимит строк</strong></td>
+              <td><code>LIMIT 10</code></td>
+              <td><code>LIMIT 10</code></td>
+              <td><code>LIMIT 10</code></td>
+              <td><code>TOP 10</code> / <code>FETCH NEXT 10</code></td>
+              <td><code>LIMIT 10</code></td>
+            </tr>
+            <tr>
+              <td><strong>Приведение типа</strong></td>
+              <td><code>CAST(x AS INT)</code> / <code>x::int</code></td>
+              <td><code>CAST(x AS SIGNED)</code></td>
+              <td><code>CAST(x AS INT)</code></td>
+              <td><code>CAST(x AS INT)</code></td>
+              <td><code>CAST(x AS Int32)</code> / <code>toInt32(x)</code></td>
+            </tr>
+            <tr>
+              <td><strong>Замена NULL</strong></td>
+              <td><code>COALESCE(a, b)</code></td>
+              <td><code>COALESCE</code> / <code>IFNULL</code></td>
+              <td><code>COALESCE</code> / <code>IFNULL</code></td>
+              <td><code>COALESCE</code> / <code>ISNULL</code></td>
+              <td><code>COALESCE</code> / <code>ifNull</code></td>
+            </tr>
+            <tr>
+              <td><strong>Склейка строк</strong></td>
+              <td><code>CONCAT</code> / <code>a || b</code></td>
+              <td><code>CONCAT(a, b)</code></td>
+              <td><code>a || b</code></td>
+              <td><code>CONCAT(a, b)</code> / <code>+</code></td>
+              <td><code>concat(a, b)</code> / <code>||</code></td>
+            </tr>
+            <tr>
+              <td><strong>Поиск без регистра</strong></td>
+              <td><code>ILIKE '%sql%'</code></td>
+              <td><code>LIKE</code> (CI по умолч.)</td>
+              <td><code>LIKE</code> (ASCII)</td>
+              <td><code>LIKE</code> (CI по умолч.)</td>
+              <td><code>ILIKE '%sql%'</code></td>
+            </tr>
+            <tr>
+              <td><strong>Длина в символах</strong></td>
+              <td><code>CHAR_LENGTH(s)</code></td>
+              <td><code>CHAR_LENGTH(s)</code></td>
+              <td><code>LENGTH(s)</code></td>
+              <td><code>LEN(s)</code></td>
+              <td><code>lengthUTF8(s)</code></td>
+            </tr>
+            <tr>
+              <td><strong>Позиция подстроки</strong></td>
+              <td><code>POSITION(sub IN s)</code></td>
+              <td><code>POSITION(sub IN s)</code></td>
+              <td><code>INSTR(s, sub)</code></td>
+              <td><code>CHARINDEX(sub, s)</code></td>
+              <td><code>positionUTF8(s, sub)</code></td>
+            </tr>
+            <tr>
+              <td><strong>Начало месяца</strong></td>
+              <td><code>DATE_TRUNC('month', d)</code></td>
+              <td><code>DATE_FORMAT(d,'%Y-%m-01')</code></td>
+              <td><code>strftime('%Y-%m-01', d)</code></td>
+              <td><code>DATETRUNC(month, d)</code></td>
+              <td><code>toStartOfMonth(d)</code></td>
+            </tr>
+            <tr>
+              <td><strong>Прибавить 7 дней</strong></td>
+              <td><code>d + INTERVAL '7 days'</code></td>
+              <td><code>DATE_ADD(d, INTERVAL 7 DAY)</code></td>
+              <td><code>date(d, '+7 days')</code></td>
+              <td><code>DATEADD(day, 7, d)</code></td>
+              <td><code>d + INTERVAL 7 DAY</code></td>
+            </tr>
+            <tr>
+              <td><strong>Разница в днях</strong></td>
+              <td><code>d2::date - d1::date</code></td>
+              <td><code>DATEDIFF(d2, d1)</code></td>
+              <td><code>julianday(d2)-julianday(d1)</code></td>
+              <td><code>DATEDIFF(day, d1, d2)</code></td>
+              <td><code>dateDiff('day', d1, d2)</code></td>
+            </tr>
+            <tr>
+              <td><strong>Формат даты</strong></td>
+              <td><code>TO_CHAR(d, 'YYYY-MM')</code></td>
+              <td><code>DATE_FORMAT(d, '%Y-%m')</code></td>
+              <td><code>strftime('%Y-%m', d)</code></td>
+              <td><code>FORMAT(d, 'yyyy-MM')</code></td>
+              <td><code>formatDateTime(d,'%Y-%m')</code></td>
+            </tr>
+            <tr>
+              <td><strong>Склейка в группе</strong></td>
+              <td><code>STRING_AGG(x, ', ')</code></td>
+              <td><code>GROUP_CONCAT(x)</code></td>
+              <td><code>GROUP_CONCAT(x)</code></td>
+              <td><code>STRING_AGG(x, ', ')</code></td>
+              <td><code>arrayStringConcat(groupArray(x),', ')</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="takeaway">
+        <span class="takeaway-label">Золотое правило переносимого SQL</span>
+        Если запрос может переехать между базами, держитесь ядра ANSI SQL: <code>COALESCE</code>, <code>NULLIF</code>, <code>CAST(... AS ...)</code>, <code>CASE WHEN</code>, <code>SUM(CASE WHEN ...)</code>, <code>LOWER/UPPER/TRIM</code> и стандартных оконных функций <code>ROW_NUMBER / LAG / SUM OVER</code>. Специфичные функции диалекта оставляйте там, где они дают реальный выигрыш (например, <code>JSONB</code>, <code>GENERATE_SERIES</code> или <code>FILTER</code> в PostgreSQL).
+      </div>
+    </section>
+
+  </article>
+
+  <!-- Highlight.js и общие скрипты курса (подсветка, оглавление, кнопки копирования) -->
+  <script src="assets/vendor/highlightjs/highlight.min.js"></script>
+  <script src="assets/js/lesson.js" defer></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('fn-search');
+      const countEl = document.getElementById('fn-count');
+      const resetBtn = document.getElementById('fn-reset');
+      const emptyEl = document.getElementById('fn-empty');
+      const catButtons = Array.from(document.querySelectorAll('#cat-filters .filter-pill'));
+      const portButtons = Array.from(document.querySelectorAll('#port-filters .filter-pill'));
+      const cards = Array.from(document.querySelectorAll('.fn-card'));
+      const sections = Array.from(document.querySelectorAll('.fn-section'));
+      const dialectSection = document.getElementById('sec-dialects');
+
+      let activeCat = 'all';
+      let activePort = 'all';
+
+      const totalCards = cards.length;
+
+      function applyFilters() {
+        const q = searchInput.value.trim().toLowerCase();
+        let visibleCards = 0;
+
+        cards.forEach((card) => {
+          const catMatch = activeCat === 'all' || card.dataset.cat === activeCat;
+          const portMatch = activePort === 'all' || card.dataset.port === activePort;
+          const hay = (card.textContent + ' ' + (card.dataset.keywords || '')).toLowerCase();
+          const textMatch = !q || hay.includes(q);
+          const show = catMatch && portMatch && textMatch;
+          card.classList.toggle('hidden', !show);
+          if (show) visibleCards++;
+        });
+
+        sections.forEach((sec) => {
+          if (sec === dialectSection) {
+            const dialectCatMatch = activeCat === 'all' || activeCat === 'dialects';
+            const dialectPortMatch = activePort === 'all' || activePort === 'dialect';
+            const dialectTextMatch = !q || sec.textContent.toLowerCase().includes(q);
+            const showDialect = dialectCatMatch && dialectPortMatch && dialectTextMatch;
+            sec.classList.toggle('hidden', !showDialect);
+            return;
+          }
+          const secCards = Array.from(sec.querySelectorAll('.fn-card'));
+          const hasVisible = secCards.some((c) => !c.classList.contains('hidden'));
+          sec.classList.toggle('hidden', !hasVisible);
+        });
+
+        const dialectVisible = dialectSection && !dialectSection.classList.contains('hidden');
+        countEl.textContent = `${visibleCards} / ${totalCards}`;
+
+        const isFiltered = Boolean(q) || activeCat !== 'all' || activePort !== 'all';
+        resetBtn.classList.toggle('visible', isFiltered);
+        emptyEl.classList.toggle('visible', visibleCards === 0 && !dialectVisible);
+      }
+
+      catButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          activeCat = btn.dataset.cat;
+          catButtons.forEach((b) => b.classList.toggle('active', b === btn));
+          applyFilters();
+        });
+      });
+
+      portButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          activePort = btn.dataset.port;
+          portButtons.forEach((b) => b.classList.toggle('active', b === btn));
+          applyFilters();
+        });
+      });
+
+      searchInput.addEventListener('input', applyFilters);
+
+      resetBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        activeCat = 'all';
+        activePort = 'all';
+        catButtons.forEach((b) => b.classList.toggle('active', b.dataset.cat === 'all'));
+        portButtons.forEach((b) => b.classList.toggle('active', b.dataset.port === 'all'));
+        applyFilters();
+        searchInput.focus();
+      });
+
+      applyFilters();
+    });
+  </script>
+</body>
+</html>
