@@ -1400,10 +1400,10 @@
       <div class="stage-scaler" id="stageScaler">
 
         <!-- ============================================================
-             УРОК 2.1: Нормализация (1НФ–3НФ), связи «многие-ко-многим»
+             УРОК 2.1: Нормализация (1НФ–3НФ), связи таблиц (1:1, 1:N, M:N)
              и основы миграций схемы БД
              ============================================================ -->
-        <div class="lesson-group" data-lesson-id="2.1" data-lesson-title="Нормализация (1НФ–3НФ), M:N и миграции">
+        <div class="lesson-group" data-lesson-id="2.1" data-lesson-title="Нормализация (1НФ–3НФ), 1:1 / 1:N / M:N и миграции">
 
           <!-- СЛАЙД 01: ТИТУЛ -->
           <section class="slide">
@@ -1414,8 +1414,8 @@
                   <span class="meta-pill">Урок 2.1</span>
                   <span class="meta-pill">PostgreSQL 16 · Docker Compose</span>
                 </div>
-                <h1 class="hero-h1">Нормализация (1НФ–3НФ), связи M:N и миграции схемы БД</h1>
-                <p class="hero-sub">Превращаем одну «толстую» таблицу-свалку в чистую схему из 5 таблиц, строим мостики «многие-ко-многим» и безопасно обновляем живую базу через <code class="inline">UP/DOWN</code>-миграции.</p>
+                <h1 class="hero-h1">Нормализация (1НФ–3НФ), связи (1:1, 1:N, M:N) и миграции</h1>
+                <p class="hero-sub">Превращаем одну «толстую» таблицу-свалку в чистую схему из 5 таблиц, разбираем все три типа связей (1:1, 1:N, M:N) и безопасно обновляем живую базу через <code class="inline">UP/DOWN</code>-миграции.</p>
                 <div class="callout">
                   <span class="callout-icon">⚙️</span>
                   <div><strong>Подключение:</strong> <code class="inline">docker compose exec -it pg_primary psql -U student -d learning_db</code> (контейнер <code class="inline">course_pg_primary</code> · порт <code class="inline">5432</code>)</div>
@@ -1427,7 +1427,7 @@
                 <ul class="outcome-list">
                   <li><span class="outcome-num">01</span><span><strong>Аномалии данных:</strong> почему одна гигантская таблица ломается при обновлении, вставке и удалении.</span></li>
                   <li><span class="outcome-num">02</span><span><strong>1НФ, 2НФ и 3НФ:</strong> разложим магазин мерча на 5 таблиц по принципу «единого источника правды».</span></li>
-                  <li><span class="outcome-num">03</span><span><strong>Связь M:N:</strong> соберём таблицу-мостик <code class="inline">product_tags</code> с составным <code class="inline">PK</code> и внешними ключами.</span></li>
+                  <li><span class="outcome-num">03</span><span><strong>Связи 1:1, 1:N, M:N:</strong> правило внешнего ключа, профиль <code class="inline">1:1</code> и таблица-мостик <code class="inline">product_tags</code> с составным <code class="inline">PK</code>.</span></li>
                   <li><span class="outcome-num">04</span><span><strong>Миграции схемы:</strong> изменим непустую таблицу в транзакции <code class="inline">BEGIN ... COMMIT</code> с журналом версий.</span></li>
                 </ul>
               </div>
@@ -2140,6 +2140,156 @@ ORDER BY o.id;</pre>
             </template>
           </section>
 
+          <!-- СЛАЙД 08А: ТРИ ТИПА СВЯЗЕЙ (1:N, 1:1, M:N) -->
+          <section class="slide">
+            <div class="slide-head">
+              <div>
+                <div class="slide-kicker">03 · Типы связей между таблицами</div>
+                <h2 class="slide-title">Карта связей в БД: <code class="inline">1:N</code>, <code class="inline">1:1</code> и <code class="inline">M:N</code></h2>
+              </div>
+              <span class="slide-badge-num"></span>
+            </div>
+            <div class="slide-body">
+              <p style="font-size:15.5px;">Любая связь между двумя сущностями в реляционной БД сводится к одному из трёх типов кардинальности:</p>
+
+              <div class="tbl-wrap">
+                <table class="data-tbl" style="font-size:13.8px;">
+                  <thead>
+                    <tr>
+                      <th style="width:15%;">Тип связи</th>
+                      <th style="width:27%;">Жизненный пример</th>
+                      <th style="width:26%;">Куда ставим <code class="inline">FOREIGN KEY</code></th>
+                      <th>Как БД гарантирует кратность</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>1:N</strong><br />один-ко-многим</td>
+                      <td>1 клиент → много заказов;<br />1 город → много клиентов</td>
+                      <td>В таблицу на стороне <strong>«многие» (N)</strong> (<code class="inline">shop_orders.customer_id</code>)</td>
+                      <td>Обычный <code class="inline">FK</code> (<code class="inline">NOT NULL</code> — обязательная связь, без него — <code class="inline">0..1:N</code>)</td>
+                    </tr>
+                    <tr>
+                      <td><strong>1:1</strong><br />один-к-одному</td>
+                      <td>1 клиент ↔ 1 анкета / паспорт (<code class="inline">customer_profiles</code>)</td>
+                      <td>В дочернюю таблицу-спутник (<code class="inline">customer_profiles.customer_id</code>)</td>
+                      <td>Общий <code class="inline">PRIMARY KEY</code> (Shared PK) или <code class="inline">FK + UNIQUE</code></td>
+                    </tr>
+                    <tr>
+                      <td><strong>M:N</strong><br />многие-ко-многим</td>
+                      <td>Много товаров ↔ много тегов (<code class="inline">product_tags</code>)</td>
+                      <td>В отдельную <strong>таблицу-мостик</strong> (сразу два <code class="inline">FK</code>)</td>
+                      <td>Составной <code class="inline">PRIMARY KEY (a_id, b_id)</code> или свой <code class="inline">id + UNIQUE</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="grid-2 fragment">
+                <div class="callout">
+                  <span class="callout-icon">📌</span>
+                  <div><strong>Золотое правило 1:N:</strong> внешний ключ <em>всегда</em> живёт на стороне «многие». Хочешь необязательную связь (<code class="inline">0..1:N</code>) — убери <code class="inline">NOT NULL</code> (например, черновик товара без категории).</div>
+                </div>
+                <div class="callout tip">
+                  <span class="callout-icon">🌳</span>
+                  <div><strong>Самоссылочная связь (Self-referencing 1:N):</strong> таблица может ссылаться сама на себя — например, дерево подкатегорий через <code class="inline">parent_id REFERENCES categories(id)</code>.</div>
+                </div>
+              </div>
+            </div>
+            <template class="slide-notes">
+              <p><strong>Системный взгляд на связи:</strong> 80% связей в реальных БД — это <code>1:N</code>. Подчеркните правило «FK всегда ставится на стороне N», иначе студенты часто пытаются добавить <code>order_id</code> в таблицу <code>customers</code>.</p>
+              <p>Упомяните самоссылочную связь <code>parent_id</code> — это просто частный случай <code>1:N</code> внутри одной таблицы.</p>
+            </template>
+          </section>
+
+          <!-- СЛАЙД 08Б: СВЯЗЬ 1:1 И ПРАКТИКА -->
+          <section class="slide">
+            <div class="slide-head">
+              <div>
+                <div class="slide-kicker">03 · Связь «один-к-одному» (1:1)</div>
+                <h2 class="slide-title">Зачем делить таблицу в <code class="inline">1:1</code> и как запретить дубль?</h2>
+              </div>
+              <span class="slide-badge-num"></span>
+            </div>
+            <div class="slide-body">
+              <div class="grid-3">
+                <div class="card-soft">
+                  <div class="card-title" style="font-size:14.2px; margin-bottom:4px;">🔒 Безопасность</div>
+                  <p style="font-size:13.2px;">Паспорт, реквизиты и секреты лежат отдельно с жёсткими правами доступа.</p>
+                </div>
+                <div class="card-soft">
+                  <div class="card-title" style="font-size:14.2px; margin-bottom:4px;">🧩 Опциональность (1 : 0..1)</div>
+                  <p style="font-size:13.2px;">Анкета или кабинет продавца есть не у всех — меньше пустых <code class="inline">NULL</code> в главной таблице.</p>
+                </div>
+                <div class="card-soft">
+                  <div class="card-title" style="font-size:14.2px; margin-bottom:4px;">⚡ Горячие vs холодные</div>
+                  <p style="font-size:13.2px;">Основная таблица остаётся узкой и быстрой, а редкие тяжёлые поля вынесены в спутник.</p>
+                </div>
+              </div>
+
+              <div class="code-card" data-tab-group="l2-1-1to1">
+                <div class="code-head">
+                  <div class="code-head-left">
+                    <span class="lang-pill sql">SQL</span>
+                    <div class="code-tabs">
+                      <button class="code-tab active" type="button" data-tab="o1">1. Пример 4 · Shared PK (1:1)</button>
+                      <button class="code-tab" type="button" data-tab="o2">2. Краш-тест второго профиля</button>
+                    </div>
+                  </div>
+                  <button class="copy-code-btn" type="button">Копировать</button>
+                </div>
+
+                <div class="tab-pane active" data-pane="o1">
+<pre class="code-pre compact" data-lang="sql">-- Общий PK (Shared PK): customer_id одновременно и PRIMARY KEY, и FOREIGN KEY
+CREATE TABLE customer_profiles (
+    customer_id       INT PRIMARY KEY REFERENCES shop_customers(id) ON DELETE CASCADE,
+    birth_date        DATE,
+    telegram_handle   VARCHAR(60) UNIQUE,
+    newsletter_opt_in BOOLEAN NOT NULL DEFAULT true
+);
+
+INSERT INTO customer_profiles (customer_id, birth_date, telegram_handle)
+VALUES (1, '2009-05-14', '@alice_sql');
+
+SELECT c.id, c.full_name, cp.telegram_handle, cp.birth_date
+FROM shop_customers c LEFT JOIN customer_profiles cp ON cp.customer_id = c.id ORDER BY c.id;</pre>
+                </div>
+
+                <div class="tab-pane" data-pane="o2">
+<pre class="code-pre" data-lang="sql">-- Пробуем создать ВТОРОЙ профиль для Алисы (customer_id = 1)
+INSERT INTO customer_profiles (customer_id, birth_date, telegram_handle)
+VALUES (1, '2009-05-14', '@alice_backup');
+
+-- Альтернатива Shared PK: свой id + UNIQUE на внешнем ключе
+-- customer_id INT NOT NULL UNIQUE REFERENCES shop_customers(id)</pre>
+                </div>
+              </div>
+
+              <div class="fragment tab-sync-output" data-tab-group="l2-1-1to1">
+                <div class="tab-pane active" data-pane="o1">
+                  <div class="console-card">
+                    <div class="console-head">Ответ PostgreSQL · Пример 4 (у Алисы профиль заполнен, у Тимура — NULL: связь 1 : 0..1)</div>
+<pre class="console-pre" style="font-size:12px; line-height:1.34;"> id |   full_name  | telegram_handle | birth_date
+----+--------------+-----------------+------------
+  1 | Алиса Ким    | @alice_sql      | 2009-05-14
+  2 | Тимур Омаров |                 |</pre>
+                  </div>
+                </div>
+
+                <div class="tab-pane" data-pane="o2">
+                  <div class="console-card error">
+                    <div class="console-head">Ошибка PostgreSQL · СУБД жёстко держит кратность 1:1</div>
+<pre class="console-pre" style="font-size:12.2px; line-height:1.4;">ERROR:  duplicate key value violates unique constraint "customer_profiles_pkey"
+DETAIL:  Key (customer_id)=(1) already exists.</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <template class="slide-notes">
+              <p><strong>Главный технический трюк 1:1:</strong> обычный <code>FOREIGN KEY</code> даёт связь <code>1:N</code>. Чтобы превратить её в <code>1:1</code>, на внешний ключ добавляют уникальность — либо делают его самим <code>PRIMARY KEY</code> (Shared PK), либо вешают <code>UNIQUE</code>.</p>
+            </template>
+          </section>
+
           <!-- СЛАЙД 08: СВЯЗЬ M:N И ТАБЛИЦА-МОСТИК -->
           <section class="slide">
             <div class="slide-head">
@@ -2203,7 +2353,7 @@ ORDER BY o.id;</pre>
 
                   <line x1="800" y1="112" x2="721" y2="112" stroke="#4338CA" stroke-width="2.5" marker-end="url(#l2-1-arrMn)" />
                   <rect x="731" y="82" width="58" height="22" rx="6" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1" />
-                  <text x="760" y="97" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11.5" font-weight="800" fill="#4338CA">1 : N</text>
+                  <text x="760" y="97" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11.5" font-weight="800" fill="#4338CA">N : 1</text>
                 </svg>
               </div>
 
@@ -2245,7 +2395,7 @@ ORDER BY o.id;</pre>
                     <div class="code-tabs">
                       <button class="code-tab active" type="button" data-tab="m1">1. CREATE tags &amp; мостик</button>
                       <button class="code-tab" type="button" data-tab="m2">2. INSERT &amp; SELECT</button>
-                      <button class="code-tab" type="button" data-tab="m3">3. Краш-тест (Пример 5)</button>
+                      <button class="code-tab" type="button" data-tab="m3">3. Краш-тест (Пример 6)</button>
                     </div>
                   </div>
                   <button class="copy-code-btn" type="button">Копировать</button>
@@ -2297,7 +2447,7 @@ INSERT INTO product_tags (product_id, tag_id) VALUES (1, 999);</pre>
 
                 <div class="tab-pane" data-pane="m2">
                   <div class="console-card">
-                    <div class="console-head">Ответ PostgreSQL · Пример 4 (8 связок; Блокнот №5 без тегов не попал в INNER JOIN)</div>
+                    <div class="console-head">Ответ PostgreSQL · Пример 5 (8 связок; Блокнот №5 без тегов не попал в INNER JOIN)</div>
 <pre class="console-pre" style="font-size:12px; line-height:1.34;">       product        |   tag
 ----------------------+---------
  Худи «SQL Master»    | одежда
@@ -2430,7 +2580,7 @@ DETAIL:  Key (tag_id)=(999) is not present in table "tags".</pre>
                 <div class="code-head">
                   <div class="code-head-left">
                     <span class="lang-pill sql">SQL</span>
-                    <span class="code-title">Пример 6 · Наивная попытка добавить обязательный артикул sku</span>
+                    <span class="code-title">Пример 7 · Наивная попытка добавить обязательный артикул sku</span>
                   </div>
                   <button class="copy-code-btn" type="button">Копировать</button>
                 </div>
@@ -2868,8 +3018,8 @@ ORDER BY order_id, item_name;</pre>
                 <div class="summary-item">
                   <span class="summary-icon">03</span>
                   <div>
-                    <h4>Таблицы-мостики (M:N)</h4>
-                    <p>Связь «многие-ко-многим» решается промежуточной таблицей с составным <code class="inline">PK</code> и парой <code class="inline">FK</code>.</p>
+                    <h4>Связи 1:1, 1:N и M:N</h4>
+                    <p><code class="inline">1:N</code> — FK на стороне N; <code class="inline">1:1</code> — Shared PK или <code class="inline">FK + UNIQUE</code>; <code class="inline">M:N</code> — таблица-мостик с составным <code class="inline">PK</code>.</p>
                   </div>
                 </div>
                 <div class="summary-item">
@@ -2896,7 +3046,7 @@ ORDER BY order_id, item_name;</pre>
           </section>
 
           <script type="text/plain" class="lesson-sql">-- =====================================================================
--- Урок 2.1: Нормализация (1НФ–3НФ), связи «многие-ко-многим»
+-- Урок 2.1: Нормализация (1НФ–3НФ), связи таблиц (1:1, 1:N, M:N)
 --           и основы миграций схемы БД
 -- Среда курса: сервис pg_primary | БД learning_db | пользователь student
 -- Подключение: docker compose exec -it pg_primary psql -U student -d learning_db
@@ -2924,7 +3074,7 @@ SELECT order_id, customer_name, customer_phone, city, items_list
 FROM bad_orders_sheet;
 
 -- === Раздел 02. Пример 2: Чистая схема магазина в 3НФ (5 таблиц) ===
-DROP TABLE IF EXISTS product_tags, tags, shop_order_items, shop_orders, shop_products, shop_customers, cities CASCADE;
+DROP TABLE IF EXISTS customer_profiles, product_tags, tags, shop_order_items, shop_orders, shop_products, shop_customers, cities CASCADE;
 
 CREATE TABLE cities (
     id       INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -3012,7 +3162,26 @@ FROM shop_orders o
 JOIN shop_customers c ON c.id = o.customer_id
 ORDER BY o.id;
 
--- === Раздел 03. Пример 4: Связь M:N и таблица-мостик product_tags ===
+-- === Раздел 03. Пример 4: Связь 1:1 через общий первичный ключ (Shared PK) ===
+CREATE TABLE customer_profiles (
+    customer_id       INT PRIMARY KEY REFERENCES shop_customers(id) ON DELETE CASCADE,
+    birth_date        DATE,
+    telegram_handle   VARCHAR(60) UNIQUE,
+    newsletter_opt_in BOOLEAN NOT NULL DEFAULT true
+);
+
+INSERT INTO customer_profiles (customer_id, birth_date, telegram_handle)
+VALUES (1, '2009-05-14', '@alice_sql');
+
+SELECT c.id, c.full_name, cp.telegram_handle, cp.birth_date
+FROM shop_customers c
+LEFT JOIN customer_profiles cp ON cp.customer_id = c.id
+ORDER BY c.id;
+
+-- [КРАШ-ТЕСТ 1:1: раскомментируй для проверки запрета второго профиля]
+-- INSERT INTO customer_profiles (customer_id, birth_date, telegram_handle) VALUES (1, '2009-05-14', '@alice_backup');
+
+-- === Пример 5: Связь M:N и таблица-мостик product_tags ===
 CREATE TABLE tags (
     id   INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE
@@ -3042,18 +3211,18 @@ JOIN product_tags pt ON pt.product_id = p.id
 JOIN tags         t  ON t.id = pt.tag_id
 ORDER BY p.id, t.name;
 
--- === Пример 5: Краш-тест защиты таблицы-мостика ===
+-- === Пример 6: Краш-тест защиты таблицы-мостика ===
 -- [КРАШ-ТЕСТ: раскомментируй для проверки ошибки дубликата составного PK]
 -- INSERT INTO product_tags (product_id, tag_id) VALUES (1, 1);
 
 -- [КРАШ-ТЕСТ: раскомментируй для проверки ошибки внешнего ключа FK]
 -- INSERT INTO product_tags (product_id, tag_id) VALUES (1, 999);
 
--- === Раздел 04. Пример 6: Наивная миграция с NOT NULL ===
+-- === Раздел 04. Пример 7: Наивная миграция с NOT NULL ===
 -- [КРАШ-ТЕСТ: раскомментируй для проверки ошибки column "sku" contains null values]
 -- ALTER TABLE shop_products ADD COLUMN sku VARCHAR(30) NOT NULL;
 
--- === Пример 7: Журнал версий + безопасная UP-миграция 001 ===
+-- === Пример 8: Журнал версий + безопасная UP-миграция 001 ===
 DROP TABLE IF EXISTS schema_migrations;
 
 CREATE TABLE IF NOT EXISTS schema_migrations (

@@ -371,7 +371,7 @@ ORDER BY total_cost DESC;</code></pre>
     <div class="grid-2">
 
       <div class="card">
-        <h3><span>Нормализация (1НФ–3НФ), M:N и Миграции</span><span class="lesson-tag">Урок 2.1</span></h3>
+        <h3><span>Нормализация (1НФ–3НФ), Связи (1:1, 1:N, M:N) и Миграции</span><span class="lesson-tag">Урок 2.1</span></h3>
         <table>
           <thead>
             <tr><th>Форма</th><th>Правило проектирования</th></tr>
@@ -382,10 +382,15 @@ ORDER BY total_cost DESC;</code></pre>
             <tr><td><strong>3НФ</strong></td><td>2НФ + нет транзитивных зависимостей (<code>PK → A → B</code>)</td></tr>
           </tbody>
         </table>
-        <pre><code>-- Разбор строки с разделителями в строки (приведение к 1НФ)
+        <div class="formula">1:N → FK на стороне N | 1:1 → Shared PK или FK+UNIQUE | M:N → мостик + PK(a,b)</div>
+        <pre><code>-- 1НФ: разбор списка через запятую в отдельные строки
 SELECT id, TRIM(unnest(string_to_array(items_list, ','))) AS item FROM raw_orders;
 
--- Таблица-мостик (Junction Table) для связи M:N
+-- 1:1 (Shared PK) и M:N (таблица-мостик)
+CREATE TABLE customer_profiles (
+    customer_id INT PRIMARY KEY REFERENCES customers(id) ON DELETE CASCADE,
+    telegram    TEXT UNIQUE
+);
 CREATE TABLE product_tags (
     product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     tag_id     INT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
@@ -400,7 +405,7 @@ ALTER TABLE products ALTER COLUMN sku SET NOT NULL,
                      ADD CONSTRAINT products_sku_key UNIQUE (sku);
 INSERT INTO schema_migrations (version) VALUES ('002_add_sku') ON CONFLICT DO NOTHING;
 COMMIT;
--- DOWN-миграция: ALTER TABLE products DROP COLUMN IF EXISTS sku;</code></pre>
+-- DOWN: ALTER TABLE products DROP COLUMN IF EXISTS sku;</code></pre>
       </div>
 
       <div class="card">

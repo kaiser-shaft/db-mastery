@@ -106,7 +106,7 @@ docker exec -it course_clickhouse clickhouse-client -u student --password studen
   - [`lesson_1_3.html`](lessons/lesson_1_3.html) — Чтение, фильтрация и сортировка (`SELECT`, `WHERE`, `ORDER BY`, пагинация и `NULL`)
   - [`lesson_1_4.html`](lessons/lesson_1_4.html) — `UPDATE`, `DELETE` и первое объединение таблиц (`INNER JOIN`)
 - **Модуль 2 — Проектирование схем и продвинутый SQL**
-  - [`lesson_2_1.html`](lessons/lesson_2_1.html) — Нормализация (1НФ–3НФ), связи «многие-ко-многим» и основы миграций схемы БД
+  - [`lesson_2_1.html`](lessons/lesson_2_1.html) — Нормализация (1НФ–3НФ), связи таблиц (1:1, 1:N, M:N) и основы миграций схемы БД
   - [`lesson_2_2.html`](lessons/lesson_2_2.html) — `LEFT JOIN`, `UNION`, `CASE WHEN`, `GROUP BY` и `HAVING`
   - [`lesson_2_3.html`](lessons/lesson_2_3.html) — Подзапросы, CTE, работа с датами, строками и `JSONB`
   - [`lesson_2_4.html`](lessons/lesson_2_4.html) — Оконные функции — аналитика без схлопывания строк

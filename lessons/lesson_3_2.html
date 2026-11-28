@@ -361,6 +361,17 @@ ON shop_orders (
           <strong>Суперспособность <code>INCLUDE</code> (Покрывающий индекс):</strong> Представь, что на карточке в библиотечном каталоге сразу написано имя автора и год издания — тебе даже не нужно идти в зал за самой книгой! Если написать <code>CREATE INDEX idx_cover ON shop_orders (customer_id) INCLUDE (total_price);</code>, то запрос <code>SELECT total_price FROM shop_orders WHERE customer_id = 42;</code> выполнится через <code>Index Only Scan</code> — вообще без чтения страниц <code>Heap</code>!
         </div>
       </aside>
+
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Секрет про связи 1:N и M:N в PostgreSQL:</strong> для <code>PRIMARY KEY</code> и <code>UNIQUE</code> база сама заводит каталог (индекс), а вот для <strong><code>FOREIGN KEY</code> — нет!</strong> Если в связи <code>1:N</code> не создать индекс на <code>shop_orders (customer_id)</code> вручную, то при <code>JOIN</code> и даже при попытке удалить клиента охраннику придётся листать всю стотысячную тетрадь заказов от корки до корки (<code>Seq Scan</code>). А в таблице-мостике <code>M:N</code> с ключом <code>PRIMARY KEY (product_id, tag_id)</code> поиск всех товаров по одному тегу <code>tag_id</code> нарушает правило левого префикса — поэтому для быстрого поиска «в обратную сторону» добавляют второй индекс: <code>CREATE INDEX idx_product_tags_tag ON product_tags (tag_id);</code>.
+        </div>
+      </aside>
     </section>
 
     <!-- ==================== РАЗДЕЛ 03 ==================== -->

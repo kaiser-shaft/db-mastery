@@ -20,6 +20,8 @@
 -- ============================================================================
 
 -- 1. Удаляем старые и вспомогательные таблицы в правильном порядке
+DROP TABLE IF EXISTS customer_profiles CASCADE;
+DROP TABLE IF EXISTS student_cards CASCADE;
 DROP TABLE IF EXISTS product_tags CASCADE;
 DROP TABLE IF EXISTS tags CASCADE;
 DROP TABLE IF EXISTS schema_migrations CASCADE;

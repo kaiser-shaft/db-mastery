@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Урок 2.1: Нормализация (1НФ–3НФ), связи «многие-ко-многим» и основы миграций схемы БД</title>
+  <title>Урок 2.1: Нормализация (1НФ–3НФ), связи таблиц (1:1, 1:N, M:N) и основы миграций схемы БД</title>
 
   <!-- Локальные шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
   <link rel="stylesheet" href="../assets/vendor/fonts/fonts.css" />
@@ -34,7 +34,7 @@
         <span class="pill pill-neutral">Урок 2.1</span>
         <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
       </div>
-      <h1>Нормализация (1НФ–3НФ), связи «многие-ко-многим» и основы миграций схемы БД</h1>
+      <h1>Нормализация (1НФ–3НФ), связи таблиц (1:1, 1:N, M:N) и основы миграций схемы БД</h1>
 
       <!-- Карточка целей урока -->
       <div class="focus-box">
@@ -42,7 +42,7 @@
         <ul>
           <li>Поймёшь, почему одна гигантская таблица быстро превращается в хаос, и научишься раскладывать данные по полочкам с помощью <strong>1НФ, 2НФ и 3НФ</strong>.</li>
           <li>Увидишь наглядно, как «разрезание» таблицы побеждает дубли и противоречия в данных.</li>
-          <li>Разберёшься, как устроена связь <strong>«многие-ко-многим» (M:N)</strong>, и соберёшь таблицу-мостик с составным <code>PRIMARY KEY</code> и внешними ключами <code>FOREIGN KEY</code>.</li>
+          <li>Разберёшься во всех трёх типах связей между таблицами — <strong>1:1</strong>, <strong>1:N</strong> и <strong>M:N</strong>: поймёшь, куда ставить <code>FOREIGN KEY</code>, соберёшь профиль <strong>1:1</strong> и таблицу-мостик <strong>M:N</strong> с составным <code>PRIMARY KEY</code>.</li>
           <li>Научишься безопасно менять живую базу через <strong>миграции схемы БД</strong> (<code>UP</code> и <code>DOWN</code>) внутри транзакций (<code>BEGIN ... COMMIT</code>), не теряя данные клиентов.</li>
         </ul>
       </div>
@@ -362,7 +362,7 @@ WHERE product_id = 2;</code></pre>
           <button class="copy-btn" type="button">Копировать</button>
         </div>
         <pre><code class="language-sql">-- Удаляем таблицы в обратном порядке (CASCADE чистит зависимые связи)
-DROP TABLE IF EXISTS product_tags, tags, shop_order_items, shop_orders, shop_products, shop_customers, cities CASCADE;
+DROP TABLE IF EXISTS customer_profiles, product_tags, tags, shop_order_items, shop_orders, shop_products, shop_customers, cities CASCADE;
 
 -- 1. Справочник городов (убираем транзитивную зависимость — 3НФ)
 CREATE TABLE cities (
@@ -520,9 +520,128 @@ ORDER BY o.id;</code></pre>
 
     <!-- ==================== 4. РАЗДЕЛ 03 ==================== -->
     <section>
-      <h2><span class="sec-num">03</span> Связь «многие-ко-многим» (M:N) и таблица-мостик</h2>
+      <h2><span class="sec-num">03</span> Типы связей между таблицами: 1:1, 1:N и M:N</h2>
       <p>
-        Подумай о школьных кружках: один ученик может ходить и на робототехнику, и на шахматы. При этом в кружок робототехники ходит 15 разных учеников. Или возьмём теги в нашем магазине мерча: у «Худи SQL Master» сразу два тега — <code>#хит</code> и <code>#одежда</code>, а тег <code>#хит</code> приклеен ещё и к стикерпаку.
+        Как только ты разложил базу на аккуратные таблицы по правилам 1НФ–3НФ, их нужно правильно соединить «стрелочками». Хорошая новость: в любой базе данных — хоть в школьном магазине, хоть в соцсети или онлайн-игре — существует ровно <strong>три вида связей</strong> (инженеры называют число связей с каждой стороны <em>кардинальностью</em>): <strong>1:N</strong>, <strong>1:1</strong> и <strong>M:N</strong>.
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Тип связи</th>
+              <th>Жизненный пример</th>
+              <th>Куда ставим <code>FOREIGN KEY</code></th>
+              <th>Как база держит правило</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1:N</strong><br />один-ко-многим</td>
+              <td>1 класс → много учеников;<br />1 клиент → много заказов</td>
+              <td>В таблицу на стороне <strong>«многие» (N)</strong> (<code>shop_orders.customer_id</code>)</td>
+              <td>Обычный <code>FOREIGN KEY</code> (<code>NOT NULL</code> — обязательно указать, без него — можно оставить пустым)</td>
+            </tr>
+            <tr>
+              <td><strong>1:1</strong><br />один-к-одному</td>
+              <td>1 ученик ↔ 1 читательский билет;<br />1 клиент ↔ 1 анкета профиля</td>
+              <td>В дополнительную таблицу (<code>customer_profiles.customer_id</code>)</td>
+              <td>Общий <code>PRIMARY KEY</code> или <code>FOREIGN KEY</code> + <code>UNIQUE</code> (дубль запрещён)</td>
+            </tr>
+            <tr>
+              <td><strong>M:N</strong><br />многие-ко-многим</td>
+              <td>Много учеников ↔ много кружков;<br />много товаров ↔ много тегов</td>
+              <td>В отдельную <strong>таблицу-мостик</strong> (сразу два <code>FOREIGN KEY</code>)</td>
+              <td>Составной <code>PRIMARY KEY (a_id, b_id)</code> или свой <code>id</code> + <code>UNIQUE (a_id, b_id)</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Связь «один-ко-многим» (1:N): золотое правило внешнего ключа</h3>
+      <p>
+        Это главный «кирпичик» баз данных — примерно 80% всех связей в реальных проектах. Ты уже много раз собирал её сам: <code>cities → shop_customers</code>, <code>shop_customers → shop_orders</code>, <code>categories → products</code>. Запомни простое правило, которое спасёт от путаницы: <strong>внешний ключ всегда живёт на стороне «многие» (N)</strong>, никогда — на стороне «один». У одного покупателя бывает хоть сто заказов, но у каждого заказа ровно один покупатель — значит, колонка <code>customer_id</code> лежит именно в <code>shop_orders</code>.
+      </p>
+      <ul>
+        <li><strong>Обязательная (<code>1:N</code>) или «по желанию» (<code>0..1:N</code>):</strong> если написать <code>city_id INT NOT NULL REFERENCES cities(id)</code>, база не даст создать клиента без города. Если убрать <code>NOT NULL</code> (как в Уроке 1.4 для <code>products.category_id</code>), в ячейке может лежать <code>NULL</code> — например, товар ещё в черновике и ему пока не выбрали категорию.</li>
+        <li><strong>Связь «сама с собой» (Self-referencing <code>1:N</code>):</strong> иногда таблица ссылается сама на себя. Представь папки на компьютере или разделы в магазине: внутри «Одежды» лежат «Худи» и «Футболки». Все категории хранятся в одной таблице <code>categories</code>, но у каждой есть колонка <code>parent_id INT REFERENCES categories(id)</code>, указывающая на «родительскую» папку.</li>
+      </ul>
+
+      <h3>Связь «один-к-одному» (1:1): зачем вообще делить таблицу надвое?</h3>
+      <p>
+        Тут обычно сразу возникает логичный вопрос: если у одного покупателя может быть максимум один профиль, почему просто не дописать лишние колонки прямо в <code>shop_customers</code>? Представь школьный журнал: у каждого ученика есть одна медицинская карта и один логин от электронного дневника, но их не вклеивают в обычный классный журнал! В реальных проектах таблицу делят в формате <strong>1:1</strong> в трёх случаях:
+      </p>
+      <ol>
+        <li><strong>Секретность и доступ:</strong> паспортные данные, банковские реквизиты или секретные коды кладут в отдельную таблицу под замок — обычные страницы сайта читают <code>shop_customers</code>, но не имеют прав заглянуть в «сейф» <code>customer_secrets</code>.</li>
+        <li><strong>Заполняют не все (меньше пустых <code>NULL</code>):</strong> анкету с датой рождения и Telegram-ником или настройки продавца заполняет только часть покупателей. Выносим их в отдельную таблицу <code>1 : 0..1</code>, чтобы основная таблица не превращалась в решето из пустых ячеек.</li>
+        <li><strong>Скорость («часто нужно» vs «редко читаем»):</strong> основная таблица <code>shop_customers</code> остаётся маленькой и молниеносной, а тяжёлые поля вроде длинного описания «О себе» и настроек лежат отдельно и читаются только на странице профиля.</li>
+      </ol>
+      <p>
+        Как превратить обычную связь <code>1:N</code> в строгую <strong>1:1</strong>, чтобы никто не смог завести клиенту два профиля? Достаточно запретить повторы во внешнем ключе! Есть два удобных способа:
+      </p>
+      <ul>
+        <li><strong>Общий первичный ключ (Shared PK — самый аккуратный способ):</strong> <code>customer_id INT PRIMARY KEY REFERENCES shop_customers(id) ON DELETE CASCADE</code>. Один и тот же столбец работает сразу и как «паспорт» строки (<code>PK</code>), и как ссылка на клиента (<code>FK</code>) — второй профиль с тем же номером база просто не пропустит.</li>
+        <li><strong>Свой <code>id</code> + охранник <code>UNIQUE</code>:</strong> <code>customer_id INT NOT NULL UNIQUE REFERENCES shop_customers(id)</code>. Удобно, если у профиля должен быть свой собственный номер <code>id</code> (например, чтобы на него ссылались другие таблицы).</li>
+      </ul>
+
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            C["shop_customers<br/>(PK: id, full_name, phone)"] ---|"1 : 0..1"| CP["customer_profiles<br/>(PK &amp; FK: customer_id,<br/>birth_date, telegram_handle)"]
+        </div>
+        <figcaption class="diagram-caption">Рис. 3. Связь 1:1 (точнее 1 : 0..1): у каждого покупателя может быть максимум один профиль — за этим следит общий ключ customer_id.</figcaption>
+      </figure>
+
+      <p>
+        Давай добавим в <code>learning_db</code> таблицу <code>customer_profiles</code> со связью <strong>1:1</strong>, заполним анкету только для Алисы (у Тимура профиля пока нет) и сразу проверим, как PostgreSQL остановит попытку завести Алисе второй профиль:
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример 4: Реализуем связь 1:1 через общий первичный ключ (Shared PK)</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">-- Таблица-спутник 1:1: customer_id одновременно и PRIMARY KEY, и FOREIGN KEY
+CREATE TABLE customer_profiles (
+    customer_id       INT PRIMARY KEY REFERENCES shop_customers(id) ON DELETE CASCADE,
+    birth_date        DATE,
+    telegram_handle   VARCHAR(60) UNIQUE,
+    newsletter_opt_in BOOLEAN NOT NULL DEFAULT true
+);
+
+-- Алиса (id = 1) заполнила профиль, а Тимур (id = 2) — пока нет
+INSERT INTO customer_profiles (customer_id, birth_date, telegram_handle)
+VALUES (1, '2009-05-14', '@alice_sql');
+
+-- Смотрим всех клиентов и их профили (у Тимура профиль NULL — это и есть 1 : 0..1)
+SELECT c.id, c.full_name, cp.telegram_handle, cp.birth_date
+FROM shop_customers c
+LEFT JOIN customer_profiles cp ON cp.customer_id = c.id
+ORDER BY c.id;
+
+-- Краш-тест 1:1: пробуем завести ВТОРОЙ профиль для Алисы (id = 1)
+INSERT INTO customer_profiles (customer_id, birth_date, telegram_handle)
+VALUES (1, '2009-05-14', '@alice_backup');</code></pre>
+      </div>
+
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL · Выборка SELECT</div>
+        <pre> id |   full_name  | telegram_handle | birth_date
+----+--------------+-----------------+------------
+  1 | Алиса Ким    | @alice_sql      | 2009-05-14
+  2 | Тимур Омаров |                 |
+(2 rows)</pre>
+      </div>
+
+      <div class="error-block standalone">
+        <div class="output-label">Ошибка PostgreSQL · Краш-тест связи 1:1</div>
+        <pre>ERROR:  duplicate key value violates unique constraint "customer_profiles_pkey"
+DETAIL:  Key (customer_id)=(1) already exists.</pre>
+      </div>
+
+      <h3>Связь «многие-ко-многим» (M:N) и таблица-мостик</h3>
+      <p>
+        Теперь представим школьные кружки: один ученик может ходить и на робототехнику, и на шахматы. При этом в кружок робототехники ходит 15 разных учеников. Или возьмём теги в нашем магазине мерча: у «Худи SQL Master» сразу два тега — <code>#хит</code> и <code>#одежда</code>, а тег <code>#хит</code> приклеен ещё и к стикерпаку.
       </p>
       <p>
         Как сохранить такую связь в базе? Если добавить колонку <code>tag_id</code> прямо в таблицу товаров <code>shop_products</code>, то у каждого товара сможет быть только <strong>один</strong> тег. Если добавить <code>product_id</code> в таблицу тегов <code>tags</code>, то каждый тег достанется только <strong>одному</strong> товару. А писать теги через запятую нам уже запретила 1НФ!
@@ -537,7 +656,7 @@ ORDER BY o.id;</code></pre>
             P["shop_products<br/>(PK: id, title, price)"] ---|"1 : N"| J["product_tags (мостик)<br/>(PK: product_id + tag_id)"]
             J ---|"N : 1"| T["tags<br/>(PK: id, name)"]
         </div>
-        <figcaption class="diagram-caption">Рис. 3. Таблица-мостик product_tags хранит пары «ID товара + ID тега» и связывает две сущности в формате M:N.</figcaption>
+        <figcaption class="diagram-caption">Рис. 4. Таблица-мостик product_tags хранит пары «ID товара + ID тега» и связывает две сущности в формате M:N.</figcaption>
       </figure>
 
       <p>
@@ -550,7 +669,7 @@ ORDER BY o.id;</code></pre>
 
       <div class="code-block">
         <div class="code-header">
-          <span class="code-lang">SQL · Пример 4: Реализуем связь M:N для тегов товаров</span>
+          <span class="code-lang">SQL · Пример 5: Реализуем связь M:N для тегов товаров</span>
           <button class="copy-btn" type="button">Копировать</button>
         </div>
         <pre><code class="language-sql">-- Справочник уникальных тегов
@@ -610,7 +729,7 @@ ORDER BY p.id, t.name;</code></pre>
 
       <div class="code-block">
         <div class="code-header">
-          <span class="code-lang">SQL · Пример 5: Проверяем защиту таблицы-мостика</span>
+          <span class="code-lang">SQL · Пример 6: Проверяем защиту таблицы-мостика</span>
           <button class="copy-btn" type="button">Копировать</button>
         </div>
         <pre><code class="language-sql">-- Попытка 1: дубликат пары (товар 1, тег 1)
@@ -635,6 +754,17 @@ DETAIL:  Key (tag_id)=(999) is not present in table "tags".</pre>
       <p>
         Видишь, как здорово? Тебе не нужно молиться, чтобы программист на сайте не забыл проверку в коде — сам PostgreSQL намертво пресечёт и дубликаты, и «висячие» ссылки в никуда. А благодаря <code>ON DELETE CASCADE</code>, если ты удалишь тег <code>#новинка</code>, все его строчки в <code>product_tags</code> подчистятся автоматически.
       </p>
+
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Составной <code>PK</code> vs свой <code>id</code> в таблице-мостике:</strong> для чистых связок без собственной истории (<code>product_tags</code>, <code>shop_order_items</code>) лучше всего подходит составной <code>PRIMARY KEY (product_id, tag_id)</code>. Но если на строку мостика будут ссылаться другие таблицы (например, жалобы на отзыв <code>reviews</code> из Урока 1.2) или одна и та же пара может повторяться в разное время (ученик записался в кружок, ушёл и через год вернулся), делают отдельный <code>id PRIMARY KEY</code> и при необходимости добавляют <code>UNIQUE (a_id, b_id)</code>.
+        </div>
+      </aside>
 
       <aside class="callout tip">
         <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -664,7 +794,7 @@ DETAIL:  Key (tag_id)=(999) is not present in table "tags".</pre>
             V1 -->|"UP: 002_add_loyalty.up.sql"| V2["База v2<br/>(+ уровень лояльности)"]
             V2 -->|"Запись в schema_migrations"| LOG["Журнал версий<br/>(проверяется ДО запуска)"]
         </div>
-        <figcaption class="diagram-caption">Рис. 4. Миграции умеют двигать схему вперёд (UP) и откатывать назад (DOWN), а журнал версий не даёт применить один файл дважды.</figcaption>
+        <figcaption class="diagram-caption">Рис. 5. Миграции умеют двигать схему вперёд (UP) и откатывать назад (DOWN), а журнал версий не даёт применить один файл дважды.</figcaption>
       </figure>
 
       <p>
@@ -678,7 +808,7 @@ DETAIL:  Key (tag_id)=(999) is not present in table "tags".</pre>
 
       <div class="code-block">
         <div class="code-header">
-          <span class="code-lang">SQL · Пример 6: Наивная миграция, которая падает с ошибкой</span>
+          <span class="code-lang">SQL · Пример 7: Наивная миграция, которая падает с ошибкой</span>
           <button class="copy-btn" type="button">Копировать</button>
         </div>
         <pre><code class="language-sql">-- Пытаемся сразу добавить обязательную колонку без значения по умолчанию
@@ -737,7 +867,7 @@ COMMIT;</code></pre>
 
       <div class="code-block">
         <div class="code-header">
-          <span class="code-lang">SQL · Пример 7: Журнал версий + безопасная UP-миграция 001</span>
+          <span class="code-lang">SQL · Пример 8: Журнал версий + безопасная UP-миграция 001</span>
           <button class="copy-btn" type="button">Копировать</button>
         </div>
         <pre><code class="language-sql">-- Шаг 0: создаём журнал применённых миграций (один раз на всю базу)
@@ -880,6 +1010,14 @@ docker exec -i course_pg_primary psql -U student -d learning_db \
               <td>Цепочка через посредника: <code>клиент → город → часовой пояс</code> (убираем в 3НФ).</td>
             </tr>
             <tr>
+              <td><strong>Связь 1:N</strong></td>
+              <td>Внешний ключ ставится в таблице на стороне «многие» (<code>orders.customer_id</code>).</td>
+            </tr>
+            <tr>
+              <td><strong>Связь 1:1 (Shared PK / UNIQUE)</strong></td>
+              <td>Вынос редких или секретных полей в таблицу-спутник с <code>FK + UNIQUE</code> или общим <code>PK</code>.</td>
+            </tr>
+            <tr>
               <td><strong>Таблица-мостик (M:N)</strong></td>
               <td>Промежуточная таблица, хранящая пары внешних ключей для связи «многие-ко-многим».</td>
             </tr>
@@ -900,7 +1038,7 @@ docker exec -i course_pg_primary psql -U student -d learning_db \
     <section>
       <h2><span class="sec-num">06</span> Мини-практикум для закрепления</h2>
       <p>
-        Запусти свою базу <code>learning_db</code> (через <code>docker compose up -d</code>) и попробуй решить 4 задачи разной сложности. Каждая задача полностью автономна — не подглядывай в спойлер, пока не проверишь свой вариант в <code>psql</code>!
+        Запусти свою базу <code>learning_db</code> (через <code>docker compose up -d</code>) и попробуй решить 5 задач разной сложности. Каждая задача полностью автономна — не подглядывай в спойлер, пока не проверишь свой вариант в <code>psql</code>!
       </p>
 
       <div class="task-card">
@@ -1072,12 +1210,42 @@ ORDER BY order_id, item_name;</code></pre>
           </div>
         </details>
       </div>
+      <div class="task-card">
+        <div class="task-title">Задание 5 (Базовое+ · 1:1). Читательский билет со связью 1:1</div>
+        <p style="margin-bottom: 0;">
+          К таблице <code>club_students</code> из Задания 2 добавь таблицу-спутник <code>student_cards</code> со связью <strong>1:1</strong> через общий первичный ключ: <code>student_id INT PRIMARY KEY REFERENCES club_students(id) ON DELETE CASCADE</code>, <code>card_number VARCHAR(20) NOT NULL UNIQUE</code>, <code>issued_at DATE NOT NULL DEFAULT CURRENT_DATE</code>. Выдай билет <code>'LIB-001'</code> первому ученику, а затем попробуй выдать ему второй билет <code>'LIB-002'</code> и убедись, что PostgreSQL заблокирует дубликат.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block" style="margin-bottom: 0;">
+            <div class="code-header">
+              <span class="code-lang">SQL · Эталонное решение</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS student_cards;
+
+CREATE TABLE student_cards (
+    student_id  INT PRIMARY KEY REFERENCES club_students(id) ON DELETE CASCADE,
+    card_number VARCHAR(20) NOT NULL UNIQUE,
+    issued_at   DATE NOT NULL DEFAULT CURRENT_DATE
+);
+
+-- Успешно: выдаём первый билет ученику №1
+INSERT INTO student_cards (student_id, card_number)
+VALUES (1, 'LIB-001');
+
+-- Ошибка дубликата первичного ключа (student_cards_pkey): второй билет запрещён!
+INSERT INTO student_cards (student_id, card_number)
+VALUES (1, 'LIB-002');</code></pre>
+          </div>
+        </details>
+      </div>
       <aside class="callout tip">
         <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
         <div class="callout-body">
-          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_2/practice.html#sec-2-1"><strong>Практикум по Уроку 2.1 →</strong></a> — там ещё 9 пошаговых заданий с ответами от разминки по схеме 3НФ и связей M:N до безопасных UP/DOWN-миграций.
+          <strong>Хочешь больше практики?</strong> Открой <a href="../practice/module_2/practice.html#sec-2-1"><strong>Практикум по Уроку 2.1 →</strong></a> — там ещё 10 пошаговых заданий с ответами от разминки по схеме 3НФ и связей 1:1 / M:N до безопасных UP/DOWN-миграций.
         </div>
       </aside>
     </section>
@@ -1085,7 +1253,7 @@ ORDER BY order_id, item_name;</code></pre>
     <!-- ==================== 8. ИТОГ УРОКА ==================== -->
     <div class="takeaway">
       <span class="takeaway-label">Итог урока и что дальше</span>
-      Теперь ты умеешь наводить в базе идеальный порядок: <strong>1НФ–3НФ</strong> избавляют таблицы от дублей и аномалий, <strong>таблица-мостик</strong> с составным ключом элегантно решает связь <strong>«многие-ко-многим»</strong>, а <strong>транзакционные UP/DOWN миграции</strong> позволяют безопасно развивать живую схему без потери данных. Но раз данные теперь аккуратно разложены по разным таблицам, возникает новый вопрос: как найти наш новенький «Блокнот ACID», у которого пока нет ни одного тега и ни одного заказа, разделить чеки на категории и посчитать выручку по городам? В следующем <strong>Уроке 2.2</strong> мы разберём <code>LEFT JOIN</code>, <code>UNION</code>, условную логику <code>CASE WHEN</code> и группировки <code>GROUP BY / HAVING</code> — и наша чистая схема заработает на полную мощность!
+      Теперь ты умеешь наводить в базе идеальный порядок: <strong>1НФ–3НФ</strong> избавляют таблицы от дублей и аномалий, три вида связей (<strong>1:N</strong> с внешним ключом на стороне «многие», <strong>1:1</strong> через общий ключ или <code>UNIQUE</code> и <strong>M:N</strong> через таблицу-мостик) помогают аккуратно описать любой проект — от школьного магазина до соцсети, а <strong>транзакционные UP/DOWN миграции</strong> позволяют безопасно развивать живую базу без потери данных. Но раз данные теперь аккуратно разложены по разным таблицам, возникает новый вопрос: как найти наш новенький «Блокнот ACID», у которого пока нет ни одного тега и ни одного заказа, разделить чеки на категории и посчитать выручку по городам? В следующем <strong>Уроке 2.2</strong> мы разберём <code>LEFT JOIN</code>, <code>UNION</code>, условную логику <code>CASE WHEN</code> и группировки <code>GROUP BY / HAVING</code> — и наша чистая схема заработает на полную мощность!
     </div>
 
     <nav class="lesson-pager" aria-label="Переход между уроками">

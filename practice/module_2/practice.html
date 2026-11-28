@@ -26,19 +26,19 @@
     <header class="lecture-header">
       <div class="meta-pills">
         <span class="pill pill-primary">Практикум · Модуль 2</span>
-        <span class="pill pill-tip">50 заданий · От самого лёгкого</span>
+        <span class="pill pill-tip">51 задание · От самого лёгкого</span>
         <span class="pill pill-neutral">PostgreSQL 16 · learning_db</span>
       </div>
 
       <h1>Практические задания: Проектирование схем и продвинутый SQL</h1>
       <p class="hero-sub">
-        Тренажёр по Урокам 2.1–2.5: от связей <code>3НФ</code>, таблиц-мостиков и безопасных миграций к <code>LEFT JOIN</code>, <code>UNION</code>, <code>CASE WHEN</code>, <code>GROUP BY / HAVING</code>, многошаговым <code>CTE</code>, <code>JSONB</code>, оконным функциям и комплексной аналитике.
+        Тренажёр по Урокам 2.1–2.5: от связей <code>3НФ</code>, профилей <code>1:1</code>, таблиц-мостиков <code>M:N</code> и безопасных миграций к <code>LEFT JOIN</code>, <code>UNION</code>, <code>CASE WHEN</code>, <code>GROUP BY / HAVING</code>, многошаговым <code>CTE</code>, <code>JSONB</code>, оконным функциям и комплексной аналитике.
       </p>
 
       <div class="practice-toolbar">
         <div>
           <div class="progress-head">
-            <span class="progress-label">Выполнено заданий: <strong id="progress-text">0 / 50 (0%)</strong></span>
+            <span class="progress-label">Выполнено заданий: <strong id="progress-text">0 / 51 (0%)</strong></span>
             <button type="button" class="reset-btn" id="reset-progress">Сбросить прогресс</button>
           </div>
           <div class="progress-bar" style="margin-top: 0.45rem;">
@@ -48,7 +48,7 @@
 
         <div class="toolbar-actions">
           <div class="filter-pills" role="group" aria-label="Фильтр заданий">
-            <button type="button" class="filter-btn active" data-filter="all">Все (50)</button>
+            <button type="button" class="filter-btn active" data-filter="all">Все (51)</button>
             <button type="button" class="filter-btn" data-filter="todo">Невыполненные</button>
             <button type="button" class="filter-btn" data-filter="2_1">Урок 2.1</button>
             <button type="button" class="filter-btn" data-filter="2_2">Урок 2.2</button>
@@ -77,8 +77,8 @@
           <strong>Когда запускать <code>init.sql</code>:</strong>
           <ul style="margin: 0.4rem 0 0; padding-left: 1.25rem;">
             <li><strong>Для всех уроков 2.1–2.5</strong> используется один и тот же базовый контейнер <code>course_pg_primary</code> (дополнительные Docker-профили не нужны — достаточно <code>docker compose up -d</code>).</li>
-            <li><strong>Перед стартом Урока 2.1</strong> загрузи <code>init.sql</code> один раз — и все 50 заданий практикума сразу заработают на едином датасете.</li>
-            <li><strong>Для сброса состояния:</strong> скрипт полностью идемпотентен — он безопасно удалит старые и учебные таблицы (включая <code>tags</code>, <code>product_tags</code>, <code>schema_migrations</code> из Урока 2.1) и вернёт базу к чистому старту.</li>
+            <li><strong>Перед стартом Урока 2.1</strong> загрузи <code>init.sql</code> один раз — и все 51 задание практикума сразу заработают на едином датасете.</li>
+            <li><strong>Для сброса состояния:</strong> скрипт полностью идемпотентен — он безопасно удалит старые и учебные таблицы (включая <code>customer_profiles</code>, <code>tags</code>, <code>product_tags</code>, <code>schema_migrations</code> из Урока 2.1) и вернёт базу к чистому старту.</li>
           </ul>
         </div>
       </div>
@@ -544,9 +544,9 @@
 
     <!-- ==================== 01. УРОК 2.1 ==================== -->
     <section id="sec-2-1" data-section-lesson="2_1">
-      <h2><span class="sec-num">01</span> Урок 2.1 · Нормализация (1НФ–3НФ), связи M:N и миграции (9 заданий) <a class="sec-lesson-link" href="../../lessons/lesson_2_1.html">Урок 2.1 →</a></h2>
+      <h2><span class="sec-num">01</span> Урок 2.1 · Нормализация (1НФ–3НФ), связи (1:1, 1:N, M:N) и миграции (10 заданий) <a class="sec-lesson-link" href="../../lessons/lesson_2_1.html">Урок 2.1 →</a></h2>
       <p>
-        Начинаем с простого знакомства с нашей схемой в 3НФ, затем создаём таблицу-мостик <code>M:N</code>, пробуем сломать составной ключ, приводим «грязную» таблицу к 1НФ и пишем настоящую транзакционную UP/DOWN-миграцию.
+        Начинаем с простого знакомства с нашей схемой в 3НФ, затем создаём таблицу-спутник со связью <code>1:1</code> и таблицу-мостик <code>M:N</code>, пробуем сломать ограничения, приводим «грязную» таблицу к 1НФ и пишем настоящую транзакционную UP/DOWN-миграцию.
       </p>
 
       <h3>Часть А. Разминка: изучаем нормализованную схему 3НФ</h3>
@@ -630,13 +630,55 @@ ORDER BY p.id;</code></pre>
         </details>
       </div>
 
-      <h3>Часть Б. Связь «многие-ко-многим» (M:N) и приведение к 1НФ</h3>
+      <h3>Часть Б. Связи 1:1 и «многие-ко-многим» (M:N), приведение к 1НФ</h3>
 
       <div class="task-card" data-task-id="2_1_4" data-lesson="2_1">
         <div class="task-head">
           <div class="task-title-wrap">
             <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.4" />
-            <div class="task-title"><span class="task-num">2.1.4</span> Создаём справочник тегов и таблицу-мостик</div>
+            <div class="task-title"><span class="task-num">2.1.4</span> Профиль покупателя: реализуем связь 1:1 и ловим дубликат</div>
+          </div>
+          <span class="lvl-badge lvl-base">Базовое</span>
+        </div>
+        <p class="task-desc">
+          Создай таблицу-спутник <code>customer_profiles</code> со связью <strong>1:1</strong> к <code>customers</code> через общий первичный ключ: <code>customer_id INT PRIMARY KEY REFERENCES customers(id) ON DELETE CASCADE</code>, <code>telegram TEXT UNIQUE</code>, <code>birth_date DATE</code>. Добавь профили для клиентов <code>1</code> (<code>'@alisa_k'</code>, <code>'2004-03-15'</code>) и <code>2</code> (<code>'@boris_t'</code>, <code>'2002-11-20'</code>). Выведи всех клиентов с их профилями через <code>LEFT JOIN</code>, а затем попробуй вставить <em>второй</em> профиль для клиента <code>1</code> — убедись, что база заблокирует дубликат.
+        </p>
+        <p class="task-hint">Подсказка: когда <code>customer_id</code> одновременно является и <code>PRIMARY KEY</code>, и <code>FOREIGN KEY</code>, у каждого клиента может быть ровно 0 или 1 профиль.</p>
+        <details class="solution">
+          <summary>Показать ответ</summary>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">SQL</span><button class="copy-btn" type="button">Копировать</button></div>
+            <pre><code class="language-sql">DROP TABLE IF EXISTS customer_profiles;
+
+CREATE TABLE customer_profiles (
+    customer_id INT PRIMARY KEY REFERENCES customers(id) ON DELETE CASCADE,
+    telegram    TEXT UNIQUE,
+    birth_date  DATE
+);
+
+INSERT INTO customer_profiles (customer_id, telegram, birth_date) VALUES
+    (1, '@alisa_k', '2004-03-15'),
+    (2, '@boris_t', '2002-11-20');
+
+SELECT c.id, c.full_name, cp.telegram, cp.birth_date
+FROM customers AS c
+LEFT JOIN customer_profiles AS cp
+    ON cp.customer_id = c.id
+ORDER BY c.id;
+
+-- Краш-тест связи 1:1 — упадёт с ошибкой duplicate key (customer_profiles_pkey):
+INSERT INTO customer_profiles (customer_id, telegram, birth_date)
+VALUES (1, '@alisa_second', '2004-03-15');</code></pre>
+          </div>
+          <p class="solution-note">У остальных клиентов в результате <code>LEFT JOIN</code> профиль равен <code>NULL</code> — это типичная опциональная связь <code>1 : 0..1</code>.</p>
+        </details>
+      </div>
+
+      <div class="task-card" data-task-id="2_1_5" data-lesson="2_1">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.5" />
+            <div class="task-title"><span class="task-num">2.1.5</span> Создаём справочник тегов и таблицу-мостик</div>
           </div>
           <span class="lvl-badge lvl-base">Базовое</span>
         </div>
@@ -673,11 +715,11 @@ INSERT INTO product_tags (product_id, tag_id) VALUES
         </details>
       </div>
 
-      <div class="task-card" data-task-id="2_1_5" data-lesson="2_1">
+      <div class="task-card" data-task-id="2_1_6" data-lesson="2_1">
         <div class="task-head">
           <div class="task-title-wrap">
-            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.5" />
-            <div class="task-title"><span class="task-num">2.1.5</span> Читаем товары с их тегами через мостик</div>
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.6" />
+            <div class="task-title"><span class="task-num">2.1.6</span> Читаем товары с их тегами через мостик</div>
           </div>
           <span class="lvl-badge lvl-base">Базовое</span>
         </div>
@@ -701,11 +743,11 @@ ORDER BY p.id, t.name;</code></pre>
         </details>
       </div>
 
-      <div class="task-card" data-task-id="2_1_6" data-lesson="2_1">
+      <div class="task-card" data-task-id="2_1_7" data-lesson="2_1">
         <div class="task-head">
           <div class="task-title-wrap">
-            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.6" />
-            <div class="task-title"><span class="task-num">2.1.6</span> Эксперимент: проверяем защиту составного ключа и FK</div>
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.7" />
+            <div class="task-title"><span class="task-num">2.1.7</span> Эксперимент: проверяем защиту составного ключа и FK</div>
           </div>
           <span class="lvl-badge lvl-mid">Эксперимент</span>
         </div>
@@ -726,11 +768,11 @@ INSERT INTO product_tags (product_id, tag_id) VALUES (1, 999);</code></pre>
         </details>
       </div>
 
-      <div class="task-card" data-task-id="2_1_7" data-lesson="2_1">
+      <div class="task-card" data-task-id="2_1_8" data-lesson="2_1">
         <div class="task-head">
           <div class="task-title-wrap">
-            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.7" />
-            <div class="task-title"><span class="task-num">2.1.7</span> Разбираем список через запятую в 1НФ</div>
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.8" />
+            <div class="task-title"><span class="task-num">2.1.8</span> Разбираем список через запятую в 1НФ</div>
           </div>
           <span class="lvl-badge lvl-mid">Среднее</span>
         </div>
@@ -766,11 +808,11 @@ ORDER BY order_id, item_name;</code></pre>
 
       <h3>Часть В. Безопасные миграции схемы БД (UP и DOWN)</h3>
 
-      <div class="task-card" data-task-id="2_1_8" data-lesson="2_1">
+      <div class="task-card" data-task-id="2_1_9" data-lesson="2_1">
         <div class="task-head">
           <div class="task-title-wrap">
-            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.8" />
-            <div class="task-title"><span class="task-num">2.1.8</span> Безопасная UP-миграция: добавляем NOT NULL колонку <code>sku</code></div>
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.9" />
+            <div class="task-title"><span class="task-num">2.1.9</span> Безопасная UP-миграция: добавляем NOT NULL колонку <code>sku</code></div>
           </div>
           <span class="lvl-badge lvl-mid">Среднее</span>
         </div>
@@ -810,11 +852,11 @@ SELECT id, title, sku FROM products ORDER BY id;</code></pre>
         </details>
       </div>
 
-      <div class="task-card" data-task-id="2_1_9" data-lesson="2_1">
+      <div class="task-card" data-task-id="2_1_10" data-lesson="2_1">
         <div class="task-head">
           <div class="task-title-wrap">
-            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.9" />
-            <div class="task-title"><span class="task-num">2.1.9</span> Откат схемы (DOWN-миграция 001)</div>
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2.1.10" />
+            <div class="task-title"><span class="task-num">2.1.10</span> Откат схемы (DOWN-миграция 001)</div>
           </div>
           <span class="lvl-badge lvl-mid">Среднее</span>
         </div>
