@@ -1,6 +1,7 @@
 /* =========================================================================
    Единая система тем (light / dark) и кнопка переключения для курса БД:
    index.html, docker_guide.html, lessons/*, practice/*
+   Основана на семантических CSS-переменных + ремаппинге инлайновых SVG.
    ========================================================================= */
 
 /* ==================== КНОПКА ПЕРЕКЛЮЧЕНИЯ ТЕМЫ ==================== */
@@ -16,7 +17,7 @@
   padding: 0.36rem 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--border-strong, var(--border, #e2e8f0));
-  background: var(--surface-soft, var(--surface-2, #f8fafc));
+  background: var(--surface-soft, #f8fafc);
   color: var(--text-body, #1e293b);
   cursor: pointer;
   white-space: nowrap;
@@ -64,31 +65,41 @@
   margin-bottom: 0;
 }
 
-/* ==================== ТЁМНАЯ ТЕМА: ОБЩАЯ ПАЛИТРА ПЕРЕМЕННЫХ ==================== */
+/* ==================== ТЁМНАЯ ТЕМА: ЕДИНЫЕ СЕМАНТИЧЕСКИЕ ТОКЕНЫ ==================== */
 :root[data-theme="dark"] {
   --bg: #0b1120;
   --surface: #131c2e;
   --surface-soft: #19243a;
+  --surface-subtle: #0e1525;
+  --surface-hover: rgba(56, 189, 248, 0.06);
   --surface-2: #19243a;
   --surface-3: #0e1525;
   --text: #f1f5f9;
   --text-body: #d1dbe8;
   --muted: #94a3b8;
   --border: #26344d;
+  --border-soft: rgba(38, 52, 77, 0.65);
   --border-strong: #364766;
   --accent: #38bdf8;
   --accent-solid: #0284c7;
   --accent-soft: rgba(56, 189, 248, 0.14);
+  --accent-soft-hover: rgba(56, 189, 248, 0.22);
   --accent-border: rgba(56, 189, 248, 0.42);
+  --accent-strong: #7dd3fc;
   --warn-bg: rgba(245, 158, 11, 0.12);
   --warn-border: #f59e0b;
+  --warn-border-soft: rgba(245, 158, 11, 0.38);
   --warn-text: #fcd34d;
   --tip-bg: rgba(34, 197, 94, 0.12);
+  --tip-bg-hover: rgba(34, 197, 94, 0.22);
   --tip-border: #22c55e;
+  --tip-border-soft: rgba(34, 197, 94, 0.38);
   --tip-text: #4ade80;
   --tip-solid: #22c55e;
   --err-bg: rgba(244, 63, 94, 0.13);
+  --err-bg-strong: rgba(244, 63, 94, 0.2);
   --err-border: #f43f5e;
+  --err-border-soft: rgba(244, 63, 94, 0.38);
   --err-text: #fda4af;
   --purple-bg: rgba(167, 139, 250, 0.15);
   --purple-border: rgba(167, 139, 250, 0.38);
@@ -103,666 +114,57 @@
   --code-text: #e6edf3;
   --code-header-bg: #111827;
   --code-border: #27344a;
+  --code-scroll-thumb: #334155;
+  --code-scroll-thumb-hover: #475569;
   --inline-code-bg: #1e293b;
   --inline-code-text: #7dd3fc;
   --inline-code-border: #334155;
+  --output-bg: #0e1525;
+  --output-border: #26344d;
+  --output-text: #cbd5e1;
+  --output-label-bg: #19243a;
   --row-even: rgba(255, 255, 255, 0.02);
   --row-hover: rgba(56, 189, 248, 0.07);
-}
-
-:root[data-theme="dark"] .theme-toggle-btn {
-  background: var(--surface-2);
-  border-color: var(--border-strong);
-  color: var(--text-body);
-}
-
-:root[data-theme="dark"] .theme-toggle-btn:hover,
-:root[data-theme="dark"] .theme-toggle-btn:focus-visible {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* ==================== ТЁМНАЯ ТЕМА: ОБЩИЕ КОНТЕЙНЕРЫ И ТИПОГРАФИКА ==================== */
-:root[data-theme="dark"] .lecture,
-:root[data-theme="dark"] .hero,
-:root[data-theme="dark"] .module-card {
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.38);
-}
-
-:root[data-theme="dark"] .pill-neutral {
-  background: var(--surface-2);
-  color: var(--muted);
-  border: 1px solid var(--border);
-}
-
-:root[data-theme="dark"] .pill-primary {
-  border: 1px solid var(--accent-border);
-}
-
-:root[data-theme="dark"] .pill-tip {
-  border: 1px solid rgba(34, 197, 94, 0.35);
-}
-
-:root[data-theme="dark"] .pill-warn {
-  border: 1px solid rgba(245, 158, 11, 0.35);
-}
-
-:root[data-theme="dark"] .pill-purple {
-  border: 1px solid var(--purple-border);
-}
-
-:root[data-theme="dark"] code:not(pre code) {
-  background: var(--inline-code-bg);
-  color: var(--inline-code-text);
-  border-color: var(--inline-code-border);
-}
-
-:root[data-theme="dark"] .callout-body strong {
-  color: #7dd3fc;
-}
-
-:root[data-theme="dark"] .callout.warn .callout-body strong {
-  color: var(--warn-text);
-}
-
-:root[data-theme="dark"] .callout.tip .callout-body strong {
-  color: var(--tip-text);
-}
-
-:root[data-theme="dark"] .callout.danger .callout-body strong {
-  color: var(--err-text);
-}
-
-/* ==================== ТЁМНАЯ ТЕМА: УРОКИ (lessons/*) ==================== */
-:root[data-theme="dark"] .focus-box {
-  background: var(--surface-2);
-  border-color: var(--border);
-}
-
-:root[data-theme="dark"] .toc-box {
-  background: var(--surface-3);
-  border-color: var(--border);
-}
-
-:root[data-theme="dark"] .toc-list li {
-  border-bottom-color: rgba(38, 52, 77, 0.6);
-}
-
-:root[data-theme="dark"] .toc-list a:hover {
-  background: var(--surface-2);
-  color: var(--accent);
-}
-
-:root[data-theme="dark"] .sec-num {
-  border: 1px solid var(--accent-border);
-}
-
-:root[data-theme="dark"] .course-nav-btn {
-  background: var(--surface-2);
-  border-color: var(--border-strong);
-  color: var(--text-body);
-}
-
-:root[data-theme="dark"] .course-nav-btn:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-:root[data-theme="dark"] .course-nav-btn.primary {
-  background: var(--accent-soft);
-  border-color: var(--accent-border);
-  color: var(--accent);
-}
-
-:root[data-theme="dark"] .pager-link {
-  background: var(--surface-2);
-  border-color: var(--border);
-}
-
-:root[data-theme="dark"] .pager-link:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-}
-
-:root[data-theme="dark"] .output-block {
-  background: var(--surface-3);
-  border-color: var(--border);
-  color: #cbd5e1;
-}
-
-:root[data-theme="dark"][data-page="docker-guide"] .output-block {
-  color: var(--tip-text);
-}
-
-:root[data-theme="dark"] .output-label {
-  border-bottom-color: var(--border);
-}
-
-:root[data-theme="dark"] .output-block .output-label {
-  background: var(--surface-2);
-  color: var(--muted);
-}
-
-:root[data-theme="dark"] .error-block {
-  background: var(--err-bg);
-  border-color: rgba(244, 63, 94, 0.38);
-  border-left-color: var(--err-border);
-  color: var(--err-text);
-}
-
-:root[data-theme="dark"] .error-block .output-label {
-  background: rgba(244, 63, 94, 0.18);
-  color: var(--err-text);
-}
-
-:root[data-theme="dark"] .compare-card {
-  background: var(--surface-2);
-  border-color: var(--border);
-}
-
-:root[data-theme="dark"] .compare-card.bad {
-  border-color: rgba(244, 63, 94, 0.42);
-}
-
-:root[data-theme="dark"] .compare-card.bad .compare-head {
-  background: var(--err-bg);
-  color: var(--err-text);
-  border-bottom-color: rgba(244, 63, 94, 0.32);
-}
-
-:root[data-theme="dark"] .compare-card.good {
-  border-color: rgba(34, 197, 94, 0.42);
-}
-
-:root[data-theme="dark"] .compare-card.good .compare-head {
-  background: var(--tip-bg);
-  color: var(--tip-text);
-  border-bottom-color: rgba(34, 197, 94, 0.32);
-}
-
-:root[data-theme="dark"] .table-wrapper {
-  background: var(--surface-3);
-  border-color: var(--border);
-}
-
-:root[data-theme="dark"] th {
-  background: var(--surface-2);
-  color: var(--text);
-}
-
-:root[data-theme="dark"] tbody tr:nth-child(even) {
-  background: var(--row-even);
-}
-
-:root[data-theme="dark"] tbody tr:hover {
-  background: var(--row-hover);
-}
-
-:root[data-theme="dark"] .task-card {
-  background: var(--surface-2);
-  border-color: var(--border);
-}
-
-:root[data-theme="dark"] .takeaway {
-  background: var(--surface-2);
-  border-color: var(--accent-border);
-  color: var(--text-body);
-}
-
-:root[data-theme="dark"] .code-block pre {
-  scrollbar-color: #334155 #080d17;
-}
-
-:root[data-theme="dark"] .code-block pre::-webkit-scrollbar-track {
-  background: #080d17;
-}
-
-:root[data-theme="dark"] .code-block pre::-webkit-scrollbar-thumb {
-  background: #334155;
-}
-
-:root[data-theme="dark"] .code-block pre::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
-
-/* ==================== ТЁМНАЯ ТЕМА: СОДЕРЖАНИЕ КУРСА (index.html) ==================== */
-:root[data-theme="dark"] .quick-card {
-  background: var(--surface-2);
-  border-color: var(--border);
-}
-
-:root[data-theme="dark"] .quick-card:hover {
-  background: #1f2d47;
-  border-color: var(--accent);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
-}
-
-:root[data-theme="dark"] .quick-card.primary-cta {
-  background: var(--accent-soft);
-  border-color: var(--accent-border);
-}
-
-:root[data-theme="dark"] .quick-card.primary-cta:hover {
-  background: rgba(56, 189, 248, 0.22);
-  border-color: var(--accent);
-}
-
-:root[data-theme="dark"] .quick-card.primary-cta .quick-title {
-  color: #7dd3fc;
-}
-
-:root[data-theme="dark"] .progress-bar {
-  background: var(--surface-3);
-  border-color: var(--border);
-}
-
-:root[data-theme="dark"] .progress-fill {
-  background: linear-gradient(90deg, #38bdf8, #22c55e);
-}
-
-:root[data-theme="dark"] .search-input {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
-  color: var(--text);
-}
-
-:root[data-theme="dark"] .search-input:focus {
-  background: var(--surface-2);
-  border-color: var(--accent);
-}
-
-:root[data-theme="dark"] .mod-jump a {
-  background: var(--surface-2);
-  border-color: var(--border);
-  color: var(--text-body);
-}
-
-:root[data-theme="dark"] .mod-jump a:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-:root[data-theme="dark"] .p-default {
-  border-color: rgba(34, 197, 94, 0.35);
-}
-
-:root[data-theme="dark"] .p-mod4 {
-  border-color: rgba(245, 158, 11, 0.35);
-}
-
-:root[data-theme="dark"] .slides-link {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
-  color: var(--text-body);
-}
-
-:root[data-theme="dark"] .slides-link:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-:root[data-theme="dark"] .slides-link.practice-link {
-  background: var(--tip-bg);
-  border-color: rgba(34, 197, 94, 0.38);
-  color: var(--tip-text);
-}
-
-:root[data-theme="dark"] .slides-link.practice-link:hover {
-  background: rgba(34, 197, 94, 0.22);
-  border-color: var(--tip-solid);
-  color: var(--tip-text);
-}
-
-:root[data-theme="dark"] .lesson-row {
-  border-bottom-color: rgba(38, 52, 77, 0.65);
-}
-
-:root[data-theme="dark"] .lesson-row:hover {
-  background: rgba(56, 189, 248, 0.06);
-}
-
-:root[data-theme="dark"] .lesson-check,
-:root[data-theme="dark"] .task-check {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
-}
-
-:root[data-theme="dark"] .lesson-check:checked,
-:root[data-theme="dark"] .task-check:checked {
-  background: var(--tip-border);
-  border-color: var(--tip-border);
-}
-
-:root[data-theme="dark"] .lesson-row.done .lesson-num {
-  border-color: rgba(34, 197, 94, 0.38);
-}
-
-:root[data-theme="dark"] .lesson-slides-btn {
-  background: var(--surface-2);
-  border-color: var(--border-strong);
-  color: var(--muted);
-}
-
-:root[data-theme="dark"] .lesson-slides-btn:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-:root[data-theme="dark"] .lesson-slides-btn.practice-btn {
-  background: var(--tip-bg);
-  border-color: rgba(34, 197, 94, 0.38);
-  color: var(--tip-text);
-}
-
-:root[data-theme="dark"] .lesson-slides-btn.practice-btn:hover {
-  background: rgba(34, 197, 94, 0.22);
-  border-color: var(--tip-solid);
-  color: var(--tip-text);
-}
-
-/* ==================== ТЁМНАЯ ТЕМА: ПРАКТИКУМЫ (practice/*) ==================== */
-:root[data-theme="dark"] .filter-btn {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
-  color: var(--text-body);
-}
-
-:root[data-theme="dark"] .filter-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-:root[data-theme="dark"] .filter-btn.active {
-  background: var(--accent-solid);
-  border-color: var(--accent);
-  color: #ffffff;
-}
-
-:root[data-theme="dark"] .format-chip {
-  background: var(--surface-2);
-  border-color: var(--border);
-  color: var(--muted);
-}
-
-:root[data-theme="dark"] .schema-box {
-  background: var(--surface-3);
-  border-color: var(--border);
-}
-
-:root[data-theme="dark"] .er-tag-pk {
-  background: rgba(56, 189, 248, 0.16);
-  color: #7dd3fc;
-}
-
-:root[data-theme="dark"] .er-tag-fk,
-:root[data-theme="dark"] .er-tag-ro {
-  background: rgba(245, 158, 11, 0.18);
-  color: #fcd34d;
-}
-
-:root[data-theme="dark"] .er-tag-uk {
-  background: rgba(167, 139, 250, 0.18);
-  color: #c4b5fd;
-}
-
-:root[data-theme="dark"] .er-tag-idx,
-:root[data-theme="dark"] .er-tag-rw {
-  background: rgba(34, 197, 94, 0.18);
-  color: #4ade80;
-}
-
-:root[data-theme="dark"] .er-tag-null {
-  background: rgba(244, 63, 94, 0.18);
-  color: #fda4af;
-}
-
-:root[data-theme="dark"] .quirk-chip {
-  background: var(--surface-2);
-  border-color: var(--border);
-  color: var(--text-body);
-}
-
-:root[data-theme="dark"] details.data-preview {
-  background: var(--surface-2);
-  border-color: var(--border);
-}
-
-:root[data-theme="dark"] details.data-preview summary {
-  background: var(--surface-2);
-  color: var(--accent);
-}
-
-:root[data-theme="dark"] details.data-preview[open] summary {
-  background: var(--accent-soft);
-  border-bottom-color: var(--border);
-}
-
-:root[data-theme="dark"] .null-pill {
-  background: rgba(244, 63, 94, 0.16);
-  color: #fda4af;
-  border-color: rgba(244, 63, 94, 0.36);
-}
-
-:root[data-theme="dark"] .status-pill {
-  background: var(--surface-3);
-  color: #cbd5e1;
-  border: 1px solid var(--border);
-}
-
-:root[data-theme="dark"] .task-card.project-card {
-  background: rgba(167, 139, 250, 0.08);
-  border-left-color: #a78bfa;
-}
-
-:root[data-theme="dark"] .task-card.done {
-  background: rgba(34, 197, 94, 0.09);
-  border-color: rgba(34, 197, 94, 0.38);
-}
-
-:root[data-theme="dark"] .task-card.done .task-num {
-  background: var(--tip-bg);
-  border-color: rgba(34, 197, 94, 0.38);
-  color: var(--tip-text);
-}
-
-:root[data-theme="dark"] .lvl-easy,
-:root[data-theme="dark"] .lvl-lab {
-  border-color: rgba(34, 197, 94, 0.38);
-}
-
-:root[data-theme="dark"] .lvl-mid,
-:root[data-theme="dark"] .lvl-exp,
-:root[data-theme="dark"] .lvl-bench {
-  border-color: rgba(245, 158, 11, 0.38);
-}
-
-:root[data-theme="dark"] .lvl-bug,
-:root[data-theme="dark"] .lvl-incident {
-  border-color: rgba(244, 63, 94, 0.38);
-}
-
-:root[data-theme="dark"] .lvl-sql {
-  background: var(--surface-3);
-  color: #cbd5e1;
-  border-color: var(--border-strong);
-}
-
-:root[data-theme="dark"] .lvl-boss {
-  background: rgba(244, 63, 94, 0.22);
-  color: #fecdd3;
-  border-color: rgba(244, 63, 94, 0.45);
-}
-
-:root[data-theme="dark"] .env-pg1 {
-  background: var(--surface-3);
-  color: #cbd5e1;
-  border-color: var(--border-strong);
-}
-
-:root[data-theme="dark"] .env-pg {
-  background: var(--accent-soft);
-  color: #7dd3fc;
-  border-color: var(--accent-border);
-}
-
-:root[data-theme="dark"] .env-ch {
-  background: var(--purple-bg);
-  color: var(--purple-text);
-  border-color: var(--purple-border);
-}
-
-:root[data-theme="dark"] .env-duel {
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.18) 0%, rgba(245, 158, 11, 0.18) 100%);
-  color: var(--text);
-  border-color: var(--border-strong);
-}
-
-:root[data-theme="dark"] .env-both {
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.18) 0%, rgba(167, 139, 250, 0.18) 100%);
-  color: var(--text);
-  border-color: var(--purple-border);
-}
-
-:root[data-theme="dark"] .state-bar {
-  background: var(--warn-bg);
-  border-color: rgba(245, 158, 11, 0.38);
-  color: var(--warn-text);
-}
-
-:root[data-theme="dark"] .observe-box {
-  background: var(--surface-3);
-  border-color: var(--accent-border);
-  border-left-color: var(--accent);
-}
-
-:root[data-theme="dark"] .solution-note {
-  background: var(--surface-3);
-  border-color: var(--border);
-  color: var(--text-body);
-}
-
-:root[data-theme="dark"] .tl-col-head.win1 {
-  background: var(--accent-soft);
-  color: #7dd3fc;
-  border-color: var(--accent-border);
-}
-
-:root[data-theme="dark"] .tl-col-head.win2 {
-  background: var(--warn-bg);
-  color: var(--warn-text);
-  border-color: rgba(245, 158, 11, 0.38);
-}
-
-:root[data-theme="dark"] .tl-wait {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
-  color: var(--muted);
-}
-
-:root[data-theme="dark"] .tl-wait.blocked {
-  background: var(--warn-bg);
-  border-color: var(--warn-border);
-  color: var(--warn-text);
-}
-
-:root[data-theme="dark"] .duel-col {
-  background: var(--surface-3);
-}
-
-:root[data-theme="dark"] .duel-col.duel-pg {
-  border-color: var(--accent-border);
-}
-
-:root[data-theme="dark"] .duel-col.duel-mysql {
-  border-color: rgba(245, 158, 11, 0.45);
-}
-
-:root[data-theme="dark"] .duel-pg .duel-col-head {
-  background: var(--accent-soft);
-  color: #7dd3fc;
-}
-
-:root[data-theme="dark"] .duel-mysql .duel-col-head {
-  background: var(--warn-bg);
-  color: var(--warn-text);
-}
-
-:root[data-theme="dark"] .duel-pg .duel-result {
-  background: rgba(56, 189, 248, 0.1);
-  color: #bae6fd;
-  border-color: rgba(56, 189, 248, 0.3);
-}
-
-:root[data-theme="dark"] .duel-mysql .duel-result {
-  background: rgba(245, 158, 11, 0.1);
-  color: #fde68a;
-  border-color: rgba(245, 158, 11, 0.3);
-}
-
-:root[data-theme="dark"] .nc-host {
-  background: #334155;
-  color: #e2e8f0;
-}
-
-:root[data-theme="dark"] .nc-primary {
-  background: rgba(56, 189, 248, 0.18);
-  color: #7dd3fc;
-}
-
-:root[data-theme="dark"] .nc-standby {
-  background: rgba(34, 211, 238, 0.18);
-  color: #67e8f9;
-}
-
-:root[data-theme="dark"] .nc-logical {
-  background: rgba(167, 139, 250, 0.18);
-  color: #c4b5fd;
-}
-
-:root[data-theme="dark"] .nc-bouncer {
-  background: rgba(245, 158, 11, 0.18);
-  color: #fcd34d;
-}
-
-:root[data-theme="dark"] .nc-pitr {
-  background: rgba(34, 197, 94, 0.18);
-  color: #4ade80;
-}
-
-:root[data-theme="dark"] .alert-strip {
-  background: var(--err-bg);
-  border-color: rgba(244, 63, 94, 0.38);
-  color: #fecdd3;
-}
-
-:root[data-theme="dark"] .alert-strip strong {
-  color: var(--err-text);
-}
-
-:root[data-theme="dark"] .ms-step {
-  background: var(--purple-bg);
-  border-color: var(--purple-border);
-  color: var(--purple-text);
-}
-
-:root[data-theme="dark"] .file-link-bar:hover {
-  background: rgba(56, 189, 248, 0.24);
-  border-color: var(--accent);
-}
+  --progress-track: #0e1525;
+  --progress-grad: linear-gradient(90deg, #38bdf8, #22c55e);
+  --check-bg: #0e1525;
+  --done-bg: rgba(34, 197, 94, 0.09);
+  --project-bg: rgba(167, 139, 250, 0.08);
+  --boss-bg: rgba(244, 63, 94, 0.22);
+  --boss-text: #fecdd3;
+  --boss-border: rgba(244, 63, 94, 0.45);
+  --env-duel-bg: linear-gradient(90deg, rgba(56, 189, 248, 0.18) 0%, rgba(245, 158, 11, 0.18) 100%);
+  --env-both-bg: linear-gradient(90deg, rgba(56, 189, 248, 0.18) 0%, rgba(167, 139, 250, 0.18) 100%);
+  --duel-pg-border: rgba(56, 189, 248, 0.42);
+  --duel-mysql-border: rgba(245, 158, 11, 0.45);
+  --duel-pg-result-bg: rgba(56, 189, 248, 0.1);
+  --duel-pg-result-text: #bae6fd;
+  --duel-mysql-result-bg: rgba(245, 158, 11, 0.1);
+  --duel-mysql-result-text: #fde68a;
+  --shadow-card: 0 12px 36px rgba(0, 0, 0, 0.38);
+  --shadow-hover: 0 6px 18px rgba(0, 0, 0, 0.32);
+}
+
+/* Тонкие контрастные акценты в тёмной теме (границы пилюль, оглавления и карточек) */
+:root[data-theme="dark"] .pill-primary { border-color: var(--accent-border); }
+:root[data-theme="dark"] .pill-tip     { border-color: var(--tip-border-soft); }
+:root[data-theme="dark"] .pill-neutral { border-color: var(--border); }
+:root[data-theme="dark"] .sec-num      { border-color: var(--accent-border); }
+:root[data-theme="dark"] .toc-box      { background: var(--surface-3); }
+:root[data-theme="dark"] .compare-card { background: var(--surface-2); }
+:root[data-theme="dark"] .table-wrapper { background: var(--surface-3); }
+:root[data-theme="dark"] .schema-box   { background: var(--surface-3); }
+:root[data-theme="dark"] .takeaway     { border-color: var(--accent-border); }
+:root[data-theme="dark"] .course-nav-btn { border-color: var(--border-strong); }
+:root[data-theme="dark"] .course-nav-btn:hover { background: var(--accent-soft); }
+:root[data-theme="dark"] .quick-card:hover { background: #1f2d47; }
 
 /* ==================== ТЁМНАЯ ТЕМА: ER-ДИАГРАММЫ В ПРАКТИКУМАХ (.er-svg) ==================== */
-/* Нейтральные фоны карточек и плашек */
 :root[data-theme="dark"] .er-svg [fill="#ffffff"] { fill: #131c2e; }
 :root[data-theme="dark"] .er-svg [fill="#f8fafc"] { fill: #19243a; }
 :root[data-theme="dark"] .er-svg [fill="#f1f5f9"] { fill: #1e293b; }
 :root[data-theme="dark"] .er-svg [fill="#e2e8f0"] { fill: #26344d; }
 
-/* Заголовки и цветные бейджи (светлые фоны -> полупрозрачные тёмные) */
 :root[data-theme="dark"] .er-svg [fill="#eff6ff"],
 :root[data-theme="dark"] .er-svg [fill="#f0f9ff"] { fill: #162944; }
 :root[data-theme="dark"] .er-svg [fill="#dbeafe"],
@@ -786,7 +188,6 @@
 :root[data-theme="dark"] .er-svg [fill="#fee2e2"],
 :root[data-theme="dark"] .er-svg [fill="#ffe4e6"] { fill: #4c1d2b; }
 
-/* Текстовые цвета в ER-схемах (тёмные -> светлые и контрастные) */
 :root[data-theme="dark"] .er-svg text[fill="#0f172a"] { fill: #f1f5f9; }
 :root[data-theme="dark"] .er-svg text[fill="#1e293b"] { fill: #e2e8f0; }
 :root[data-theme="dark"] .er-svg text[fill="#334155"] { fill: #cbd5e1; }
@@ -824,13 +225,11 @@
 :root[data-theme="dark"] .er-svg text[fill="#9f1239"],
 :root[data-theme="dark"] .er-svg text[fill="#be123c"] { fill: #fda4af; }
 
-/* Залитые стрелки-маркеры в ER-схемах */
 :root[data-theme="dark"] .er-svg path[fill="#7c3aed"] { fill: #a78bfa; }
 :root[data-theme="dark"] .er-svg path[fill="#2563eb"] { fill: #38bdf8; }
 :root[data-theme="dark"] .er-svg path[fill="#16a34a"] { fill: #4ade80; }
 :root[data-theme="dark"] .er-svg path[fill="#d97706"] { fill: #fbbf24; }
 
-/* Границы и соединители в ER-схемах */
 :root[data-theme="dark"] .er-svg [stroke="#f1f5f9"] { stroke: #1e293b; }
 :root[data-theme="dark"] .er-svg [stroke="#e2e8f0"] { stroke: #26344d; }
 :root[data-theme="dark"] .er-svg [stroke="#cbd5e1"] { stroke: #3b4f70; }
@@ -841,7 +240,7 @@
 :root[data-theme="dark"] .er-svg [stroke="#bae6fd"] { stroke: #254b75; }
 :root[data-theme="dark"] .er-svg [stroke="#93c5fd"],
 :root[data-theme="dark"] .er-svg [stroke="#7dd3fc"],
-:root[data-theme="dark"] .er-svg [stroke="#60a5fa"] { stroke: #38bdf8; }
+:root[data-theme="dark"] .er-svg [stroke="#60a5fa"],
 :root[data-theme="dark"] .er-svg [stroke="#2563eb"] { stroke: #38bdf8; }
 
 :root[data-theme="dark"] .er-svg [stroke="#bbf7d0"] { stroke: #1d5438; }
@@ -849,7 +248,7 @@
 :root[data-theme="dark"] .er-svg [stroke="#16a34a"] { stroke: #4ade80; }
 
 :root[data-theme="dark"] .er-svg [stroke="#ddd6fe"] { stroke: #433273; }
-:root[data-theme="dark"] .er-svg [stroke="#c4b5fd"] { stroke: #a78bfa; }
+:root[data-theme="dark"] .er-svg [stroke="#c4b5fd"],
 :root[data-theme="dark"] .er-svg [stroke="#7c3aed"] { stroke: #a78bfa; }
 
 :root[data-theme="dark"] .er-svg [stroke="#fde68a"] { stroke: #6b4c17; }
@@ -864,179 +263,11 @@
 :root[data-theme="dark"] .er-svg [stroke="#fca5a5"],
 :root[data-theme="dark"] .er-svg [stroke="#fda4af"] { stroke: #fb7185; }
 
-/* ==================== СВЕТЛАЯ ТЕМА ДЛЯ DOCKER GUIDE ==================== */
-:root[data-theme="light"][data-page="docker-guide"] {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --surface-3: #f1f5f9;
-  --text: #0f172a;
-  --text-body: #1e293b;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --accent: #2563eb;
-  --accent-solid: #2563eb;
-  --accent-soft: #eff6ff;
-  --accent-border: #bfdbfe;
-  --warn-bg: #fffbeb;
-  --warn-border: #f59e0b;
-  --warn-text: #92400e;
-  --tip-bg: #f0fdf4;
-  --tip-border: #16a34a;
-  --tip-text: #166534;
-  --err-bg: #fef2f2;
-  --err-border: #dc2626;
-  --err-text: #991b1b;
-  --purple-bg: #f5f3ff;
-  --purple-text: #6d28d9;
-  --purple-border: #ddd6fe;
-  --rose-bg: #fff1f2;
-  --rose-text: #be123c;
-  --rose-border: #fecdd3;
-  --code-bg: #0d1117;
-  --code-text: #e6edf3;
-  --code-header-bg: #161b22;
-  --code-border: #30363d;
-  --inline-code-bg: #f1f5f9;
-  --inline-code-text: #be123c;
-  --inline-code-border: #e2e8f0;
-  --row-even: #fcfcfd;
-  --row-hover: #f1f5f9;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .lecture {
-  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.045);
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .nav-btn {
-  background: #f8fafc;
-  border-color: var(--border);
-  color: var(--text-body);
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .nav-btn:hover {
-  background: #ffffff;
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .nav-btn.primary {
-  background: var(--accent-soft);
-  border-color: var(--accent-border);
-  color: var(--accent);
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .cred-pill {
-  background: #ffffff;
-  border-color: var(--border-strong);
-  color: var(--muted);
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .toc-box {
-  background: #ffffff;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .toc-list li {
-  border-bottom-color: #f1f5f9;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .toc-list a:hover {
-  background: #f8fafc;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .copy-btn {
-  background: transparent;
-  border-color: #30363d;
-  color: #c9d1d9;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .copy-btn:hover {
-  background: #21262d;
-  border-color: #8b949e;
-  color: #ffffff;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .copy-btn.copied {
-  background: transparent;
-  border-color: #238636;
-  color: #3fb950;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .output-block {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #166534;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .output-label {
-  background: #f1f5f9;
-  color: var(--muted);
-  border-bottom-color: var(--border);
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .picker-tab {
-  background: #ffffff;
-  border-color: var(--border-strong);
-  color: var(--text-body);
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .picker-tab.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #ffffff;
-  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.25);
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .callout-body strong {
-  color: #1e40af;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .callout.warn .callout-body strong {
-  color: var(--warn-text);
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .callout.tip .callout-body strong {
-  color: var(--tip-text);
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .callout.danger .callout-body strong {
-  color: var(--err-text);
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .table-wrapper {
-  background: #ffffff;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .faq-body {
-  background: #ffffff;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .compare-card {
-  background: #ffffff;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .compare-card.bad {
-  border-color: #fecaca;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .compare-card.bad .compare-head {
-  border-bottom-color: #fecaca;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .compare-card.good {
-  border-color: #bbf7d0;
-}
-
-:root[data-theme="light"][data-page="docker-guide"] .compare-card.good .compare-head {
-  border-bottom-color: #bbf7d0;
-}
-
-/* Светлая тема для SVG-схемы сети Docker в docker_guide.html */
+/* ==================== СВЕТЛАЯ ТЕМА: SVG-СХЕМА СЕТИ В DOCKER GUIDE ==================== */
 :root[data-theme="light"][data-page="docker-guide"] .diagram-box svg [fill="#131c2e"],
 :root[data-theme="light"][data-page="docker-guide"] .diagram-modal-canvas svg [fill="#131c2e"] { fill: #ffffff; }
 :root[data-theme="light"][data-page="docker-guide"] .diagram-box svg [fill="#19243a"],
-:root[data-theme="light"][data-page="docker-guide"] .diagram-modal-canvas svg [fill="#19243a"] { fill: #f8fafc; }
+:root[data-theme="light"][data-page="docker-guide"] .diagram-modal-canvas svg [fill="#19243a"],
 :root[data-theme="light"][data-page="docker-guide"] .diagram-box svg [fill="#0e1525"],
 :root[data-theme="light"][data-page="docker-guide"] .diagram-modal-canvas svg [fill="#0e1525"] { fill: #f8fafc; }
 
@@ -1072,7 +303,7 @@
 :root[data-theme="light"][data-page="docker-guide"] .diagram-box svg [stroke="#38bdf8"],
 :root[data-theme="light"][data-page="docker-guide"] .diagram-modal-canvas svg [stroke="#38bdf8"] { stroke: #2563eb; }
 :root[data-theme="light"][data-page="docker-guide"] .diagram-box svg [stroke="#4ade80"],
-:root[data-theme="light"][data-page="docker-guide"] .diagram-modal-canvas svg [stroke="#4ade80"] { stroke: #16a34a; }
+:root[data-theme="light"][data-page="docker-guide"] .diagram-modal-canvas svg [stroke="#4ade80"],
 :root[data-theme="light"][data-page="docker-guide"] .diagram-box svg [stroke="#22c55e"],
 :root[data-theme="light"][data-page="docker-guide"] .diagram-modal-canvas svg [stroke="#22c55e"] { stroke: #16a34a; }
 :root[data-theme="light"][data-page="docker-guide"] .diagram-box svg [stroke="#f59e0b"],

@@ -10,172 +10,26 @@
 
   <!-- Highlight.js: тема github-dark (как в уроках курса) -->
   <link rel="stylesheet" href="assets/vendor/highlightjs/github-dark.min.css" />
-  <!-- Общие стили для диаграмм и полноэкранного просмотрщика -->
+  <!-- Общие стили для диаграмм, уроков и единой темы -->
   <link rel="stylesheet" href="assets/css/diagrams.css" />
+  <link rel="stylesheet" href="assets/css/lesson.css" />
+  <link rel="stylesheet" href="assets/css/theme.css" />
   <script src="assets/js/theme.js"></script>
 
   <style>
+    /* Специфичные стили гида по Docker поверх общих lesson.css и theme.css */
     :root {
-      --bg: #0b1120;
-      --surface: #131c2e;
-      --surface-2: #19243a;
-      --surface-3: #0e1525;
-      --text: #f1f5f9;
-      --text-body: #d1dbe8;
-      --muted: #94a3b8;
-      --border: #26344d;
-      --border-strong: #364766;
-      --accent: #38bdf8;
-      --accent-solid: #0284c7;
-      --accent-soft: rgba(56, 189, 248, 0.14);
-      --accent-border: rgba(56, 189, 248, 0.42);
-      --warn-bg: rgba(245, 158, 11, 0.11);
-      --warn-border: #f59e0b;
-      --warn-text: #fcd34d;
-      --tip-bg: rgba(34, 197, 94, 0.11);
-      --tip-border: #22c55e;
-      --tip-text: #4ade80;
-      --err-bg: rgba(244, 63, 94, 0.12);
-      --err-border: #f43f5e;
-      --err-text: #fda4af;
-      --purple-bg: rgba(167, 139, 250, 0.14);
-      --purple-text: #c4b5fd;
-      --purple-border: rgba(167, 139, 250, 0.35);
-      --rose-bg: rgba(251, 113, 133, 0.14);
-      --rose-text: #fda4af;
-      --rose-border: rgba(251, 113, 133, 0.35);
-      --code-bg: #080d17;
-      --code-text: #e6edf3;
-      --code-header-bg: #111827;
-      --code-border: #27344a;
-      --inline-code-bg: #1e293b;
-      --inline-code-text: #7dd3fc;
-      --inline-code-border: #334155;
-      --row-even: rgba(255, 255, 255, 0.02);
-      --row-hover: rgba(56, 189, 248, 0.07);
+      --purple-bg: #f5f3ff;
+      --purple-text: #6d28d9;
+      --purple-border: #ddd6fe;
+      --rose-bg: #fff1f2;
+      --rose-text: #be123c;
+      --rose-border: #fecdd3;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      margin: 0;
-      padding: 2.25rem 1.25rem 5rem;
-      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 16px;
-      line-height: 1.72;
-      background-color: var(--bg);
-      color: var(--text-body);
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* Основной контейнер */
     .lecture {
       max-width: 940px;
-      margin: 0 auto;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
       padding: 2.75rem 3.25rem;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.42);
-    }
-
-    /* ==================== ШАПКА ДОКУМЕНТА ==================== */
-    .course-nav {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.65rem;
-      padding-bottom: 1.15rem;
-      margin-bottom: 1.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .course-nav-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.45rem;
-    }
-
-    .nav-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      text-decoration: none;
-      font-size: 0.84rem;
-      font-weight: 600;
-      padding: 0.38rem 0.78rem;
-      border-radius: 8px;
-      border: 1px solid var(--border-strong);
-      background: var(--surface-2);
-      color: var(--text-body);
-      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
-    }
-
-    .nav-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .nav-btn.primary {
-      background: var(--accent-soft);
-      border-color: var(--accent-border);
-      color: var(--accent);
-    }
-
-    .lecture-header {
-      padding-bottom: 1.85rem;
-      margin-bottom: 2.35rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .meta-pills {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
-
-    .pill {
-      font-size: 0.78rem;
-      font-weight: 600;
-      padding: 0.28rem 0.75rem;
-      border-radius: 999px;
-      letter-spacing: 0.01em;
-    }
-
-    .pill-primary {
-      background: var(--accent-soft);
-      color: var(--accent);
-      border: 1px solid var(--accent-border);
-    }
-
-    .pill-tip {
-      background: var(--tip-bg);
-      color: var(--tip-text);
-      border: 1px solid rgba(34, 197, 94, 0.35);
-    }
-
-    .pill-neutral {
-      background: var(--surface-2);
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
-
-    h1 {
-      margin: 0 0 0.85rem;
-      font-size: 2rem;
-      font-weight: 700;
-      line-height: 1.25;
-      letter-spacing: -0.025em;
-      color: var(--text);
     }
 
     .hero-lead {
@@ -185,23 +39,7 @@
       line-height: 1.65;
     }
 
-    /* Карточка реквизитов доступа */
-    .focus-box {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.15rem 1.35rem;
-    }
-
-    .focus-title {
-      font-size: 0.76rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted);
-      margin: 0 0 0.65rem;
-    }
-
+    /* Плашки реквизитов доступа */
     .creds-bar {
       display: flex;
       flex-wrap: wrap;
@@ -213,7 +51,7 @@
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      background: var(--surface-3);
+      background: var(--surface);
       border: 1px solid var(--border-strong);
       border-radius: 8px;
       padding: 0.38rem 0.75rem;
@@ -222,6 +60,10 @@
       color: var(--muted);
       cursor: pointer;
       transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    }
+
+    :root[data-theme="dark"] .cred-pill {
+      background: var(--surface-3);
     }
 
     .cred-pill:hover {
@@ -249,144 +91,6 @@
       color: var(--muted);
     }
 
-    /* Автоматическое оглавление */
-    .toc-box {
-      margin-top: 1.1rem;
-      padding: 0.95rem 1.25rem;
-      background: var(--surface-3);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      font-size: 0.9rem;
-    }
-
-    .toc-box:empty {
-      display: none;
-    }
-
-    .toc-title {
-      font-size: 0.74rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted);
-      margin-bottom: 0.55rem;
-    }
-
-    .toc-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-
-    .toc-list li {
-      margin: 0;
-      border-bottom: 1px solid rgba(38, 52, 77, 0.55);
-    }
-
-    .toc-list li:last-child {
-      border-bottom: none;
-    }
-
-    .toc-list a {
-      display: flex;
-      align-items: baseline;
-      gap: 0.65rem;
-      padding: 0.42rem 0.55rem;
-      border-radius: 8px;
-      color: var(--text-body);
-      text-decoration: none;
-      font-weight: 500;
-      line-height: 1.45;
-      transition: background-color 0.15s ease, color 0.15s ease;
-    }
-
-    .toc-list a:hover {
-      background: var(--surface-2);
-      color: var(--accent);
-    }
-
-    .toc-num {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 1.85rem;
-      padding: 0.08rem 0.4rem;
-      border-radius: 6px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 0.78rem;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-
-    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
-    section {
-      margin-top: 3rem;
-      scroll-margin-top: 1.5rem;
-    }
-
-    section:first-of-type {
-      margin-top: 0;
-    }
-
-    h2 {
-      display: flex;
-      align-items: center;
-      gap: 0.7rem;
-      margin: 0 0 1.1rem;
-      padding-bottom: 0.65rem;
-      border-bottom: 1px solid var(--border);
-      font-size: 1.38rem;
-      font-weight: 700;
-      letter-spacing: -0.015em;
-      color: var(--text);
-    }
-
-    .sec-num {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 2rem;
-      height: 2rem;
-      padding: 0 0.45rem;
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--accent);
-      background: var(--accent-soft);
-      border: 1px solid var(--accent-border);
-      border-radius: 8px;
-      flex-shrink: 0;
-    }
-
-    h3 {
-      margin: 1.85rem 0 0.7rem;
-      font-size: 1.08rem;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    p {
-      margin: 0 0 1.05rem;
-    }
-
-    ul, ol {
-      margin: 0 0 1.2rem;
-      padding-left: 1.45rem;
-    }
-
-    li {
-      margin-bottom: 0.5rem;
-    }
-
-    li strong, p strong {
-      color: var(--text);
-      font-weight: 600;
-    }
-
     a.ext-link {
       color: var(--accent);
       text-decoration: none;
@@ -403,132 +107,17 @@
       font-size: 0.78em;
       padding: 0.1rem 0.45rem;
       border-radius: 5px;
-      background: var(--surface-3);
+      background: var(--surface-subtle);
       border: 1px solid var(--border-strong);
       border-bottom-width: 2px;
       color: var(--text);
     }
 
-    /* ==================== ИНЛАЙН-КОД И БЛОКИ КОДА ==================== */
-    code:not(pre code) {
-      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.85em;
-      background: var(--inline-code-bg);
-      color: var(--inline-code-text);
-      padding: 0.15em 0.42em;
-      border-radius: 5px;
-      border: 1px solid var(--inline-code-border);
-    }
-
-    .code-block {
-      margin: 0.9rem 0 1.25rem;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid var(--code-border);
-      background: var(--code-bg);
-    }
-
-    .code-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      padding: 0.48rem 0.95rem;
-      background: var(--code-header-bg);
-      border-bottom: 1px solid var(--code-border);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 0.75rem;
-      color: #94a3b8;
-    }
-
-    .code-lang {
-      font-weight: 600;
-      letter-spacing: 0.03em;
-    }
-
-    .copy-btn {
-      background: var(--surface-2);
-      border: 1px solid var(--border-strong);
-      color: var(--text);
-      font-family: "Inter", sans-serif;
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 0.24rem 0.68rem;
-      border-radius: 6px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.15s ease;
-    }
-
-    .copy-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .copy-btn.copied {
-      background: var(--tip-bg);
-      border-color: var(--tip-border);
-      color: var(--tip-text);
-    }
-
-    .code-block pre {
-      margin: 0;
-      padding: 0.95rem 1.2rem;
-      overflow-x: auto;
-      background: var(--code-bg) !important;
-      color: var(--code-text);
-      color-scheme: dark;
-      scrollbar-width: thin;
-      scrollbar-color: #334155 #080d17;
-    }
-
-    .code-block pre code,
-    .code-block pre code.hljs {
-      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.85rem;
-      line-height: 1.58;
-      padding: 0 !important;
-      background: transparent !important;
-    }
-
-    .code-block pre code:not(.hljs) {
-      color: var(--code-text);
-    }
-
-    /* ==================== ВЫВОД КОНСОЛИ ==================== */
     .output-block {
-      margin: -0.8rem 0 1.35rem;
-      border-radius: 10px;
-      overflow: hidden;
-      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.82rem;
-      line-height: 1.55;
-      background: var(--surface-3);
-      border: 1px solid var(--border);
       color: var(--tip-text);
     }
 
-    .output-label {
-      padding: 0.3rem 0.95rem;
-      font-family: "Inter", sans-serif;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      background: var(--surface-2);
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .output-block pre {
-      margin: 0;
-      padding: 0.65rem 1rem;
-      overflow-x: auto;
-      white-space: pre;
-      font-family: inherit;
-    }
-
-    /* ==================== КАРТОЧКИ СЛОВАРЯ И ШАГОВ ==================== */
+    /* Карточки словаря и шагов старта */
     .glossary-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -537,7 +126,7 @@
     }
 
     .mini-card {
-      background: var(--surface-2);
+      background: var(--surface-soft);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 1.05rem 1.2rem;
@@ -568,7 +157,7 @@
     }
 
     .step-item {
-      background: var(--surface-2);
+      background: var(--surface-soft);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 1.15rem 1.35rem;
@@ -606,19 +195,11 @@
       font-size: 0.93rem;
     }
 
-    .step-item p:last-child {
-      margin-bottom: 0;
-    }
+    .step-item p:last-child { margin-bottom: 0; }
+    .step-item .code-block { margin: 0.65rem 0 0.75rem; }
+    .step-item .code-block:last-child { margin-bottom: 0; }
 
-    .step-item .code-block {
-      margin: 0.65rem 0 0.75rem;
-    }
-
-    .step-item .code-block:last-child {
-      margin-bottom: 0;
-    }
-
-    /* ==================== ИНТЕРАКТИВНЫЙ ПОМОЩНИК ПО УРОКАМ ==================== */
+    /* Интерактивный помощник по урокам */
     .picker-tabs {
       display: flex;
       flex-wrap: wrap;
@@ -629,7 +210,7 @@
     .picker-tab {
       appearance: none;
       border: 1px solid var(--border-strong);
-      background: var(--surface-2);
+      background: var(--surface);
       color: var(--text-body);
       font-family: inherit;
       font-size: 0.85rem;
@@ -638,6 +219,10 @@
       border-radius: 9px;
       cursor: pointer;
       transition: all 0.15s ease;
+    }
+
+    :root[data-theme="dark"] .picker-tab {
+      background: var(--surface-2);
     }
 
     .picker-tab:hover {
@@ -649,20 +234,18 @@
       background: var(--accent-solid);
       border-color: var(--accent);
       color: #ffffff;
-      box-shadow: 0 2px 12px rgba(2, 132, 199, 0.35);
+      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.25);
     }
 
     .picker-panel {
       display: none;
-      background: var(--surface-2);
+      background: var(--surface-soft);
       border: 1px solid var(--accent-border);
       border-radius: 12px;
       padding: 1.35rem 1.45rem;
     }
 
-    .picker-panel.active {
-      display: block;
-    }
+    .picker-panel.active { display: block; }
 
     .picker-meta {
       display: flex;
@@ -674,13 +257,8 @@
       color: var(--muted);
     }
 
-    .picker-panel .code-block {
-      margin: 0.6rem 0 0.9rem;
-    }
-
-    .picker-panel .callout {
-      margin: 0.95rem 0 0;
-    }
+    .picker-panel .code-block { margin: 0.6rem 0 0.9rem; }
+    .picker-panel .callout { margin: 0.95rem 0 0; }
 
     .picker-step-label {
       font-size: 0.88rem;
@@ -689,11 +267,9 @@
       margin: 0.9rem 0 0.25rem;
     }
 
-    .picker-step-label:first-of-type {
-      margin-top: 0;
-    }
+    .picker-step-label:first-of-type { margin-top: 0; }
 
-    /* ==================== БЕЙДЖИ ПРОФИЛЕЙ ==================== */
+    /* Бейджи профилей */
     .badge {
       display: inline-block;
       font-family: "JetBrains Mono", monospace;
@@ -704,244 +280,19 @@
       white-space: nowrap;
     }
 
-    .b-default { background: var(--tip-bg); color: var(--tip-text); border: 1px solid rgba(34, 197, 94, 0.35); }
-    .b-mod4    { background: var(--warn-bg); color: var(--warn-text); border: 1px solid rgba(245, 158, 11, 0.35); }
+    .b-default { background: var(--tip-bg); color: var(--tip-text); border: 1px solid var(--tip-border-soft); }
+    .b-mod4    { background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn-border-soft); }
     .b-mod5    { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); }
     .b-mod6    { background: var(--purple-bg); color: var(--purple-text); border: 1px solid var(--purple-border); }
     .b-ui      { background: var(--rose-bg); color: var(--rose-text); border: 1px solid var(--rose-border); }
 
-    /* ==================== СРАВНЕНИЕ: КАК НЕ НАДО / КАК ПРАВИЛЬНО ==================== */
-    .compare-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1rem;
-      margin: 1.4rem 0 1.65rem;
-    }
-
-    .compare-card {
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-
-    .compare-head {
-      padding: 0.58rem 1rem;
-      font-size: 0.8rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .compare-card.bad {
-      border-color: rgba(244, 63, 94, 0.42);
-    }
-
-    .compare-card.bad .compare-head {
-      background: var(--err-bg);
-      color: var(--err-text);
-      border-bottom: 1px solid rgba(244, 63, 94, 0.32);
-    }
-
-    .compare-card.good {
-      border-color: rgba(34, 197, 94, 0.42);
-    }
-
-    .compare-card.good .compare-head {
-      background: var(--tip-bg);
-      color: var(--tip-text);
-      border-bottom: 1px solid rgba(34, 197, 94, 0.32);
-    }
-
-    .compare-body {
-      padding: 0.95rem 1rem 1rem;
-      font-size: 0.91rem;
-      line-height: 1.55;
-      flex: 1;
-    }
-
-    .compare-body p:last-child {
-      margin-bottom: 0;
-    }
-
-    .compare-body .code-block {
-      margin: 0 0 0.75rem;
-      border-radius: 8px;
-    }
-
-    .compare-body .code-block pre {
-      padding: 0.75rem 0.9rem;
-    }
-
-    .compare-body .code-block pre code {
-      font-size: 0.8rem;
-    }
-
-    /* ==================== СХЕМА ==================== */
+    /* Схема сети Docker */
     .diagram-box .diagram-scroll > svg {
       width: 100%;
       min-width: 680px;
     }
 
-    /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
-    .callout {
-      display: flex;
-      gap: 0.9rem;
-      margin: 1.45rem 0;
-      padding: 1.05rem 1.25rem;
-      border-radius: 12px;
-      border-left: 4px solid var(--accent);
-      background: var(--accent-soft);
-      font-size: 0.93rem;
-      line-height: 1.62;
-      color: var(--text-body);
-    }
-
-    .callout-icon {
-      flex-shrink: 0;
-      width: 22px;
-      height: 22px;
-      margin-top: 0.15rem;
-      color: var(--accent);
-    }
-
-    .callout-body {
-      min-width: 0;
-      flex: 1;
-    }
-
-    .callout-body strong {
-      color: #7dd3fc;
-    }
-
-    .callout.warn {
-      background: var(--warn-bg);
-      border-left-color: var(--warn-border);
-    }
-
-    .callout.warn .callout-icon {
-      color: var(--warn-border);
-    }
-
-    .callout.warn .callout-body strong {
-      color: var(--warn-text);
-    }
-
-    .callout.tip {
-      background: var(--tip-bg);
-      border-left-color: var(--tip-border);
-    }
-
-    .callout.tip .callout-icon {
-      color: var(--tip-border);
-    }
-
-    .callout.tip .callout-body strong {
-      color: var(--tip-text);
-    }
-
-    .callout.danger {
-      background: var(--err-bg);
-      border-left-color: var(--err-border);
-    }
-
-    .callout.danger .callout-icon {
-      color: var(--err-border);
-    }
-
-    .callout.danger .callout-body strong {
-      color: var(--err-text);
-    }
-
-    .callout .code-block {
-      margin: 0.75rem 0 0;
-    }
-
-    /* ==================== ТАБЛИЦЫ ==================== */
-    .table-wrapper {
-      width: 100%;
-      overflow-x: auto;
-      margin: 1.25rem 0 1.6rem;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--surface-3);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.89rem;
-      line-height: 1.5;
-    }
-
-    table.table-wide {
-      min-width: 680px;
-    }
-
-    th, td {
-      text-align: left;
-      padding: 0.78rem 0.9rem;
-      border-bottom: 1px solid var(--border);
-      vertical-align: top;
-    }
-
-    th {
-      background: var(--surface-2);
-      font-weight: 600;
-      color: var(--text);
-      font-size: 0.77rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    tbody tr:nth-child(even) {
-      background: var(--row-even);
-    }
-
-    tbody tr:hover {
-      background: var(--row-hover);
-    }
-
-    tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    /* ==================== КАРТОЧКИ И FAQ ==================== */
-    .task-card {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.2rem 1.35rem;
-      margin: 1.15rem 0;
-    }
-
-    .task-title {
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 0.45rem;
-      font-size: 1rem;
-    }
-
-    .task-card p {
-      font-size: 0.92rem;
-      margin-bottom: 0.65rem;
-    }
-
-    .task-card p:last-child {
-      margin-bottom: 0;
-    }
-
-    .task-card .code-block {
-      margin: 0.65rem 0 0.8rem;
-    }
-
-    .task-card .code-block:last-child {
-      margin-bottom: 0;
-    }
-
+    /* FAQ */
     .faq-list {
       display: flex;
       flex-direction: column;
@@ -950,16 +301,14 @@
     }
 
     details.faq {
-      background: var(--surface-2);
+      background: var(--surface-soft);
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
       transition: border-color 0.15s ease;
     }
 
-    details.faq[open] {
-      border-color: var(--accent-border);
-    }
+    details.faq[open] { border-color: var(--accent-border); }
 
     details.faq summary {
       padding: 0.95rem 1.2rem;
@@ -975,9 +324,7 @@
       user-select: none;
     }
 
-    details.faq summary::-webkit-details-marker {
-      display: none;
-    }
+    details.faq summary::-webkit-details-marker { display: none; }
 
     details.faq summary::after {
       content: "+";
@@ -987,133 +334,40 @@
       flex-shrink: 0;
     }
 
-    details.faq[open] summary::after {
-      content: "−";
-    }
+    details.faq[open] summary::after { content: "−"; }
 
     .faq-body {
       padding: 0.85rem 1.2rem 1.1rem;
       border-top: 1px solid var(--border);
-      background: var(--surface-3);
+      background: var(--surface);
       font-size: 0.92rem;
       line-height: 1.62;
     }
 
-    .faq-body p {
-      margin: 0 0 0.65rem;
+    :root[data-theme="dark"] .faq-body {
+      background: var(--surface-3);
     }
 
-    .faq-body p:last-child {
-      margin-bottom: 0;
-    }
+    .faq-body p { margin: 0 0 0.65rem; }
+    .faq-body p:last-child { margin-bottom: 0; }
+    .faq-body .code-block { margin: 0.6rem 0 0; }
 
-    .faq-body .code-block {
-      margin: 0.6rem 0 0;
-    }
-
-    /* ==================== ИТОГ ==================== */
-    .takeaway {
-      margin-top: 3rem;
-      padding: 1.35rem 1.5rem;
-      background: var(--surface-2);
-      border: 1px solid var(--accent-border);
-      border-radius: 12px;
-      color: var(--text-body);
-      font-size: 0.95rem;
-    }
-
-    .takeaway-label {
-      display: block;
-      font-size: 0.78rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--accent);
-      margin-bottom: 0.45rem;
-    }
-
-    /* ==================== АДАПТИВНОСТЬ И ПЕЧАТЬ ==================== */
     @media (max-width: 740px) {
-      .glossary-grid,
-      .compare-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 680px) {
-      body {
-        padding: 1rem 0.75rem 3rem;
-        font-size: 15.5px;
-      }
-      .lecture {
-        padding: 1.65rem 1.25rem;
-        border-radius: 12px;
-      }
-      h1 {
-        font-size: 1.6rem;
-      }
-      h2 {
-        font-size: 1.22rem;
-      }
+      .glossary-grid { grid-template-columns: 1fr; }
     }
 
     @media print {
-      body {
-        background: #ffffff;
-        color: #0f172a;
-        padding: 0;
-      }
-      .copy-btn,
-      .picker-tabs,
-      .course-nav {
-        display: none !important;
-      }
-      .picker-panel {
-        display: block !important;
-        margin-bottom: 1rem;
-      }
-      .lecture,
-      .focus-box,
-      .toc-box,
-      .mini-card,
-      .step-item,
-      .picker-panel,
-      .compare-card,
-      .diagram-box,
-      .task-card,
-      details.faq,
-      .takeaway,
-      .table-wrapper {
-        background: #ffffff !important;
-        color: #0f172a !important;
-        border-color: #cbd5e1 !important;
-        box-shadow: none !important;
-      }
-      .lecture {
-        border: none !important;
-        padding: 0;
-        max-width: 100%;
-      }
-      h1, h2, h3, strong, th, summary {
-        color: #0f172a !important;
-      }
-      .code-block,
-      .output-block,
-      .compare-grid,
-      .diagram-box,
-      .task-card,
-      details.faq {
-        break-inside: avoid;
-      }
+      .picker-tabs { display: none !important; }
+      .picker-panel { display: block !important; margin-bottom: 1rem; }
+      details.faq { break-inside: avoid; }
     }
   </style>
-  <link rel="stylesheet" href="assets/css/theme.css" />
 </head>
 <body>
   <article class="lecture">
 
     <nav class="course-nav" aria-label="Навигация по курсу">
-      <a class="nav-btn primary" href="index.html">← Содержание курса</a>
+      <a class="course-nav-btn primary" href="index.html">← Содержание курса</a>
     </nav>
 
     <!-- ==================== ШАПКА ==================== -->
@@ -1143,7 +397,7 @@
       </div>
 
       <!-- Автоматическое оглавление собирается скриптом из всех <h2> -->
-      <nav class="toc-box" id="toc" aria-label="Содержание гида"></nav>
+      <nav class="toc-box" id="toc" data-toc-title="Содержание гида" aria-label="Содержание гида"></nav>
     </header>
 
     <!-- ==================== 01. СТАРТ С НУЛЯ ==================== -->
@@ -2031,42 +1285,13 @@ LIMIT 5;</code></pre>
 
   </article>
 
-  <!-- Highlight.js: подсветка кода -->
+  <!-- Highlight.js, полноэкранный просмотрщик диаграмм и общие скрипты -->
   <script src="assets/vendor/highlightjs/highlight.min.js"></script>
-  <!-- Полноэкранный просмотрщик диаграмм -->
   <script src="assets/js/diagrams.js" defer></script>
+  <script src="assets/js/lesson.js" defer></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // 1. Подсветка синтаксиса (как в уроках курса)
-      if (window.hljs) {
-        hljs.highlightAll();
-      }
-
-      // 2. Автоматическая сборка оглавления из всех <h2>
-      const tocEl = document.getElementById('toc');
-      const sections = document.querySelectorAll('article.lecture > section');
-      if (tocEl && sections.length > 0) {
-        const items = [];
-        sections.forEach((sec, idx) => {
-          const h2 = sec.querySelector('h2');
-          if (!h2) return;
-          const id = sec.id || `sec-${idx + 1}`;
-          sec.id = id;
-          const numEl = h2.querySelector('.sec-num');
-          const numText = numEl ? numEl.textContent.trim() : String(idx + 1).padStart(2, '0');
-          const clone = h2.cloneNode(true);
-          const cloneNum = clone.querySelector('.sec-num');
-          if (cloneNum) cloneNum.remove();
-          const titleText = clone.textContent.trim();
-          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
-        });
-        if (items.length > 0) {
-          tocEl.innerHTML = `<div class="toc-title">Содержание гида</div><ul class="toc-list">${items.join('')}</ul>`;
-        }
-      }
-
-      // 3. Копирование текста (с fallback для локального file://)
       async function copyText(text) {
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(text);
@@ -2083,28 +1308,7 @@ LIMIT 5;</code></pre>
         if (!ok) throw new Error('Copy failed');
       }
 
-      document.querySelectorAll('.copy-btn').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          const codeEl = btn.closest('.code-block').querySelector('code');
-          const originalText = btn.textContent;
-          try {
-            await copyText(codeEl.innerText.trim());
-            btn.textContent = 'Скопировано ✓';
-            btn.classList.add('copied');
-            setTimeout(() => {
-              btn.textContent = originalText;
-              btn.classList.remove('copied');
-            }, 1800);
-          } catch (err) {
-            btn.textContent = 'Ошибка';
-            setTimeout(() => {
-              btn.textContent = originalText;
-            }, 1800);
-          }
-        });
-      });
-
-      // 4. Клик по плашкам реквизитов в шапке
+      // Клик по плашкам реквизитов в шапке
       document.querySelectorAll('.cred-pill[data-copy]').forEach((pill) => {
         pill.addEventListener('click', async () => {
           const val = pill.getAttribute('data-copy');
@@ -2116,7 +1320,7 @@ LIMIT 5;</code></pre>
         });
       });
 
-      // 5. Интерактивный помощник по урокам
+      // Интерактивный помощник по урокам
       const tabs = document.querySelectorAll('.picker-tab');
       const panels = document.querySelectorAll('.picker-panel');
       tabs.forEach((tab) => {

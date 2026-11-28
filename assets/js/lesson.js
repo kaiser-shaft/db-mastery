@@ -24,7 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
       items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${titleText}</a></li>`);
     });
     if (items.length > 0) {
-      tocEl.innerHTML = `<div class="toc-title">Содержание урока</div><ul class="toc-list">${items.join('')}</ul>`;
+      const tocTitle = tocEl.dataset.tocTitle || 'Содержание урока';
+      tocEl.innerHTML = `<div class="toc-title">${tocTitle}</div><ul class="toc-list">${items.join('')}</ul>`;
     }
   }
 

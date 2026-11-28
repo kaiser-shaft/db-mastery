@@ -7,424 +7,13 @@
 
   <link rel="stylesheet" href="../../assets/vendor/fonts/fonts.css" />
   <link rel="stylesheet" href="../../assets/vendor/highlightjs/github-dark.min.css" />
-  <script src="../../assets/js/theme.js"></script>
-
-  <style>
-    :root {
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --surface-soft: #f8fafc;
-      --text: #0f172a;
-      --text-body: #1e293b;
-      --muted: #64748b;
-      --border: #e2e8f0;
-      --border-strong: #cbd5e1;
-      --accent: #2563eb;
-      --accent-soft: #eff6ff;
-      --accent-border: #bfdbfe;
-      --warn-bg: #fffbeb;
-      --warn-border: #f59e0b;
-      --warn-text: #92400e;
-      --tip-bg: #f0fdf4;
-      --tip-border: #16a34a;
-      --tip-text: #166534;
-      --purple-bg: #f5f3ff;
-      --purple-border: #ddd6fe;
-      --purple-text: #6d28d9;
-      --err-bg: #fef2f2;
-      --err-border: #dc2626;
-      --err-text: #991b1b;
-      --cyan-bg: #ecfeff;
-      --cyan-border: #a5f3fc;
-      --cyan-text: #155e75;
-      --code-bg: #0d1117;
-      --code-text: #e6edf3;
-      --code-header-bg: #161b22;
-      --code-border: #30363d;
-      --inline-code-bg: #f1f5f9;
-      --inline-code-text: #be123c;
-    }
-
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-
-    body {
-      margin: 0;
-      padding: 2.25rem 1.25rem 5rem;
-      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 16px;
-      line-height: 1.7;
-      background-color: var(--bg);
-      color: var(--text-body);
-      -webkit-font-smoothing: antialiased;
-    }
-
-    .lecture {
-      max-width: 920px;
-      margin: 0 auto;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 2.75rem 3rem;
-      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.035);
-    }
-
-    /* ==================== НАВИГАЦИЯ ==================== */
-    .course-nav {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.6rem;
-      padding-bottom: 1.15rem;
-      margin-bottom: 1.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .course-nav-links { display: flex; flex-wrap: wrap; gap: 0.45rem; }
-
-    .course-nav-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      text-decoration: none;
-      font-size: 0.83rem;
-      font-weight: 600;
-      padding: 0.36rem 0.72rem;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface-soft);
-      color: var(--text-body);
-      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
-    }
-
-    .course-nav-btn:hover { border-color: var(--accent); color: var(--accent); background: #ffffff; }
-    .course-nav-btn.primary { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent); }
-
-    /* ==================== ШАПКА ==================== */
-    .lecture-header {
-      padding-bottom: 1.85rem;
-      margin-bottom: 2.25rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .meta-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.9rem; }
-    .pill { font-size: 0.78rem; font-weight: 600; padding: 0.28rem 0.75rem; border-radius: 999px; letter-spacing: 0.01em; }
-    .pill-primary { background: var(--accent-soft); color: var(--accent); }
-    .pill-tip     { background: var(--tip-bg); color: var(--tip-text); }
-    .pill-purple  { background: var(--purple-bg); color: var(--purple-text); }
-    .pill-neutral { background: #f1f5f9; color: var(--muted); }
-
-    h1 {
-      margin: 0 0 0.75rem;
-      font-size: 1.98rem;
-      font-weight: 700;
-      line-height: 1.25;
-      letter-spacing: -0.025em;
-      color: var(--text);
-    }
-
-    .hero-sub { margin: 0 0 1.4rem; color: var(--muted); font-size: 0.97rem; }
-
-    /* Прогресс-бар и фильтры */
-    .practice-toolbar {
-      background: var(--surface-soft);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.1rem 1.3rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.85rem;
-    }
-
-    .progress-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; font-size: 0.88rem; }
-    .progress-label { font-weight: 600; color: var(--text-body); }
-    .progress-label strong { font-family: "JetBrains Mono", monospace; color: var(--tip-border); }
-
-    .progress-bar { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
-    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #2563eb, #7c3aed, #16a34a); border-radius: 999px; transition: width 0.25s ease; }
-
-    .toolbar-actions { display: flex; flex-direction: column; gap: 0.55rem; }
-    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
-    .filter-row-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-right: 0.2rem; }
-
-    .filter-btn {
-      appearance: none;
-      border: 1px solid var(--border-strong);
-      background: #ffffff;
-      color: var(--text-body);
-      font-family: inherit;
-      font-size: 0.79rem;
-      font-weight: 600;
-      padding: 0.28rem 0.68rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #ffffff; }
-
-    .reset-btn {
-      appearance: none;
-      background: transparent;
-      border: 1px solid var(--border-strong);
-      color: var(--muted);
-      font-family: inherit;
-      font-size: 0.76rem;
-      font-weight: 500;
-      padding: 0.26rem 0.62rem;
-      border-radius: 7px;
-      cursor: pointer;
-      display: none;
-    }
-
-    .reset-btn.visible { display: inline-block; }
-    .reset-btn:hover { border-color: var(--err-border); color: var(--err-border); }
-
-    /* Легенда форматов */
-    .format-legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.55rem; margin-top: 1.05rem; }
-    .format-chip { background: #ffffff; border: 1px solid var(--border); border-radius: 10px; padding: 0.55rem 0.75rem; font-size: 0.8rem; line-height: 1.4; color: var(--muted); }
-    .format-chip strong { display: block; font-size: 0.82rem; color: var(--text); margin-bottom: 0.15rem; }
-
-    /* Оглавление */
-    .toc-box { margin-top: 1.1rem; padding: 0.95rem 1.25rem; background: #ffffff; border: 1px solid var(--border); border-radius: 12px; font-size: 0.9rem; }
-    .toc-title { font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.5rem; }
-    .toc-list { display: flex; flex-direction: column; gap: 0.15rem; list-style: none; margin: 0; padding: 0; }
-    .toc-list li { border-bottom: 1px solid #f1f5f9; }
-    .toc-list li:last-child { border-bottom: none; }
-    .toc-list a { display: flex; align-items: baseline; gap: 0.65rem; padding: 0.36rem 0.5rem; border-radius: 8px; color: var(--text-body); text-decoration: none; font-weight: 500; transition: background-color 0.15s ease, color 0.15s ease; }
-    .toc-list a:hover { background: var(--surface-soft); color: var(--accent); }
-    .toc-num { display: inline-flex; align-items: center; justify-content: center; min-width: 1.85rem; padding: 0.06rem 0.38rem; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-family: "JetBrains Mono", monospace; font-size: 0.78rem; font-weight: 700; flex-shrink: 0; }
-
-    /* ==================== РАЗДЕЛЫ И ТИПОГРАФИКА ==================== */
-    section { margin-top: 2.75rem; scroll-margin-top: 1.5rem; }
-    section:first-of-type { margin-top: 0; }
-    section.hidden { display: none; }
-
-    h2 { display: flex; align-items: center; gap: 0.7rem; margin: 0 0 1rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border); font-size: 1.35rem; font-weight: 700; letter-spacing: -0.015em; color: var(--text); }
-    .sec-num { display: inline-flex; align-items: center; justify-content: center; min-width: 2.1rem; height: 2rem; padding: 0 0.45rem; font-size: 0.85rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 8px; flex-shrink: 0; }
-    h3 { margin: 1.65rem 0 0.75rem; font-size: 1.04rem; font-weight: 700; color: var(--text); }
-    p { margin: 0 0 1rem; }
-    ul, ol { margin: 0 0 1.15rem; padding-left: 1.4rem; }
-    li { margin-bottom: 0.4rem; }
-
-    code:not(pre code) {
-      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.84em;
-      background: var(--inline-code-bg);
-      color: var(--inline-code-text);
-      padding: 0.14em 0.4em;
-      border-radius: 5px;
-      border: 1px solid #e2e8f0;
-    }
-
-    /* ==================== БЛОКИ КОДА И ПЛАШКИ СРЕД ==================== */
-    .code-block { margin: 0.85rem 0 1.05rem; border-radius: 10px; overflow: hidden; border: 1px solid var(--code-border); background: var(--code-bg); }
-    .code-block.bug-code { border-color: #f87171; box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.12); }
-    .code-block.bug-code .code-header { background: #2b1417; border-bottom-color: #5c2128; color: #fca5a5; }
-    .code-block.cleanup-code { border-color: #22c55e; }
-    .code-block.cleanup-code .code-header { background: #102619; border-bottom-color: #1f4b31; color: #86efac; }
-
-    .code-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.42rem 0.85rem; background: var(--code-header-bg); border-bottom: 1px solid var(--code-border); font-family: "JetBrains Mono", monospace; font-size: 0.73rem; color: #8b949e; }
-    .code-lang { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-weight: 600; letter-spacing: 0.02em; }
-
-    .db-pill { display: inline-block; padding: 0.09rem 0.46rem; border-radius: 5px; font-size: 0.69rem; font-weight: 700; text-transform: none; }
-    .db-pg   { background: #1d4ed8; color: #ffffff; }
-    .db-ch   { background: #7c3aed; color: #ffffff; }
-    .db-bash { background: #334155; color: #f1f5f9; }
-
-    .copy-btn { background: transparent; border: 1px solid #30363d; color: #c9d1d9; font-family: "Inter", sans-serif; font-size: 0.72rem; font-weight: 500; padding: 0.18rem 0.55rem; border-radius: 6px; cursor: pointer; flex-shrink: 0; transition: all 0.15s ease; }
-    .copy-btn:hover { background: #21262d; border-color: #8b949e; color: #ffffff; }
-    .copy-btn.copied { border-color: #238636; color: #3fb950; }
-
-    .code-block pre { margin: 0; padding: 0.88rem 1.05rem; overflow-x: auto; background: var(--code-bg) !important; color: var(--code-text); color-scheme: dark; }
-    .code-block pre code, .code-block pre code.hljs { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.83rem; line-height: 1.54; padding: 0 !important; background: transparent !important; }
-
-    /* ==================== ВЫНОСКИ И ТАБЛИЦЫ ==================== */
-    .callout { display: flex; gap: 0.85rem; margin: 1.15rem 0; padding: 0.95rem 1.15rem; border-radius: 12px; border-left: 4px solid var(--accent); background: var(--accent-soft); font-size: 0.93rem; line-height: 1.6; }
-    .callout-icon { flex-shrink: 0; width: 20px; height: 20px; margin-top: 0.18rem; color: var(--accent); }
-    .callout-body strong { color: #1e40af; }
-    .callout.warn { background: var(--warn-bg); border-left-color: var(--warn-border); }
-    .callout.warn .callout-icon { color: var(--warn-border); }
-    .callout.warn .callout-body strong { color: var(--warn-text); }
-    .callout.tip { background: var(--tip-bg); border-left-color: var(--tip-border); }
-    .callout.tip .callout-icon { color: var(--tip-border); }
-    .callout.tip .callout-body strong { color: var(--tip-text); }
-
-    .table-wrapper { width: 100%; overflow-x: auto; margin: 0.8rem 0 1.1rem; border: 1px solid var(--border); border-radius: 12px; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.87rem; line-height: 1.5; }
-    th, td { text-align: left; padding: 0.6rem 0.82rem; border-bottom: 1px solid var(--border); vertical-align: top; }
-    th { background: var(--surface-soft); font-weight: 600; color: var(--text); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
-    tbody tr:last-child td { border-bottom: none; }
-
-    /* ==================== СХЕМА СТЕНДА И ПРЕДПРОСМОТР ==================== */
-    .schema-box { margin: 1rem 0 1.25rem; padding: 1.15rem 1.15rem 1rem; background: #f8fafc; border: 1px solid var(--border); border-radius: 14px; }
-    .er-scroll { width: 100%; overflow-x: auto; }
-    .er-svg { display: block; width: 100%; min-width: 720px; height: auto; font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .er-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 0.65rem 1rem; margin-top: 0.9rem; padding-top: 0.85rem; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--muted); }
-    .er-legend-item { display: inline-flex; align-items: center; gap: 0.35rem; }
-    .er-tag { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 0.7rem; font-weight: 700; padding: 0.08rem 0.38rem; border-radius: 5px; line-height: 1.3; }
-    .er-tag-pk   { background: #dbeafe; color: #1d4ed8; }
-    .er-tag-fk   { background: #fef3c7; color: #b45309; }
-    .er-tag-uk   { background: #f3e8ff; color: #7e22ce; }
-    .er-tag-null { background: #fee2e2; color: #b91c1c; }
-
-    .quirks-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; margin-top: 0.9rem; }
-    .quirk-chip { background: #ffffff; border: 1px solid var(--border); border-radius: 10px; padding: 0.62rem 0.82rem; font-size: 0.84rem; line-height: 1.48; color: var(--text-body); }
-    .quirk-chip strong { color: var(--text); }
-
-    details.data-preview { margin: 0.9rem 0 0; background: #ffffff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-    details.data-preview summary { cursor: pointer; padding: 0.78rem 1.05rem; font-size: 0.9rem; font-weight: 600; color: var(--accent); background: #ffffff; user-select: none; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-    details.data-preview summary::-webkit-details-marker { display: none; }
-    details.data-preview summary::after { content: "Развернуть ▾"; font-size: 0.78rem; font-weight: 600; color: var(--muted); }
-    details.data-preview[open] summary { border-bottom: 1px solid var(--border); background: var(--accent-soft); }
-    details.data-preview[open] summary::after { content: "Свернуть ▴"; color: var(--accent); }
-    .preview-body { padding: 1rem 1.1rem 1.15rem; display: flex; flex-direction: column; gap: 1rem; }
-    .preview-table-title { font-family: "JetBrains Mono", monospace; font-size: 0.82rem; font-weight: 700; color: var(--text); margin: 0 0 0.4rem; display: flex; align-items: center; gap: 0.45rem; }
-    .preview-table-title span { font-family: "Inter", sans-serif; font-size: 0.75rem; font-weight: 500; color: var(--muted); }
-    .preview-body .table-wrapper { margin: 0; border-radius: 9px; }
-    .preview-body table { font-size: 0.81rem; line-height: 1.4; }
-    .preview-body th, .preview-body td { padding: 0.44rem 0.65rem; white-space: nowrap; }
-
-    .null-pill { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 0.72rem; font-weight: 600; padding: 0.05rem 0.38rem; border-radius: 4px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-    .status-pill { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 0.73rem; font-weight: 600; padding: 0.05rem 0.4rem; border-radius: 5px; background: #f1f5f9; color: #334155; }
-
-    /* ==================== КАРТОЧКИ ЗАДАНИЙ И ПРОЕКТА ==================== */
-    .task-card {
-      background: var(--surface-soft);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.25rem 1.45rem;
-      margin: 1.1rem 0;
-      transition: border-color 0.15s ease, background-color 0.15s ease;
-    }
-
-    .task-card.bench-card   { border-left: 4px solid #f59e0b; }
-    .task-card.design-card  { border-left: 4px solid #2563eb; }
-    .task-card.bug-card     { border-left: 4px solid #ef4444; }
-    .task-card.project-card { border-left: 4px solid #7c3aed; background: #fcfbff; }
-
-    .task-card.done {
-      background: #f8fdf9;
-      border-color: #bbf7d0;
-      border-left-color: #16a34a;
-    }
-
-    .task-card.hidden { display: none; }
-
-    .task-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.55rem; }
-    .task-title-wrap { display: flex; align-items: flex-start; gap: 0.65rem; min-width: 0; }
-
-    .task-check {
-      appearance: none;
-      width: 19px;
-      height: 19px;
-      margin-top: 0.22rem;
-      border-radius: 6px;
-      border: 1.5px solid var(--border-strong);
-      background: #ffffff;
-      cursor: pointer;
-      display: grid;
-      place-content: center;
-      flex-shrink: 0;
-      transition: all 0.15s ease;
-    }
-
-    .task-check:hover { border-color: var(--accent); }
-    .task-check:checked { background: var(--tip-border); border-color: var(--tip-border); }
-    .task-check:checked::after { content: "✓"; color: #ffffff; font-size: 0.76rem; font-weight: 800; line-height: 1; }
-
-    .task-title { font-weight: 700; color: var(--text); line-height: 1.4; font-size: 1.02rem; }
-    .task-card.done .task-title { color: var(--tip-text); }
-
-    .task-num { font-family: "JetBrains Mono", monospace; font-size: 0.8rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-border); padding: 0.08rem 0.45rem; border-radius: 6px; margin-right: 0.45rem; }
-    .task-card.done .task-num { background: var(--tip-bg); border-color: #bbf7d0; color: var(--tip-text); }
-
-    .task-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.35rem; flex-shrink: 0; }
-    .env-badge, .lvl-badge { font-size: 0.71rem; font-weight: 700; padding: 0.16rem 0.55rem; border-radius: 999px; white-space: nowrap; }
-
-    .env-pg   { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
-    .env-ch   { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
-    .env-both { background: linear-gradient(90deg, #dbeafe 0%, #ede9fe 100%); color: #1e293b; border: 1px solid #c4b5fd; }
-
-    .lvl-sql     { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
-    .lvl-bench   { background: var(--warn-bg); color: var(--warn-text); border: 1px solid #fde68a; }
-    .lvl-design  { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); }
-    .lvl-bug     { background: var(--err-bg); color: var(--err-text); border: 1px solid #fecaca; }
-    .lvl-lab     { background: var(--tip-bg); color: var(--tip-text); border: 1px solid #bbf7d0; }
-    .lvl-project { background: var(--purple-bg); color: var(--purple-text); border: 1px solid var(--purple-border); }
-    .lvl-boss    { background: #1e293b; color: #f8fafc; border: 1px solid #0f172a; }
-
-    .state-bar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0.15rem 0 0.65rem; padding: 0.28rem 0.65rem; border-radius: 8px; background: #fffbeb; border: 1px solid #fde68a; font-size: 0.8rem; color: var(--warn-text); }
-
-    .task-desc { margin: 0 0 0.55rem; font-size: 0.95rem; }
-
-    .observe-box { margin: 0.7rem 0 0.2rem; padding: 0.72rem 0.95rem; background: #ffffff; border: 1px solid var(--accent-border); border-left: 3.5px solid var(--accent); border-radius: 10px; font-size: 0.87rem; line-height: 1.55; }
-    .observe-title { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); margin-bottom: 0.3rem; }
-    .observe-box ul { margin: 0; padding-left: 1.2rem; }
-    .observe-box li { margin-bottom: 0.22rem; }
-    .observe-box li:last-child { margin-bottom: 0; }
-
-    details.solution { margin-top: 0.85rem; border-top: 1px dashed var(--border-strong); padding-top: 0.7rem; }
-    details.solution summary { cursor: pointer; font-size: 0.88rem; font-weight: 600; color: var(--accent); user-select: none; }
-    details.solution summary:hover { text-decoration: underline; }
-
-    .step-flow { margin-top: 0.8rem; display: flex; flex-direction: column; gap: 0.7rem; }
-    .step-flow .code-block { margin: 0; }
-
-    .solution-note { margin: 0.7rem 0 0; padding: 0.65rem 0.85rem; background: #ffffff; border: 1px solid var(--border); border-radius: 9px; font-size: 0.86rem; color: var(--text-body); }
-    .solution-note strong { color: var(--text); }
-
-    /* Дорожная карта Итогового проекта 6.5 */
-    .milestone-roadmap {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0.55rem;
-      margin: 0.9rem 0 1.2rem;
-    }
-
-    .ms-step {
-      background: #f5f3ff;
-      border: 1px solid #ddd6fe;
-      border-radius: 10px;
-      padding: 0.6rem 0.75rem;
-      font-size: 0.8rem;
-      line-height: 1.38;
-      color: #4c1d95;
-    }
-
-    .ms-step strong { display: block; font-size: 0.81rem; margin-bottom: 0.15rem; }
-
-    .os-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
-    .os-grid .code-block { margin: 0; }
-    .os-grid .code-block pre code { font-size: 0.78rem; }
-
-    .file-link-bar { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.32rem 0.68rem; border-radius: 8px; background: var(--accent-soft); border: 1px solid var(--accent-border); color: var(--accent); font-family: "JetBrains Mono", monospace; font-size: 0.81rem; font-weight: 600; text-decoration: none; }
-    .file-link-bar:hover { background: #dbeafe; border-color: var(--accent); }
-
-    .empty-filter { display: none; text-align: center; padding: 2rem; border: 1px dashed var(--border-strong); border-radius: 12px; color: var(--muted); margin-top: 1.5rem; }
-    .empty-filter.visible { display: block; }
-
-    @media (max-width: 760px) {
-      .format-legend, .milestone-roadmap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .quirks-grid, .os-grid { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 640px) {
-      body { padding: 1rem 0.7rem 3rem; font-size: 15px; }
-      .lecture { padding: 1.5rem 1.15rem; border-radius: 12px; }
-      h1 { font-size: 1.55rem; }
-      h2 { font-size: 1.2rem; }
-      .task-head { flex-direction: column; gap: 0.45rem; }
-      .task-badges { justify-content: flex-start; }
-      .format-legend, .milestone-roadmap { grid-template-columns: 1fr; }
-    }
-  </style>
+  <link rel="stylesheet" href="../../assets/css/diagrams.css" />
+  <link rel="stylesheet" href="../../assets/css/practice.css" />
   <link rel="stylesheet" href="../../assets/css/theme.css" />
+  <script src="../../assets/js/theme.js"></script>
 </head>
 <body>
-  <article class="lecture">
+  <article class="lecture" data-practice-key="db_course_practice_m6_v2">
 
     <nav class="course-nav" aria-label="Навигация по курсу">
       <a class="course-nav-btn primary" href="../../index.html">← Содержание курса</a>
@@ -507,8 +96,8 @@
       <h2><span class="sec-num">00</span> Подготовка стенда (PG + ClickHouse), схема и чек-лист</h2>
       <p>
         В Модуле 6 участвуют <strong>две СУБД</strong> в общей сети Docker <code>db_net</code>:
-        <a class="file-link-bar" href="init.sql">📄 practice/module_6/init.sql</a> (<strong>PostgreSQL 16</strong>, схемы <code>m6_oltp</code>, <code>m6_star</code>, <code>m6_part</code>, <code>m6_elt</code>) и
-        <a class="file-link-bar" href="init_clickhouse.sql">📄 practice/module_6/init_clickhouse.sql</a> (<strong>ClickHouse</strong>, база <code>analytics_db</code> — для 6.3 и 6.5).
+        <code>practice/module_6/init.sql</code> (<strong>PostgreSQL 16</strong>, схемы <code>m6_oltp</code>, <code>m6_star</code>, <code>m6_part</code>, <code>m6_elt</code>) и
+        <code>practice/module_6/init_clickhouse.sql</code> (<strong>ClickHouse</strong>, база <code>analytics_db</code> — для 6.3 и 6.5).
       </p>
 
       <h3>Шаг 1. Подними профиль <code>mod6</code> и загрузи оба скрипта</h3>
@@ -836,7 +425,7 @@ SHOW TABLES;
 
     <!-- ==================== 01. УРОК 6.1 ==================== -->
     <section id="sec-6-1" data-section-lesson="6_1">
-      <h2><span class="sec-num">6.1</span> OLTP vs OLAP и размерное моделирование «Звезда» (4 задания)</h2>
+      <h2><span class="sec-num">6.1</span> OLTP vs OLAP и размерное моделирование «Звезда» (4 задания) <a class="sec-lesson-link" href="../../lessons/lesson_6_1.html">Урок 6.1 →</a></h2>
       <p>
         Работаем в <strong>PostgreSQL 16</strong> (схемы <code>m6_oltp</code> и <code>m6_star</code>): строим аналитические срезы по «Звезде», ловим две классические ловушки DWH (перезапись цены и <em>Fan-out</em>) и проектируем собственное расширение витрины.
       </p>
@@ -1076,7 +665,7 @@ ORDER BY revenue DESC;</code></pre>
 
     <!-- ==================== 02. УРОК 6.2 ==================== -->
     <section id="sec-6-2" data-section-lesson="6_2">
-      <h2><span class="sec-num">6.2</span> Партиционирование и Materialized View в PostgreSQL (4 задания)</h2>
+      <h2><span class="sec-num">6.2</span> Партиционирование и Materialized View в PostgreSQL (4 задания) <a class="sec-lesson-link" href="../../lessons/lesson_6_2.html">Урок 6.2 →</a></h2>
       <p>
         Работаем со схемой <code>m6_part</code> (90 000 строк в <code>fact_sales_part</code> и витрина <code>mv_city_monthly</code>): замеряем <strong>Partition Pruning</strong>, управляем партициями без простоя и ускоряем отчёты через <code>REFRESH MATERIALIZED VIEW CONCURRENTLY</code>.
       </p>
@@ -1307,7 +896,7 @@ FROM m6_part.lab_list_orders GROUP BY tableoid ORDER BY partition_name;</code></
 
     <!-- ==================== 03. УРОК 6.3 ==================== -->
     <section id="sec-6-3" data-section-lesson="6_3">
-      <h2><span class="sec-num">6.3</span> Колончатое хранение и ClickHouse: сжатие, гранулы и MPP (4 задания)</h2>
+      <h2><span class="sec-num">6.3</span> Колончатое хранение и ClickHouse: сжатие, гранулы и MPP (4 задания) <a class="sec-lesson-link" href="../../lessons/lesson_6_3.html">Урок 6.3 →</a></h2>
       <p>
         Переходим в <strong>ClickHouse</strong> (база <code>analytics_db</code> — через <code>clickhouse-client</code> или <code>http://localhost:8123/play</code>). Измеряем силу колончатого сжатия и разреженного индекса на 500 000 строках и пробуем мини-MPP.
       </p>
@@ -1531,7 +1120,7 @@ FROM m6_sales_global;</code></pre>
 
     <!-- ==================== 04. УРОК 6.4 ==================== -->
     <section id="sec-6-4" data-section-lesson="6_4">
-      <h2><span class="sec-num">6.4</span> Потоки данных ELT, идемпотентность и SCD Type 2 (4 задания)</h2>
+      <h2><span class="sec-num">6.4</span> Потоки данных ELT, идемпотентность и SCD Type 2 (4 задания) <a class="sec-lesson-link" href="../../lessons/lesson_6_4.html">Урок 6.4 →</a></h2>
       <p>
         Возвращаемся в <strong>PostgreSQL 16</strong> (схема <code>m6_elt</code>): собираем идемпотентные загрузчики, тестируем предохранитель от «раздвоения» клиента, строим отчёт <strong>As-Was vs As-Is</strong> и запускаем 2-шаговый конвейер <strong>SCD Type 2</strong>.
       </p>
@@ -1746,7 +1335,7 @@ FROM m6_elt.dim_customer_scd2 ORDER BY customer_bk, valid_from;</code></pre>
 
     <!-- ==================== 05. УРОК 6.5 (ИТОГОВЫЙ ПРОЕКТ) ==================== -->
     <section id="sec-6-5" data-section-lesson="6_5">
-      <h2><span class="sec-num">6.5</span> Итоговый проект курса: сквозной контур PG (OLTP) → ClickHouse (OLAP)</h2>
+      <h2><span class="sec-num">6.5</span> Итоговый проект курса: сквозной контур PG (OLTP) → ClickHouse (OLAP) <a class="sec-lesson-link" href="../../lessons/lesson_6_5.html">Урок 6.5 →</a></h2>
       <p>
         Финальный проект объединяет <strong>PostgreSQL 16</strong> (Окно 1) и <strong>ClickHouse</strong> (Окно 2) по сети Docker <code>db_net</code>. Пройди <strong>4 последовательных Milestone-этапа</strong> — от поимки расхождения в данных до боевого инцидента на продакшене!
       </p>
@@ -2033,180 +1622,7 @@ FROM m6_mart_sales GROUP BY part_month ORDER BY part_month;</code></pre>
   </article>
 
   <script src="../../assets/vendor/highlightjs/highlight.min.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // 1. Подсветка синтаксиса
-      if (window.hljs) {
-        hljs.highlightAll();
-      }
-
-      // 2. Автоматическое оглавление из <h2>
-      const tocEl = document.getElementById('toc');
-      const sections = Array.from(document.querySelectorAll('article.lecture > section'));
-      if (tocEl && sections.length > 0) {
-        const items = [];
-        sections.forEach((sec, idx) => {
-          const h2 = sec.querySelector('h2');
-          if (!h2) return;
-          const id = sec.id || `sec-${idx + 1}`;
-          sec.id = id;
-          const numEl = h2.querySelector('.sec-num');
-          const numText = numEl ? numEl.textContent.trim() : String(idx).padStart(2, '0');
-          const clone = h2.cloneNode(true);
-          const cloneNum = clone.querySelector('.sec-num');
-          if (cloneNum) cloneNum.remove();
-          items.push(`<li><a href="#${id}"><span class="toc-num">${numText}</span>${clone.textContent.trim()}</a></li>`);
-        });
-        if (items.length > 0) {
-          tocEl.innerHTML = `<div class="toc-title">Разделы практикума</div><ul class="toc-list">${items.join('')}</ul>`;
-        }
-      }
-
-      // 3. Копирование кода (с fallback для file://)
-      async function copyText(text) {
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(text);
-          return;
-        }
-        const area = document.createElement('textarea');
-        area.value = text;
-        area.style.position = 'fixed';
-        area.style.opacity = '0';
-        document.body.appendChild(area);
-        area.select();
-        const ok = document.execCommand('copy');
-        document.body.removeChild(area);
-        if (!ok) throw new Error('Copy failed');
-      }
-
-      document.querySelectorAll('.copy-btn').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          const codeEl = btn.closest('.code-block').querySelector('code');
-          const originalText = btn.textContent;
-          try {
-            await copyText(codeEl.innerText);
-            btn.textContent = 'Скопировано ✓';
-            btn.classList.add('copied');
-            setTimeout(() => {
-              btn.textContent = originalText;
-              btn.classList.remove('copied');
-            }, 1800);
-          } catch (_) {
-            btn.textContent = 'Ошибка';
-            setTimeout(() => { btn.textContent = originalText; }, 1800);
-          }
-        });
-      });
-
-      // 4. Прогресс и фильтрация (по урокам, статусу и форматам)
-      const STORAGE_KEY = 'db_course_practice_m6_v2';
-      const cards = Array.from(document.querySelectorAll('.task-card[data-task-id]'));
-      const progressText = document.getElementById('progress-text');
-      const progressFill = document.getElementById('progress-fill');
-      const resetBtn = document.getElementById('reset-progress');
-      const filterBtns = Array.from(document.querySelectorAll('.filter-btn'));
-      const emptyFilter = document.getElementById('empty-filter');
-      let currentFilter = 'all';
-
-      function loadDone() {
-        try {
-          return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
-        } catch (_) {
-          return new Set();
-        }
-      }
-
-      function saveDone(set) {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(set)));
-        } catch (_) {}
-      }
-
-      const doneSet = loadDone();
-
-      function applyFilter() {
-        let visibleCards = 0;
-
-        cards.forEach((card) => {
-          const id = card.dataset.taskId;
-          const lesson = card.dataset.lesson;
-          const tags = (card.dataset.tags || '').split(/\s+/).filter(Boolean);
-          const isDone = doneSet.has(id);
-          let show = true;
-
-          if (currentFilter === 'todo') {
-            show = !isDone;
-          } else if (currentFilter.startsWith('tag:')) {
-            const targetTag = currentFilter.slice(4);
-            show = tags.includes(targetTag);
-          } else if (currentFilter !== 'all') {
-            show = lesson === currentFilter;
-          }
-
-          card.classList.toggle('hidden', !show);
-          if (show) visibleCards++;
-        });
-
-        sections.forEach((sec) => {
-          const secLesson = sec.dataset.sectionLesson;
-          if (secLesson === 'init') {
-            sec.classList.toggle('hidden', currentFilter !== 'all' && currentFilter !== 'todo');
-            return;
-          }
-          const secCards = Array.from(sec.querySelectorAll('.task-card'));
-          const anyVisible = secCards.some((c) => !c.classList.contains('hidden'));
-          sec.classList.toggle('hidden', !anyVisible);
-        });
-
-        emptyFilter.classList.toggle('visible', visibleCards === 0);
-      }
-
-      function syncUI() {
-        let doneCount = 0;
-        cards.forEach((card) => {
-          const id = card.dataset.taskId;
-          const cb = card.querySelector('.task-check');
-          const isDone = doneSet.has(id);
-          cb.checked = isDone;
-          card.classList.toggle('done', isDone);
-          if (isDone) doneCount++;
-        });
-
-        const total = cards.length;
-        const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
-        progressText.textContent = `${doneCount} / ${total} (${pct}%)`;
-        progressFill.style.width = `${pct}%`;
-        resetBtn.classList.toggle('visible', doneCount > 0);
-        applyFilter();
-      }
-
-      cards.forEach((card) => {
-        const cb = card.querySelector('.task-check');
-        cb.addEventListener('change', () => {
-          const id = card.dataset.taskId;
-          if (cb.checked) doneSet.add(id);
-          else doneSet.delete(id);
-          saveDone(doneSet);
-          syncUI();
-        });
-      });
-
-      filterBtns.forEach((btn) => {
-        btn.addEventListener('click', () => {
-          currentFilter = btn.dataset.filter;
-          filterBtns.forEach((b) => b.classList.toggle('active', b === btn));
-          applyFilter();
-        });
-      });
-
-      resetBtn.addEventListener('click', () => {
-        doneSet.clear();
-        saveDone(doneSet);
-        syncUI();
-      });
-
-      syncUI();
-    });
-  </script>
+  <script src="../../assets/js/diagrams.js" defer></script>
+  <script src="../../assets/js/practice.js" defer></script>
 </body>
 </html>

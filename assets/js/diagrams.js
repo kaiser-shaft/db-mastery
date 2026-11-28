@@ -32,13 +32,20 @@
   }
 
   function initDiagrams() {
-    const boxes = Array.from(document.querySelectorAll('.diagram-box'));
+    const boxes = Array.from(document.querySelectorAll('.diagram-box, .schema-box'));
     if (!boxes.length) return;
 
-    // 1. Подготавливаем DOM-обёртки для всех .diagram-box до рендера Mermaid
+    // 1. Подготавливаем DOM-обёртки для всех .diagram-box и .schema-box до рендера Mermaid
     boxes.forEach((box) => {
-      const target = box.querySelector('.mermaid') || box.querySelector('svg');
-      if (target && !box.querySelector('.diagram-scroll-wrap')) {
+      const existingErScroll = box.querySelector('.er-scroll');
+      const target = box.querySelector('.mermaid') || box.querySelector('svg.er-svg') || box.querySelector('svg');
+      if (existingErScroll && !box.querySelector('.diagram-scroll-wrap')) {
+        const wrap = document.createElement('div');
+        wrap.className = 'diagram-scroll-wrap';
+        existingErScroll.classList.add('diagram-scroll');
+        existingErScroll.parentNode.insertBefore(wrap, existingErScroll);
+        wrap.appendChild(existingErScroll);
+      } else if (target && !box.querySelector('.diagram-scroll-wrap')) {
         const wrap = document.createElement('div');
         wrap.className = 'diagram-scroll-wrap';
         const scroll = document.createElement('div');
@@ -182,7 +189,7 @@
     }
 
     function openDiagramModal(box) {
-      const svg = box.querySelector('svg');
+      const svg = box.querySelector('.mermaid svg') || box.querySelector('svg.er-svg') || box.querySelector('svg');
       if (!svg) return;
 
       // Если модалка уже открыта на другой схеме — вернём прошлую на место
@@ -190,7 +197,9 @@
       lastFocusedEl = document.activeElement;
 
       const caption = box.querySelector('.diagram-caption');
-      modalTitle.textContent = caption ? caption.textContent.trim() : 'Диаграмма';
+      modalTitle.textContent = caption
+        ? caption.textContent.trim()
+        : (svg.getAttribute('aria-label') || 'Диаграмма');
 
       const natural = getSvgNaturalSize(svg);
       const inlineRect = svg.getBoundingClientRect();

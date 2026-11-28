@@ -1,0 +1,235 @@
+<!--
+  =====================================================================
+  ШАБЛОН ПРАКТИКУМА МОДУЛЯ (единый формат курса db-mastery)
+  =====================================================================
+  1. Укажи уникальный ключ прогресса на <article class="lecture"
+     data-practice-key="db_course_practice_mX_v1">.
+  2. Подключаются общие ассеты:
+     - ../../assets/css/diagrams.css + diagrams.js (полноэкранный зум ER-схемы)
+     - ../../assets/css/practice.css + practice.js (стили, TOC, копирование, прогресс и фильтры)
+     - ../../assets/css/theme.css + theme.js (единая тема light / dark)
+  3. Поддерживаемые компоненты:
+     - .practice-toolbar  — прогресс-бар + фильтры по урокам (data-lesson) и форматам (data-tags)
+     - .format-legend     — 4 карточки-подсказки по форматам заданий
+     - .schema-box        — ER-диаграмма (.er-svg), легенда (.er-legend), ловушки (.quirks-grid)
+                            и спойлер стартовых данных (details.data-preview)
+     - .task-card         — карточка задания с чекбоксом, бейджами среды/уровня,
+                            плашкой .state-bar / .alert-strip, блоком .observe-box и details.solution
+     - .tl-wrap           — 2-оконный таймлайн транзакций (.tl-head, .tl-row, .tl-wait)
+     - .duel-grid         — сравнение двух СУБД (.duel-pg vs .duel-mysql)
+     - .os-grid           — команды в две колонки (Bash + PowerShell)
+  =====================================================================
+-->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Практикум · Модуль X: Название модуля</title>
+
+  <link rel="stylesheet" href="../../assets/vendor/fonts/fonts.css" />
+  <link rel="stylesheet" href="../../assets/vendor/highlightjs/github-dark.min.css" />
+  <link rel="stylesheet" href="../../assets/css/diagrams.css" />
+  <link rel="stylesheet" href="../../assets/css/practice.css" />
+  <link rel="stylesheet" href="../../assets/css/theme.css" />
+  <script src="../../assets/js/theme.js"></script>
+</head>
+<body>
+  <article class="lecture" data-practice-key="db_course_practice_mX_v1">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../../docker_guide.html">Гид по Docker</a>
+      </div>
+    </nav>
+
+    <!-- ==================== ШАПКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Практикум · Модуль X</span>
+        <span class="pill pill-tip">N заданий · От базового к сложному</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · learning_db</span>
+      </div>
+
+      <h1>Практические задания: Название модуля X</h1>
+      <p class="hero-sub">
+        Краткое описание тренажёра по Урокам X.1–X.4 и ключевых практических навыков.
+      </p>
+
+      <div class="practice-toolbar">
+        <div>
+          <div class="progress-head">
+            <span class="progress-label">Выполнено заданий: <strong id="progress-text">0 / 2 (0%)</strong></span>
+            <button type="button" class="reset-btn" id="reset-progress">Сбросить прогресс</button>
+          </div>
+          <div class="progress-bar" style="margin-top: 0.45rem;">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="toolbar-actions">
+          <div class="filter-row" role="group" aria-label="Фильтр по урокам">
+            <span class="filter-row-label">Урок:</span>
+            <button type="button" class="filter-btn active" data-filter="all">Все (2)</button>
+            <button type="button" class="filter-btn" data-filter="todo">Невыполненные</button>
+            <button type="button" class="filter-btn" data-filter="X_1">Урок X.1</button>
+          </div>
+          <div class="filter-row" role="group" aria-label="Фильтр по формату">
+            <span class="filter-row-label">Формат:</span>
+            <button type="button" class="filter-btn" data-filter="tag:sql">SQL</button>
+            <button type="button" class="filter-btn" data-filter="tag:bugfix">Баг-фикс</button>
+          </div>
+        </div>
+      </div>
+
+      <nav class="toc-box" id="toc" aria-label="Содержание практикума"></nav>
+    </header>
+
+    <!-- ==================== 00. ПОДГОТОВКА СТЕНДА ==================== -->
+    <section id="sec-init" data-section-lesson="init">
+      <h2><span class="sec-num">00</span> Подготовка базы данных и схема стенда</h2>
+      <p>
+        Загрузи учебный скрипт <code>practice/module_X/init.sql</code> перед началом работы.
+      </p>
+
+      <div class="os-grid">
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang"><span class="db-pill db-bash">Bash</span> Linux / macOS / Git Bash</span>
+            <button class="copy-btn" type="button">Копировать</button>
+          </div>
+          <pre><code class="language-bash">docker compose up -d
+docker exec -i course_pg_primary psql -U student -d learning_db &lt; practice/module_X/init.sql</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang"><span class="db-pill db-bash">PowerShell</span> Windows</span>
+            <button class="copy-btn" type="button">Копировать</button>
+          </div>
+          <pre><code class="language-powershell">docker compose up -d
+Get-Content practice/module_X/init.sql -Raw | docker exec -i course_pg_primary psql -U student -d learning_db</code></pre>
+        </div>
+      </div>
+
+      <h3>Схема базы данных (ER-диаграмма)</h3>
+      <div class="schema-box">
+        <div class="er-scroll">
+          <svg class="er-svg" viewBox="0 0 600 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ER-диаграмма базы данных Модуля X">
+            <rect x="20" y="20" width="240" height="120" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" />
+            <path d="M 20 30 Q 20 20 30 20 L 250 20 Q 260 20 260 30 L 260 52 L 20 52 Z" fill="#eff6ff" />
+            <text x="34" y="41" font-size="13" font-weight="700" fill="#1e3a8a" font-family="JetBrains Mono, monospace">items</text>
+            <rect x="32" y="64" width="24" height="15" rx="4" fill="#dbeafe" />
+            <text x="44" y="75" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8" font-family="JetBrains Mono, monospace">PK</text>
+            <text x="64" y="75" font-size="12" font-weight="600" fill="#0f172a" font-family="JetBrains Mono, monospace">id</text>
+            <text x="246" y="75" text-anchor="end" font-size="11" fill="#64748b" font-family="JetBrains Mono, monospace">INT</text>
+          </svg>
+        </div>
+
+        <div class="er-legend">
+          <span class="er-legend-item"><span class="er-tag er-tag-pk">PK</span> Первичный ключ</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-fk">FK</span> Внешний ключ</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-uk">UK</span> Уникальное ограничение</span>
+          <span class="er-legend-item"><span class="er-tag er-tag-null">NULL</span> Допускает NULL</span>
+        </div>
+
+        <details class="data-preview">
+          <summary>Заглянуть в стартовые данные таблиц (init.sql)</summary>
+          <div class="preview-body">
+            <div>
+              <div class="preview-table-title">items <span>пример таблицы</span></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>id</th><th>title</th><th>note</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1</td><td>Пример записи</td><td><span class="null-pill">NULL</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 01. РАЗДЕЛ ЗАДАНИЙ ==================== -->
+    <section id="sec-X-1" data-section-lesson="X_1">
+      <h2><span class="sec-num">X.1</span> Название раздела (2 задания) <a class="sec-lesson-link" href="../../lessons/lesson_1_1.html">Урок X.1 →</a></h2>
+
+      <div class="task-card" data-task-id="X_1_1" data-lesson="X_1" data-tags="sql">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 1 выполненным" />
+            <div class="task-title"><span class="task-num">#1</span>Название базового задания</div>
+          </div>
+          <div class="task-badges">
+            <span class="env-badge env-pg1">1 окно PG</span>
+            <span class="lvl-badge lvl-base">Базовый</span>
+          </div>
+        </div>
+        <p class="task-desc">Формулировка задачи с указанием таблиц, колонок и ожидаемого результата.</p>
+        <div class="observe-box">
+          <div class="observe-title">Проверь себя</div>
+          <ul>
+            <li>Ожидаемое число строк и ключевые значения результата.</li>
+          </ul>
+        </div>
+        <details class="solution">
+          <summary>Показать эталонное решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · PostgreSQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT * FROM items ORDER BY id;</code></pre>
+          </div>
+          <p class="solution-note"><strong>Разбор:</strong> короткое пояснение, почему это решение оптимально.</p>
+        </details>
+      </div>
+
+      <div class="task-card bug-card" data-task-id="X_1_2" data-lesson="X_1" data-tags="bugfix">
+        <div class="task-head">
+          <div class="task-title-wrap">
+            <input type="checkbox" class="task-check" aria-label="Отметить задание 2 выполненным" />
+            <div class="task-title"><span class="task-num">#2</span>Баг-фикс: найди и исправь ошибку</div>
+          </div>
+          <div class="task-badges">
+            <span class="lvl-badge lvl-bug">Баг-фикс</span>
+          </div>
+        </div>
+        <div class="state-bar"><strong>Предусловие:</strong> чистый <code>init.sql</code></div>
+        <p class="task-desc">Найди ошибку в запросе ниже и перепиши его корректно.</p>
+        <div class="code-block bug-code">
+          <div class="code-header">
+            <span class="code-lang">SQL · Сломанный код</span>
+            <button class="copy-btn" type="button">Копировать</button>
+          </div>
+          <pre><code class="language-sql">SELECT * FROM items WHERE note = NULL;</code></pre>
+        </div>
+        <details class="solution">
+          <summary>Показать эталонное решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL · Исправленный запрос</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">SELECT * FROM items WHERE note IS NULL;</code></pre>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <div class="empty-filter" id="empty-filter">
+      По выбранному фильтру заданий не осталось. Переключись на «Все» или сбрось прогресс.
+    </div>
+
+  </article>
+
+  <script src="../../assets/vendor/highlightjs/highlight.min.js"></script>
+  <script src="../../assets/js/diagrams.js" defer></script>
+  <script src="../../assets/js/practice.js" defer></script>
+</body>
+</html>

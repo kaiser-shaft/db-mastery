@@ -43,7 +43,8 @@
   user-select: none;
 }
 
-.diagram-box.has-scroll .diagram-scroll-hint {
+.diagram-box.has-scroll .diagram-scroll-hint,
+.schema-box.has-scroll .diagram-scroll-hint {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
@@ -394,6 +395,7 @@
 
 .diagram-modal-canvas svg {
   max-width: none !important;
+  min-width: 0 !important;
   height: auto;
   display: block;
 }
