@@ -460,9 +460,89 @@
       resizeTimer = setTimeout(updateDiagramLayouts, 120);
     });
 
-    // 4. Инициализация и запуск Mermaid (если подключён на странице)
-    if (window.mermaid && document.querySelector('.mermaid')) {
-      window.mermaid.initialize({
+    // 4. Инициализация и запуск Mermaid (с поддержкой переключения light/dark темы)
+    const mermaidEls = Array.from(document.querySelectorAll('.mermaid'));
+
+    function isDarkTheme() {
+      return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
+
+    function getMermaidConfig(dark) {
+      const lightVars = {
+        fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        fontSize: '13.5px',
+        darkMode: false,
+        background: '#f8fafc',
+        mainBkg: '#ffffff',
+        primaryColor: '#ffffff',
+        primaryTextColor: '#0f172a',
+        primaryBorderColor: '#93c5fd',
+        lineColor: '#64748b',
+        secondaryColor: '#eff6ff',
+        secondaryBorderColor: '#bfdbfe',
+        secondaryTextColor: '#1e3a8a',
+        tertiaryColor: '#f8fafc',
+        tertiaryBorderColor: '#cbd5e1',
+        tertiaryTextColor: '#334155',
+        clusterBkg: '#eff6ff',
+        clusterBorder: '#bfdbfe',
+        edgeLabelBackground: '#ffffff',
+        nodeBorder: '#93c5fd',
+        titleColor: '#1e3a8a',
+        actorBkg: '#eff6ff',
+        actorBorder: '#93c5fd',
+        actorTextColor: '#1e3a8a',
+        actorLineColor: '#cbd5e1',
+        signalColor: '#475569',
+        signalTextColor: '#0f172a',
+        labelBoxBkgColor: '#ffffff',
+        labelBoxBorderColor: '#cbd5e1',
+        labelTextColor: '#334155',
+        activationBkgColor: '#eff6ff',
+        activationBorderColor: '#93c5fd'
+      };
+
+      const darkVars = {
+        fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        fontSize: '13.5px',
+        darkMode: true,
+        background: '#0e1525',
+        mainBkg: '#19243a',
+        primaryColor: '#19243a',
+        primaryTextColor: '#f1f5f9',
+        primaryBorderColor: '#38bdf8',
+        lineColor: '#94a3b8',
+        secondaryColor: '#131c2e',
+        secondaryBorderColor: '#364766',
+        secondaryTextColor: '#7dd3fc',
+        tertiaryColor: '#0e1525',
+        tertiaryBorderColor: '#364766',
+        tertiaryTextColor: '#cbd5e1',
+        clusterBkg: '#131c2e',
+        clusterBorder: '#2c4466',
+        edgeLabelBackground: '#131c2e',
+        nodeBorder: '#38bdf8',
+        titleColor: '#f1f5f9',
+        actorBkg: '#19243a',
+        actorBorder: '#38bdf8',
+        actorTextColor: '#f1f5f9',
+        actorLineColor: '#475569',
+        signalColor: '#94a3b8',
+        signalTextColor: '#f1f5f9',
+        labelBoxBkgColor: '#19243a',
+        labelBoxBorderColor: '#364766',
+        labelTextColor: '#e2e8f0',
+        loopTextColor: '#e2e8f0',
+        noteBkgColor: '#2d2111',
+        noteBorderColor: '#f59e0b',
+        noteTextColor: '#fcd34d',
+        activationBkgColor: '#162944',
+        activationBorderColor: '#38bdf8',
+        attributeBackgroundColorOdd: '#131c2e',
+        attributeBackgroundColorEven: '#19243a'
+      };
+
+      return {
         startOnLoad: false,
         theme: 'base',
         flowchart: {
@@ -496,48 +576,65 @@
         gantt: {
           useMaxWidth: false
         },
-        themeVariables: {
-          fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          fontSize: '13.5px',
-          background: '#f8fafc',
-          mainBkg: '#ffffff',
-          primaryColor: '#ffffff',
-          primaryTextColor: '#0f172a',
-          primaryBorderColor: '#93c5fd',
-          lineColor: '#64748b',
-          secondaryColor: '#eff6ff',
-          secondaryBorderColor: '#bfdbfe',
-          secondaryTextColor: '#1e3a8a',
-          tertiaryColor: '#f8fafc',
-          tertiaryBorderColor: '#cbd5e1',
-          tertiaryTextColor: '#334155',
-          clusterBkg: '#eff6ff',
-          clusterBorder: '#bfdbfe',
-          edgeLabelBackground: '#ffffff',
-          nodeBorder: '#93c5fd',
-          titleColor: '#1e3a8a',
-          actorBkg: '#eff6ff',
-          actorBorder: '#93c5fd',
-          actorTextColor: '#1e3a8a',
-          actorLineColor: '#cbd5e1',
-          signalColor: '#475569',
-          signalTextColor: '#0f172a',
-          labelBoxBkgColor: '#ffffff',
-          labelBoxBorderColor: '#cbd5e1',
-          labelTextColor: '#334155',
-          activationBkgColor: '#eff6ff',
-          activationBorderColor: '#93c5fd'
+        themeVariables: dark ? darkVars : lightVars
+      };
+    }
+
+    if (window.mermaid && mermaidEls.length > 0) {
+      mermaidEls.forEach((el) => {
+        if (!el.dataset.mermaidSource) {
+          el.dataset.mermaidSource = el.innerHTML;
         }
       });
 
-      const runPromise = window.mermaid.run({ querySelector: '.mermaid' });
-      if (runPromise && typeof runPromise.then === 'function') {
-        runPromise.then(() => {
+      let rendering = false;
+      let needsRerender = false;
+
+      function renderMermaidDiagrams(isRerender) {
+        if (rendering) {
+          needsRerender = true;
+          return;
+        }
+        rendering = true;
+
+        if (isRerender) {
+          if (modal.classList.contains('open')) {
+            closeDiagramModal();
+          }
+          mermaidEls.forEach((el) => {
+            el.removeAttribute('data-processed');
+            el.innerHTML = el.dataset.mermaidSource || '';
+          });
+        }
+
+        window.mermaid.initialize(getMermaidConfig(isDarkTheme()));
+
+        const finish = () => {
+          rendering = false;
           updateDiagramLayouts();
-        });
-      } else {
-        setTimeout(updateDiagramLayouts, 200);
+          if (needsRerender) {
+            needsRerender = false;
+            renderMermaidDiagrams(true);
+          }
+        };
+
+        try {
+          const runPromise = window.mermaid.run({ querySelector: '.mermaid' });
+          if (runPromise && typeof runPromise.then === 'function') {
+            runPromise.then(finish, finish);
+          } else {
+            setTimeout(finish, 200);
+          }
+        } catch (_) {
+          finish();
+        }
       }
+
+      renderMermaidDiagrams(false);
+
+      window.addEventListener('course-theme-change', () => {
+        renderMermaidDiagrams(true);
+      });
     } else {
       updateDiagramLayouts();
     }

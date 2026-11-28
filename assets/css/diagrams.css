@@ -431,6 +431,128 @@
   }
 }
 
+/* ==================== ТЁМНАЯ ТЕМА ДЛЯ ДИАГРАММ И MERMAID ==================== */
+:root[data-theme="dark"] .diagram-box {
+  background: var(--diagram-bg, var(--surface-3, #0e1525));
+  border-color: var(--border, #26344d);
+}
+
+@media (min-width: 960px) {
+  :root[data-theme="dark"] .diagram-box.is-wide {
+    background: var(--surface, #131c2e);
+    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.48);
+  }
+}
+
+:root[data-theme="dark"] .diagram-zoom-btn {
+  background: var(--surface-2, #19243a);
+  border-color: var(--border-strong, #364766);
+  color: var(--muted, #94a3b8);
+}
+
+:root[data-theme="dark"] .diagram-zoom-btn:hover,
+:root[data-theme="dark"] .diagram-zoom-btn:focus-visible {
+  color: var(--accent, #38bdf8);
+  border-color: var(--accent, #38bdf8);
+  background: var(--accent-soft, rgba(56, 189, 248, 0.14));
+}
+
+:root[data-theme="dark"] .diagram-box .mermaid svg .node rect,
+:root[data-theme="dark"] .diagram-box .mermaid svg .node polygon,
+:root[data-theme="dark"] .diagram-box .mermaid svg .node circle,
+:root[data-theme="dark"] .diagram-box .mermaid svg .node path,
+:root[data-theme="dark"] .diagram-modal-canvas svg .node rect,
+:root[data-theme="dark"] .diagram-modal-canvas svg .node polygon,
+:root[data-theme="dark"] .diagram-modal-canvas svg .node circle,
+:root[data-theme="dark"] .diagram-modal-canvas svg .node path {
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.35));
+}
+
+:root[data-theme="dark"] .diagram-box .mermaid svg .nodeLabel,
+:root[data-theme="dark"] .diagram-modal-canvas svg .nodeLabel {
+  color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .diagram-box .mermaid svg .cluster rect,
+:root[data-theme="dark"] .diagram-modal-canvas svg .cluster rect {
+  fill: #131c2e !important;
+  stroke: #2c4466 !important;
+}
+
+:root[data-theme="dark"] .diagram-box .mermaid svg .cluster-label .nodeLabel,
+:root[data-theme="dark"] .diagram-box .mermaid svg .cluster-label span,
+:root[data-theme="dark"] .diagram-modal-canvas svg .cluster-label .nodeLabel,
+:root[data-theme="dark"] .diagram-modal-canvas svg .cluster-label span {
+  color: #7dd3fc;
+}
+
+:root[data-theme="dark"] .diagram-box .mermaid svg .flowchart-link,
+:root[data-theme="dark"] .diagram-box .mermaid svg .edgePath path,
+:root[data-theme="dark"] .diagram-modal-canvas svg .flowchart-link,
+:root[data-theme="dark"] .diagram-modal-canvas svg .edgePath path {
+  stroke: #94a3b8;
+}
+
+:root[data-theme="dark"] .diagram-box .mermaid svg .arrowheadPath,
+:root[data-theme="dark"] .diagram-box .mermaid svg marker path,
+:root[data-theme="dark"] .diagram-modal-canvas svg .arrowheadPath,
+:root[data-theme="dark"] .diagram-modal-canvas svg marker path {
+  fill: #94a3b8;
+  stroke: #94a3b8;
+}
+
+:root[data-theme="dark"] .diagram-box .mermaid svg foreignObject .edgeLabel,
+:root[data-theme="dark"] .diagram-modal-canvas svg foreignObject .edgeLabel {
+  color: #e2e8f0;
+  background: #131c2e;
+  border-color: #364766;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="dark"] .diagram-box .mermaid svg .edgeLabel rect,
+:root[data-theme="dark"] .diagram-modal-canvas svg .edgeLabel rect {
+  fill: #131c2e !important;
+  stroke: #364766 !important;
+}
+
+:root[data-theme="dark"] .diagram-box .mermaid svg rect.actor,
+:root[data-theme="dark"] .diagram-modal-canvas svg rect.actor {
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.32));
+}
+
+:root[data-theme="dark"] .diagram-box .mermaid svg .messageText,
+:root[data-theme="dark"] .diagram-modal-canvas svg .messageText {
+  fill: #e2e8f0;
+}
+
+:root[data-theme="dark"] .diagram-modal {
+  background: rgba(2, 6, 23, 0.86);
+}
+
+:root[data-theme="dark"] .diagram-modal-bar {
+  background: var(--surface, #131c2e);
+  border-bottom-color: var(--border, #26344d);
+}
+
+:root[data-theme="dark"] .diagram-modal-btn {
+  background: var(--surface-2, #19243a);
+  border-color: var(--border-strong, #364766);
+  color: var(--text, #f1f5f9);
+}
+
+:root[data-theme="dark"] .diagram-modal-btn:hover,
+:root[data-theme="dark"] .diagram-modal-btn:focus-visible {
+  border-color: var(--accent, #38bdf8);
+  color: var(--accent, #38bdf8);
+  background: var(--accent-soft, rgba(56, 189, 248, 0.14));
+}
+
+:root[data-theme="dark"] .diagram-modal-hint {
+  background: rgba(19, 28, 46, 0.9);
+  border: 1px solid #364766;
+  color: #cbd5e1;
+}
+
 /* ==================== ПЕЧАТЬ / ЭКСПОРТ В PDF ==================== */
 @media print {
   .diagram-actions,
