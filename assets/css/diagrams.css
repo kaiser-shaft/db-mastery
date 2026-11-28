@@ -223,8 +223,13 @@
   background-color: transparent !important;
 }
 
-.diagram-box .mermaid svg foreignObject .edgeLabel,
-.diagram-modal-canvas svg foreignObject .edgeLabel {
+.diagram-box .mermaid svg foreignObject .edgeLabel:empty,
+.diagram-modal-canvas svg foreignObject .edgeLabel:empty {
+  display: none;
+}
+
+.diagram-box .mermaid svg foreignObject .edgeLabel:not(:empty),
+.diagram-modal-canvas svg foreignObject .edgeLabel:not(:empty) {
   display: inline-block;
   padding: 2px 8px;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -503,8 +508,8 @@
   stroke: #94a3b8;
 }
 
-:root[data-theme="dark"] .diagram-box .mermaid svg foreignObject .edgeLabel,
-:root[data-theme="dark"] .diagram-modal-canvas svg foreignObject .edgeLabel {
+:root[data-theme="dark"] .diagram-box .mermaid svg foreignObject .edgeLabel:not(:empty),
+:root[data-theme="dark"] .diagram-modal-canvas svg foreignObject .edgeLabel:not(:empty) {
   color: #e2e8f0;
   background: #131c2e;
   border-color: #364766;
