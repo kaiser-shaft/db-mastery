@@ -1,131 +1,101 @@
-# Изучение Баз Данных (`db-mastery`)
+# db-mastery
 
-![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
-![MySQL 8.4](https://img.shields.io/badge/MySQL-8.4_InnoDB-4479A1?logo=mysql&logoColor=white)
-![ClickHouse](https://img.shields.io/badge/ClickHouse-OLAP-FFCC01?logo=clickhouse&logoColor=black)
-![Docker Compose](https://img.shields.io/badge/Docker_Compose-Stand-2496ED?logo=docker&logoColor=white)
-![Курс](https://img.shields.io/badge/Курс-6_модулей_·_26_уроков-10B981)
+Практический офлайн-курс по базам данных: **6 модулей, 26 уроков**, презентации, практикумы и Docker-стенд (`PostgreSQL 16`, `MySQL 8.4`, `ClickHouse`, `PgBouncer`, `Adminer`). Работает прямо в браузере без интернета и сборки.
 
-Практический курс по базам данных: **6 модулей и 26 уроков** — от первого SQL-запроса и устройства страниц на диске до транзакций, MVCC, репликации, резервного копирования (PITR) и аналитических хранилищ (DWH / OLAP).
+**Точки входа:** [`index.html`](index.html) (оглавление и прогресс) · [`handout.html`](handout.html) (шпаргалка) · [`docker_guide.html`](docker_guide.html) (гид по стенду)  
+**Навигация:** [Старт за 30 секунд](#старт-за-30-секунд) · [Модули и стенд](#модули-и-стенд) · [Подключения и порты](#подключения-и-порты) · [Команды стенда](#команды-стенда) · [Все уроки и структура](#справочник-файлов)
 
-Весь учебный материал оформлен в виде полностью автономного офлайн веб-комплекса (открывается прямо в браузере без сборки, бэкенда и доступа в интернет — шрифты, Highlight.js и Mermaid хранятся локально) и дополнен готовым Docker-стендом.
+## Старт за 30 секунд
 
-[Быстрый старт](#-быстрый-старт) · [Как проходить практику](#-как-проходить-практику) · [Программа курса](#-программа-курса) · [Стенд и подключения](#-сервисы-и-параметры-подключения) · [Структура](#-структура-репозитория)
-
----
-
-## Что внутри
-
-- **26 HTML-уроков** ([`lessons/`](lessons/)) — структурированная теория, разбор внутреннего устройства СУБД и типовых ошибок.
-- **6 презентаций** ([`slides/`](slides/)) — слайды к каждому модулю для быстрого обзора и повторения.
-- **6 практических модулей** ([`practice/`](practice/)) — задания в формате [`practice.html`](practice/module_1/practice.html) и SQL-скрипты инициализации стенда (`init.sql`, `init_mysql.sql`, `init_clickhouse.sql`).
-- **Главная страница** ([`index.html`](index.html)) — оглавление курса, поиск по урокам и отслеживание прогресса.
-- **Справочник** ([`handout.html`](handout.html)) — шпаргалка по PostgreSQL, MySQL/InnoDB, ClickHouse и проектированию DWH.
-- **Гид по стенду** ([`docker_guide.html`](docker_guide.html)) — подробная инструкция по Docker-окружению и диагностике проблем.
-
----
-
-## Быстрый старт
-
-### Требования
-
-- **Docker** и **Docker Compose** (v2)
-- Любой современный браузер
-- Опционально: локальный SQL-клиент (DBeaver, DataGrip, `psql`) или встроенный в стенд веб-клиент **Adminer**
-
-### Запуск
-
-1. Клонируйте репозиторий и перейдите в директорию проекта:
-
-   ```bash
-   git clone https://github.com/kaiser-shaft/db-mastery.git
-   cd db-mastery
-   ```
-
-2. Откройте [`index.html`](index.html) в браузере — это главная точка входа в курс.
-
-3. Поднимите базовый контейнер PostgreSQL 16 (нужен для модулей 1–6):
-
-   ```bash
-   docker compose up -d
-   ```
-
-4. Убедитесь, что контейнер перешёл в состояние `healthy`, и проверьте подключение:
-
-   ```bash
-   docker compose ps
-   docker exec -it course_pg_primary psql -U student -d learning_db
-   ```
-
-### Профили Docker Compose
-
-Дополнительные сервисы включаются по мере прохождения модулей через профили из [`docker-compose.yaml`](docker-compose.yaml):
+Требуется **Docker Compose v2** и любой браузер.
 
 ```bash
-# Модуль 4: MySQL 8.4 (InnoDB) для сравнения с PostgreSQL
-docker compose --profile mod4 up -d
+git clone https://github.com/kaiser-shaft/db-mastery.git
+cd db-mastery
 
-# Модуль 5: физическая и логическая репликация + пулер PgBouncer
-docker compose --profile mod5 up -d
+# Поднять базовый PostgreSQL 16 (нужен для всех модулей)
+docker compose up -d
 
-# Модуль 6: колоночная OLAP-СУБД ClickHouse
-docker compose --profile mod6 up -d
-
-# Опционально: веб-клиент Adminer (http://localhost:8080)
-docker compose --profile ui up -d
-
-# Запустить все сервисы стенда одновременно
-docker compose --profile all up -d
+# Проверить статус и зайти в psql
+docker compose ps
+docker exec -it course_pg_primary psql -U student -d learning_db
 ```
 
-Управление состоянием стенда:
+После запуска откройте [`index.html`](index.html) в браузере. При необходимости подключите веб-клиент Adminer: `docker compose --profile ui up -d` → [localhost:8080](http://localhost:8080).
+
+## Модули и стенд
+
+| # | Тема | Уроки | Материалы | Профиль Docker | Инициализация практики |
+| :---: | --- | :---: | --- | --- | --- |
+| **1** | Фундамент реляционных БД и базовый SQL | 1.1–1.4 | [Слайды](slides/module-1.html) · [Практика](practice/module_1/practice.html) | *(базовый)* | [`module_1/init.sql`](practice/module_1/init.sql) |
+| **2** | Проектирование схем и продвинутый SQL | 2.1–2.5 | [Слайды](slides/module-2.html) · [Практика](practice/module_2/practice.html) | *(базовый)* | [`module_2/init.sql`](practice/module_2/init.sql) |
+| **3** | Внутреннее устройство PostgreSQL: страницы, индексы, WAL | 3.1–3.4 | [Слайды](slides/module-3.html) · [Практика](practice/module_3/practice.html) | *(базовый)* | [`module_3/init.sql`](practice/module_3/init.sql) |
+| **4** | Транзакции, MVCC, блокировки и MySQL/InnoDB | 4.1–4.4 | [Слайды](slides/module-4.html) · [Практика](practice/module_4/practice.html) | `--profile mod4` | [`init.sql`](practice/module_4/init.sql) · [`init_mysql.sql`](practice/module_4/init_mysql.sql) |
+| **5** | Репликация, бэкапы (PITR) и PgBouncer | 5.1–5.4 | [Слайды](slides/module-5.html) · [Практика](practice/module_5/practice.html) | `--profile mod5` | [`module_5/init.sql`](practice/module_5/init.sql) |
+| **6** | Архитектура DWH, ClickHouse и итоговый проект | 6.1–6.5 | [Слайды](slides/module-6.html) · [Практика](practice/module_6/practice.html) | `--profile mod6` | [`init.sql`](practice/module_6/init.sql) · [`init_clickhouse.sql`](practice/module_6/init_clickhouse.sql) |
+
+> [!NOTE]
+> **Для урока 5.4 (PITR):** в [`docker-compose.yaml`](docker-compose.yaml) у сервиса `pg_primary` закомментированы `archive_mode` и `archive_command` (архивация WAL в `./backups/wal`). Раскомментируйте эти строки и выполните `docker compose up -d pg_primary`.
+
+## Подключения и порты
+
+Основная строка подключения PostgreSQL:
+
+```text
+postgresql://student:student_pass@localhost:5432/learning_db
+```
+
+| Сервис | Контейнер | Профиль | Порт | База и креды |
+| --- | --- | --- | :---: | --- |
+| **PostgreSQL 16 Primary** | `course_pg_primary` | по умолчанию | `5432` | `learning_db` · `student` / `student_pass` |
+| **MySQL 8.4 (InnoDB)** | `course_mysql_innodb` | `mod4`, `all` | `3306` | `learning_db` · `student` / `student_pass` (`root` / `root_pass`) |
+| **PostgreSQL 16 Standby** | `course_pg_standby` | `mod5`, `all` | `5433` | физическая реплика `pg_primary` |
+| **PostgreSQL 16 Logical** | `course_pg_logical` | `mod5`, `all` | `5434` | `learning_db` · `student` / `student_pass` |
+| **PgBouncer** | `course_pgbouncer` | `mod5`, `all` | `6432` | `learning_db` · `student` / `student_pass` (`transaction` pool) |
+| **ClickHouse** | `course_clickhouse` | `mod6`, `all` | `8123`, `9000` | `analytics_db` · `student` / `student_pass` · [Play UI](http://localhost:8123/play) |
+| **Adminer** | `course_adminer` | `ui`, `all` | `8080` | [Веб-клиент](http://localhost:8080) (PostgreSQL + MySQL) |
+
+## Команды стенда
+
+**Запуск и сброс профилей:**
 
 ```bash
-# Остановить контейнеры (данные в Docker volumes сохраняются)
+# Поднять нужный модуль (mod4 | mod5 | mod6 | ui | all)
+docker compose --profile mod4 up -d
+docker compose --profile all up -d
+
+# Остановить контейнеры (данные в volumes сохраняются)
 docker compose --profile all down
 
-# Полный сброс стенда с удалением всех volumes и данных
+# Полный сброс стенда вместе с данными и volumes
 docker compose --profile all down -v
 ```
 
-> Подробности по работе со стендом и решению типовых проблем — в [`docker_guide.html`](docker_guide.html).
+**Загрузка учебных данных для практики:**
 
----
+```bash
+# PostgreSQL (подставьте нужный номер модуля: module_1 … module_6)
+docker exec -i course_pg_primary psql -U student -d learning_db < practice/module_1/init.sql
 
-## Как проходить практику
+# MySQL 8.4 (модуль 4)
+docker exec -i course_mysql_innodb mysql -u student -pstudent_pass learning_db < practice/module_4/init_mysql.sql
 
-В каждом модуле (`practice/module_1` … `practice/module_6`) лежат файл с заданиями `practice.html` и скрипты подготовки данных:
+# ClickHouse (модуль 6)
+docker exec -i course_clickhouse clickhouse-client -u student --password student_pass -d analytics_db --multiquery < practice/module_6/init_clickhouse.sql
+```
 
-- **PostgreSQL** (`practice/module_N/init.sql`):
+**Быстрый вход в CLI-клиенты:**
 
-  ```bash
-  docker exec -i course_pg_primary psql -U student -d learning_db < practice/module_1/init.sql
-  ```
+```bash
+docker exec -it course_pg_primary psql -U student -d learning_db
+docker exec -it course_mysql_innodb mysql -u student -pstudent_pass learning_db
+docker exec -it course_clickhouse clickhouse-client -u student --password student_pass -d analytics_db
+```
 
-- **MySQL 8.4** (модуль 4, `practice/module_4/init_mysql.sql`):
+> [!TIP]
+> Подробный разбор сервисов, портов и частых проблем при запуске — в [`docker_guide.html`](docker_guide.html).
 
-  ```bash
-  docker exec -i course_mysql_innodb mysql -u student -pstudent_pass learning_db < practice/module_4/init_mysql.sql
-  ```
-
-- **ClickHouse** (модуль 6, `practice/module_6/init_clickhouse.sql`):
-
-  ```bash
-  docker exec -i course_clickhouse clickhouse-client -u student --password student_pass -d analytics_db --multiquery < practice/module_6/init_clickhouse.sql
-  ```
-
----
-
-## Программа курса
-
-| Модуль | Тема | Уроки | Слайды | Практика |
-| --- | --- | --- | --- | --- |
-| **Модуль 1** | Фундамент реляционных БД и базовый SQL | 1.1 – 1.4 | [`module-1.html`](slides/module-1.html) | [`practice.html`](practice/module_1/practice.html) |
-| **Модуль 2** | Проектирование схем и продвинутый SQL | 2.1 – 2.5 | [`module-2.html`](slides/module-2.html) | [`practice.html`](practice/module_2/practice.html) |
-| **Модуль 3** | Внутреннее устройство PostgreSQL: диск, память, индексы и WAL | 3.1 – 3.4 | [`module-3.html`](slides/module-3.html) | [`practice.html`](practice/module_3/practice.html) |
-| **Модуль 4** | Транзакции, MVCC, блокировки и сравнение с MySQL/InnoDB | 4.1 – 4.4 | [`module-4.html`](slides/module-4.html) | [`practice.html`](practice/module_4/practice.html) |
-| **Модуль 5** | Репликация, резервное копирование и эксплуатация (HA & Ops) | 5.1 – 5.4 | [`module-5.html`](slides/module-5.html) | [`practice.html`](practice/module_5/practice.html) |
-| **Модуль 6** | Архитектура DWH, OLAP-движки и итоговый проект | 6.1 – 6.5 | [`module-6.html`](slides/module-6.html) | [`practice.html`](practice/module_6/practice.html) |
+## Справочник файлов
 
 <details>
 <summary>Полный список уроков (26)</summary>
@@ -165,47 +135,20 @@ docker compose --profile all down -v
 
 </details>
 
----
-
-## Сервисы и параметры подключения
-
-| Сервис | Контейнер | Профиль | Порт | База и учётные данные |
-| --- | --- | --- | --- | --- |
-| **PostgreSQL 16 (Primary)** | `course_pg_primary` | по умолчанию | `5432` | `learning_db` · `student` / `student_pass` |
-| **MySQL 8.4 (InnoDB)** | `course_mysql_innodb` | `mod4`, `all` | `3306` | `learning_db` · `student` / `student_pass` (`root` / `root_pass`) |
-| **PostgreSQL 16 (Standby)** | `course_pg_standby` | `mod5`, `all` | `5433` | физическая потоковая реплика `pg_primary` |
-| **PostgreSQL 16 (Logical)** | `course_pg_logical` | `mod5`, `all` | `5434` | `learning_db` · `student` / `student_pass` |
-| **PgBouncer** | `course_pgbouncer` | `mod5`, `all` | `6432` | `learning_db` · `student` / `student_pass` (`pool_mode=transaction`) |
-| **ClickHouse** | `course_clickhouse` | `mod6`, `all` | `8123`, `9000` | `analytics_db` · `student` / `student_pass` · [Play UI](http://localhost:8123/play) |
-| **Adminer** | `course_adminer` | `ui`, `all` | `8080` | [Веб-интерфейс](http://localhost:8080) |
-
-Строка подключения к основному PostgreSQL:
-
-```text
-postgresql://student:student_pass@localhost:5432/learning_db
-```
-
-> **Примечание для урока 5.4 (PITR):** в [`docker-compose.yaml`](docker-compose.yaml) у сервиса `pg_primary` закомментированы параметры `archive_mode` и `archive_command` (архивация WAL в `./backups/wal`). Чтобы выполнить практику по Point-in-Time Recovery, раскомментируйте эти строки и перезапустите контейнер командой `docker compose up -d pg_primary`.
-
----
-
-## Структура репозитория
+<details>
+<summary>Структура репозитория</summary>
 
 ```text
 db-mastery/
 ├── index.html             # Главная страница курса (оглавление, поиск, прогресс)
 ├── handout.html           # Сводный справочник (PostgreSQL, MySQL, ClickHouse, DWH)
-├── docker_guide.html      # Подробный гид по Docker-стенду и отладке
-├── docker-compose.yaml    # Конфигурация контейнеров, профилей и volumes
-├── assets/                # Общие ресурсы и локальные офлайн-библиотеки
-│   ├── css/               #   Стили уроков (lesson.css) и диаграмм (diagrams.css)
-│   ├── js/                #   Скрипты уроков (lesson.js) и просмотрщика диаграмм (diagrams.js)
-│   └── vendor/            #   Скачанные библиотеки (fonts, highlightjs, mermaid)
+├── docker_guide.html      # Гид по Docker-стенду и диагностике проблем
+├── docker-compose.yaml    # Сервисы, профили и volumes стенда
+├── assets/                # Стили, скрипты и локальные офлайн-библиотеки (fonts, highlightjs, mermaid)
 ├── lessons/               # 26 HTML-уроков (lesson_1_1.html … lesson_6_5.html)
-├── templates/             # Шаблон урока для авторов (lesson.html)
-├── practice/              # Практикумы по модулям (module_1 … module_6)
-│   ├── module_1..3,5/     #   practice.html + init.sql
-│   ├── module_4/          #   practice.html + init.sql + init_mysql.sql
-│   └── module_6/          #   practice.html + init.sql + init_clickhouse.sql
-└── slides/                # Презентации к каждому модулю (module-1.html … module-6.html)
+├── practice/              # Практикумы по модулям (module_1 … module_6: practice.html + init*.sql)
+├── slides/                # Презентации к каждому модулю (module-1.html … module-6.html)
+└── templates/             # Шаблон урока для авторов (lesson.html)
 ```
+
+</details>
