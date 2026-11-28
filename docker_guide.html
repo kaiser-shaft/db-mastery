@@ -12,6 +12,8 @@
 
   <!-- Highlight.js: тема github-dark (как в уроках курса) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+  <!-- Общие стили для диаграмм и полноэкранного просмотрщика -->
+  <link rel="stylesheet" href="assets/diagrams.css" />
 
   <style>
     :root {
@@ -781,29 +783,9 @@
     }
 
     /* ==================== СХЕМА ==================== */
-    .diagram-box {
-      margin: 1.4rem 0 1.75rem;
-      padding: 1.25rem 1.15rem 0.95rem;
-      background: var(--surface-3);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      text-align: center;
-      overflow-x: auto;
-    }
-
-    .diagram-box svg {
+    .diagram-box .diagram-scroll > svg {
       width: 100%;
       min-width: 680px;
-      height: auto;
-      display: block;
-      margin: 0 auto;
-    }
-
-    .diagram-caption {
-      margin-top: 0.85rem;
-      font-size: 0.84rem;
-      color: var(--muted);
-      font-style: italic;
     }
 
     /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
@@ -2052,6 +2034,8 @@ LIMIT 5;</code></pre>
 
   <!-- Highlight.js: подсветка кода -->
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <!-- Полноэкранный просмотрщик диаграмм -->
+  <script src="assets/diagrams.js" defer></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
