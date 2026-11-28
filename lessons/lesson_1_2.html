@@ -12,6 +12,8 @@
 
   <!-- Highlight.js: тема github-dark -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+  <!-- Общие стили для диаграмм и полноэкранного просмотрщика -->
+  <link rel="stylesheet" href="../assets/diagrams.css" />
 
   <style>
     :root {
@@ -484,34 +486,6 @@
       padding: 0.85rem 1rem;
     }
 
-    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
-    .diagram-box {
-      margin: 1.6rem 0 1.85rem;
-      padding: 1.35rem 1.25rem 1rem;
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      text-align: center;
-      overflow-x: auto;
-    }
-
-    .diagram-box .mermaid {
-      display: flex;
-      justify-content: center;
-    }
-
-    .diagram-box svg {
-      max-width: 100%;
-      height: auto;
-    }
-
-    .diagram-caption {
-      margin-top: 0.85rem;
-      font-size: 0.84rem;
-      color: var(--muted);
-      font-style: italic;
-    }
-
     /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
     .callout {
       display: flex;
@@ -832,7 +806,7 @@
       <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
       <div class="course-nav-links">
         <a class="course-nav-btn" href="../practice/module_1/practice.html#sec-1-2">Практикум 1.2</a>
-        <a class="course-nav-btn" href="../slides/module-1.html#1.2">Слайды урока 1.2</a>
+        <a class="course-nav-btn" href="../slides/module-1.html#1.2" target="_blank" rel="noopener noreferrer">Слайды урока 1.2</a>
       </div>
     </nav>
 
@@ -1495,6 +1469,8 @@ VALUES ('Дина Касымова', 'dina@school.kz', NULL);</code></pre>
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
   <!-- Mermaid.js: диаграммы и блок-схемы -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <!-- Инициализация Mermaid и полноэкранный просмотрщик диаграмм -->
+  <script src="../assets/diagrams.js" defer></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -1502,22 +1478,6 @@ VALUES ('Дина Касымова', 'dina@school.kz', NULL);</code></pre>
         hljs.highlightAll();
       }
 
-      if (window.mermaid) {
-        mermaid.initialize({
-          startOnLoad: true,
-          theme: 'base',
-          themeVariables: {
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '14px',
-            primaryColor: '#eff6ff',
-            primaryTextColor: '#0f172a',
-            primaryBorderColor: '#2563eb',
-            lineColor: '#64748b',
-            secondaryColor: '#f8fafc',
-            tertiaryColor: '#f0fdf4'
-          }
-        });
-      }
 
       const tocEl = document.getElementById('toc');
       const sections = document.querySelectorAll('article.lecture > section');

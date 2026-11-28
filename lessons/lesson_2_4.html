@@ -12,6 +12,8 @@
 
   <!-- Highlight.js: тема github-dark -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+  <!-- Общие стили для диаграмм и полноэкранного просмотрщика -->
+  <link rel="stylesheet" href="../assets/diagrams.css" />
 
   <style>
     :root {
@@ -536,34 +538,6 @@
       padding: 0.5rem 0.65rem;
     }
 
-    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
-    .diagram-box {
-      margin: 1.6rem 0 1.85rem;
-      padding: 1.35rem 1.25rem 1rem;
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      text-align: center;
-      overflow-x: auto;
-    }
-
-    .diagram-box .mermaid {
-      display: flex;
-      justify-content: center;
-    }
-
-    .diagram-box svg {
-      max-width: 100%;
-      height: auto;
-    }
-
-    .diagram-caption {
-      margin-top: 0.85rem;
-      font-size: 0.84rem;
-      color: var(--muted);
-      font-style: italic;
-    }
-
     /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
     .callout {
       display: flex;
@@ -892,7 +866,7 @@
       <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
       <div class="course-nav-links">
         <a class="course-nav-btn" href="../practice/module_2/practice.html#sec-2-4">Практикум 2.4</a>
-        <a class="course-nav-btn" href="../slides/module-2.html#2.4">Слайды урока 2.4</a>
+        <a class="course-nav-btn" href="../slides/module-2.html#2.4" target="_blank" rel="noopener noreferrer">Слайды урока 2.4</a>
       </div>
     </nav>
 
@@ -1020,11 +994,11 @@ INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES
 
       <figure class="diagram-box">
         <div class="mermaid">
-          flowchart LR
+          flowchart TD
             S["Таблица products (9 строк)"] --> G["GROUP BY category"]
             S --> W["AVG(price) OVER (PARTITION BY category)"]
-            G --> R1["Итог: 3 строки (по 1 на категорию — товары пропали)"]
-            W --> R2["Итог: все 9 строк на месте + колонка со средним категории"]
+            G --> R1["Итог: 3 строки<br/>(по 1 на категорию — товары пропали)"]
+            W --> R2["Итог: все 9 строк на месте<br/>+ колонка со средним категории"]
         </div>
         <figcaption class="diagram-caption">Рис. 1. Главное отличие: GROUP BY схлопывает строки в сводку, а оконная функция дописывает расчёт к каждой строке.</figcaption>
       </figure>
@@ -1786,6 +1760,8 @@ ORDER BY customer_id, order_date, order_id;</code></pre>
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
   <!-- Mermaid.js: диаграммы и блок-схемы -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <!-- Инициализация Mermaid и полноэкранный просмотрщик диаграмм -->
+  <script src="../assets/diagrams.js" defer></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -1794,23 +1770,6 @@ ORDER BY customer_id, order_date, order_id;</code></pre>
         hljs.highlightAll();
       }
 
-      // 2. Инициализация схем Mermaid в светлой палитре шаблона
-      if (window.mermaid) {
-        mermaid.initialize({
-          startOnLoad: true,
-          theme: 'base',
-          themeVariables: {
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '14px',
-            primaryColor: '#eff6ff',
-            primaryTextColor: '#0f172a',
-            primaryBorderColor: '#2563eb',
-            lineColor: '#64748b',
-            secondaryColor: '#f8fafc',
-            tertiaryColor: '#f0fdf4'
-          }
-        });
-      }
 
       // 3. Автоматическая сборка оглавления из всех заголовков <h2>
       const tocEl = document.getElementById('toc');

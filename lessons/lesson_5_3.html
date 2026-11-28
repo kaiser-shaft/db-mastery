@@ -12,6 +12,8 @@
 
   <!-- Highlight.js: тема github-dark -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+  <!-- Общие стили для диаграмм и полноэкранного просмотрщика -->
+  <link rel="stylesheet" href="../assets/diagrams.css" />
 
   <style>
     :root {
@@ -536,34 +538,6 @@
       padding: 0.5rem 0.65rem;
     }
 
-    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
-    .diagram-box {
-      margin: 1.6rem 0 1.85rem;
-      padding: 1.35rem 1.25rem 1rem;
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      text-align: center;
-      overflow-x: auto;
-    }
-
-    .diagram-box .mermaid {
-      display: flex;
-      justify-content: center;
-    }
-
-    .diagram-box svg {
-      max-width: 100%;
-      height: auto;
-    }
-
-    .diagram-caption {
-      margin-top: 0.85rem;
-      font-size: 0.84rem;
-      color: var(--muted);
-      font-style: italic;
-    }
-
     /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
     .callout {
       display: flex;
@@ -892,7 +866,7 @@
       <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
       <div class="course-nav-links">
         <a class="course-nav-btn" href="../practice/module_5/practice.html#sec-5-3">Практикум 5.3</a>
-        <a class="course-nav-btn" href="../slides/module-5.html#5.3">Слайды урока 5.3</a>
+        <a class="course-nav-btn" href="../slides/module-5.html#5.3" target="_blank" rel="noopener noreferrer">Слайды урока 5.3</a>
       </div>
     </nav>
 
@@ -939,7 +913,7 @@
 
       <figure class="diagram-box">
         <div class="mermaid">
-          flowchart LR
+          flowchart TD
             subgraph Pub["Publisher: course_pg_primary (5432)"]
               T1["Таблицы: catalog_items, users, logs"] --> W["WAL (wal_level = logical)"]
               W --> D["Logical Decoding + Publication"]
@@ -1316,7 +1290,7 @@ ALTER TABLE audit_notes
 
       <figure class="diagram-box">
         <div class="mermaid">
-          flowchart LR
+          flowchart TD
             T1A["Primary (TLI 1): LSN 0/400"] --> T1B["Авария Primary!"]
             T1A ==>|"WAL поток (TLI 1)"| S1["Standby (TLI 1): LSN 0/400"]
             S1 -->|"pg_promote()"| P2["Новый Primary (TLI 2): Read/Write"]
@@ -1749,6 +1723,8 @@ SELECT id, title, price FROM ddl_demo;</code></pre>
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
   <!-- Mermaid.js: диаграммы и блок-схемы -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <!-- Инициализация Mermaid и полноэкранный просмотрщик диаграмм -->
+  <script src="../assets/diagrams.js" defer></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -1757,23 +1733,6 @@ SELECT id, title, price FROM ddl_demo;</code></pre>
         hljs.highlightAll();
       }
 
-      // 2. Инициализация схем Mermaid в светлой палитре шаблона
-      if (window.mermaid) {
-        mermaid.initialize({
-          startOnLoad: true,
-          theme: 'base',
-          themeVariables: {
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '14px',
-            primaryColor: '#eff6ff',
-            primaryTextColor: '#0f172a',
-            primaryBorderColor: '#2563eb',
-            lineColor: '#64748b',
-            secondaryColor: '#f8fafc',
-            tertiaryColor: '#f0fdf4'
-          }
-        });
-      }
 
       // 3. Автоматическая сборка оглавления из всех заголовков <h2>
       const tocEl = document.getElementById('toc');

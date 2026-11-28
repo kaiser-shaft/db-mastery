@@ -36,6 +36,8 @@
 
   <!-- Highlight.js: тема github-dark -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+  <!-- Общие стили для диаграмм и полноэкранного просмотрщика -->
+  <link rel="stylesheet" href="../assets/diagrams.css" />
 
   <style>
     :root {
@@ -560,34 +562,6 @@
       padding: 0.5rem 0.65rem;
     }
 
-    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
-    .diagram-box {
-      margin: 1.6rem 0 1.85rem;
-      padding: 1.35rem 1.25rem 1rem;
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      text-align: center;
-      overflow-x: auto;
-    }
-
-    .diagram-box .mermaid {
-      display: flex;
-      justify-content: center;
-    }
-
-    .diagram-box svg {
-      max-width: 100%;
-      height: auto;
-    }
-
-    .diagram-caption {
-      margin-top: 0.85rem;
-      font-size: 0.84rem;
-      color: var(--muted);
-      font-style: italic;
-    }
-
     /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
     .callout {
       display: flex;
@@ -915,7 +889,7 @@
     <nav class="course-nav" aria-label="Навигация по курсу">
       <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
       <div class="course-nav-links">
-        <a class="course-nav-btn" href="../slides/module-1.html#1.1">Слайды урока</a>
+        <a class="course-nav-btn" href="../slides/module-1.html#1.1" target="_blank" rel="noopener noreferrer">Слайды урока</a>
       </div>
     </nav>
 
@@ -1105,6 +1079,8 @@ SELECT now();</code></pre>
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
   <!-- Mermaid.js: диаграммы и блок-схемы -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <!-- Инициализация Mermaid и полноэкранный просмотрщик диаграмм -->
+  <script src="../assets/diagrams.js" defer></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -1113,23 +1089,6 @@ SELECT now();</code></pre>
         hljs.highlightAll();
       }
 
-      // 2. Инициализация схем Mermaid в светлой палитре шаблона
-      if (window.mermaid) {
-        mermaid.initialize({
-          startOnLoad: true,
-          theme: 'base',
-          themeVariables: {
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '14px',
-            primaryColor: '#eff6ff',
-            primaryTextColor: '#0f172a',
-            primaryBorderColor: '#2563eb',
-            lineColor: '#64748b',
-            secondaryColor: '#f8fafc',
-            tertiaryColor: '#f0fdf4'
-          }
-        });
-      }
 
       // 3. Автоматическая сборка оглавления из всех заголовков <h2>
       const tocEl = document.getElementById('toc');

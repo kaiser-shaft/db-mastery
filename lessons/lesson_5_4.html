@@ -12,6 +12,8 @@
 
   <!-- Highlight.js: тема github-dark -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+  <!-- Общие стили для диаграмм и полноэкранного просмотрщика -->
+  <link rel="stylesheet" href="../assets/diagrams.css" />
 
   <style>
     :root {
@@ -536,34 +538,6 @@
       padding: 0.5rem 0.65rem;
     }
 
-    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
-    .diagram-box {
-      margin: 1.6rem 0 1.85rem;
-      padding: 1.35rem 1.25rem 1rem;
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      text-align: center;
-      overflow-x: auto;
-    }
-
-    .diagram-box .mermaid {
-      display: flex;
-      justify-content: center;
-    }
-
-    .diagram-box svg {
-      max-width: 100%;
-      height: auto;
-    }
-
-    .diagram-caption {
-      margin-top: 0.85rem;
-      font-size: 0.84rem;
-      color: var(--muted);
-      font-style: italic;
-    }
-
     /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
     .callout {
       display: flex;
@@ -892,7 +866,7 @@
       <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
       <div class="course-nav-links">
         <a class="course-nav-btn" href="../practice/module_5/practice.html#sec-5-4">Практикум 5.4</a>
-        <a class="course-nav-btn" href="../slides/module-5.html#5.4">Слайды урока 5.4</a>
+        <a class="course-nav-btn" href="../slides/module-5.html#5.4" target="_blank" rel="noopener noreferrer">Слайды урока 5.4</a>
       </div>
     </nav>
 
@@ -1069,7 +1043,7 @@ docker exec course_pg_primary psql -U student -d learning_db \
 
       <figure class="diagram-box">
         <div class="mermaid">
-          flowchart LR
+          flowchart TD
             B["Базовый бэкап 00:00 (pg_basebackup)"] --> W1["Архив WAL: 00:00 - 12:00"]
             W1 --> W2["Архив WAL: 12:00 - 14:05:10"]
             W2 --> STOP["СТОП! recovery_target_time = 14:05:10"]
@@ -1252,11 +1226,11 @@ WARNING:  archiving write-ahead log file "000000010000000000000006" failed too m
 
       <figure class="diagram-box">
         <div class="mermaid">
-          flowchart LR
-            C1["Микросервис 1 (50 коннектов)"] --> PB["PgBouncer (порт 6432): до 200 клиентов"]
+          flowchart TD
+            C1["Микросервис 1 (50 коннектов)"] --> PB["PgBouncer (порт 6432):<br/>до 200 клиентов"]
             C2["Микросервис 2 (80 коннектов)"] --> PB
             C3["Воркеры (70 коннектов)"] --> PB
-            PB ==>|"Пул всего из 10 процессов (transaction mode)"| PG[("PostgreSQL Primary (порт 5432)")]
+            PB ==>|"Пул всего из 10 процессов<br/>(transaction mode)"| PG[("PostgreSQL Primary<br/>(порт 5432)")]
         </div>
         <figcaption class="diagram-caption">Рис. 2. Мультиплексирование 200 клиентских подключений в 10 реальных процессов PostgreSQL через PgBouncer.</figcaption>
       </figure>
@@ -1686,6 +1660,8 @@ ORDER BY connections_cnt DESC;</code></pre>
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
   <!-- Mermaid.js: диаграммы и блок-схемы -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <!-- Инициализация Mermaid и полноэкранный просмотрщик диаграмм -->
+  <script src="../assets/diagrams.js" defer></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -1694,23 +1670,6 @@ ORDER BY connections_cnt DESC;</code></pre>
         hljs.highlightAll();
       }
 
-      // 2. Инициализация схем Mermaid в светлой палитре шаблона
-      if (window.mermaid) {
-        mermaid.initialize({
-          startOnLoad: true,
-          theme: 'base',
-          themeVariables: {
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '14px',
-            primaryColor: '#eff6ff',
-            primaryTextColor: '#0f172a',
-            primaryBorderColor: '#2563eb',
-            lineColor: '#64748b',
-            secondaryColor: '#f8fafc',
-            tertiaryColor: '#f0fdf4'
-          }
-        });
-      }
 
       // 3. Автоматическая сборка оглавления из всех заголовков <h2>
       const tocEl = document.getElementById('toc');

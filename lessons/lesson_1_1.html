@@ -12,6 +12,8 @@
 
   <!-- Highlight.js: тема github-dark -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css" />
+  <!-- Общие стили для диаграмм и полноэкранного просмотрщика -->
+  <link rel="stylesheet" href="../assets/diagrams.css" />
 
   <style>
     :root {
@@ -484,34 +486,6 @@
       padding: 0.85rem 1rem;
     }
 
-    /* ==================== СХЕМЫ И ДИАГРАММЫ (MERMAID / SVG) ==================== */
-    .diagram-box {
-      margin: 1.6rem 0 1.85rem;
-      padding: 1.35rem 1.25rem 1rem;
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      text-align: center;
-      overflow-x: auto;
-    }
-
-    .diagram-box .mermaid {
-      display: flex;
-      justify-content: center;
-    }
-
-    .diagram-box svg {
-      max-width: 100%;
-      height: auto;
-    }
-
-    .diagram-caption {
-      margin-top: 0.85rem;
-      font-size: 0.84rem;
-      color: var(--muted);
-      font-style: italic;
-    }
-
     /* ==================== ВЫНОСКИ (CALLOUTS) ==================== */
     .callout {
       display: flex;
@@ -832,7 +806,7 @@
       <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
       <div class="course-nav-links">
         <a class="course-nav-btn" href="../practice/module_1/practice.html#sec-1-1">Практикум 1.1</a>
-        <a class="course-nav-btn" href="../slides/module-1.html#1.1">Слайды урока 1.1</a>
+        <a class="course-nav-btn" href="../slides/module-1.html#1.1" target="_blank" rel="noopener noreferrer">Слайды урока 1.1</a>
       </div>
     </nav>
 
@@ -965,13 +939,13 @@
         <div class="mermaid">
           flowchart LR
             subgraph C["Таблица customers (Клиенты)"]
-              C1["id = 1 | Артём | ул. Абая, 15"]
-              C2["id = 2 | Алина | пр. Аль-Фараби, 42"]
+              C1["id = 1 | Артём<br/>ул. Абая, 15"]
+              C2["id = 2 | Алина<br/>пр. Аль-Фараби, 42"]
             end
             subgraph O["Таблица orders (Заказы)"]
-              O1["id = 101 | customer_id = 1 | Пепперони"]
-              O2["id = 102 | customer_id = 1 | Маргарита"]
-              O3["id = 103 | customer_id = 2 | Четыре сыра"]
+              O1["id = 101 | customer_id = 1<br/>Пепперони"]
+              O2["id = 102 | customer_id = 1<br/>Маргарита"]
+              O3["id = 103 | customer_id = 2<br/>Четыре сыра"]
             end
             C1 -->|"ссылка по id = 1"| O1
             C1 -->|"ссылка по id = 1"| O2
@@ -1561,6 +1535,8 @@ docker exec -it course_pg_primary psql -U student -d learning_db -c "SELECT * FR
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
   <!-- Mermaid.js: диаграммы и блок-схемы -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <!-- Инициализация Mermaid и полноэкранный просмотрщик диаграмм -->
+  <script src="../assets/diagrams.js" defer></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -1568,22 +1544,6 @@ docker exec -it course_pg_primary psql -U student -d learning_db -c "SELECT * FR
         hljs.highlightAll();
       }
 
-      if (window.mermaid) {
-        mermaid.initialize({
-          startOnLoad: true,
-          theme: 'base',
-          themeVariables: {
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '14px',
-            primaryColor: '#eff6ff',
-            primaryTextColor: '#0f172a',
-            primaryBorderColor: '#2563eb',
-            lineColor: '#64748b',
-            secondaryColor: '#f8fafc',
-            tertiaryColor: '#f0fdf4'
-          }
-        });
-      }
 
       const tocEl = document.getElementById('toc');
       const sections = document.querySelectorAll('article.lecture > section');
