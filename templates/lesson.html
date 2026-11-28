@@ -1,0 +1,239 @@
+<!--
+  =====================================================================
+  ПАМЯТКА ДЛЯ ГЕНЕРАЦИИ КОНСПЕКТОВ (стиль и структура курса)
+  =====================================================================
+  1. Язык и подача: объясняй максимально доступно — как для школьников.
+     Сначала простая аналогия из жизни (магазин, библиотека, школа, игры),
+     затем точный инженерный термин в скобках или коде.
+  2. Практика: минимум 4–5 живых, запускаемых примеров на урок в базе
+     learning_db (PostgreSQL 16 + Docker Compose), с подробными комментариями.
+  3. Компоненты шаблона (используй по смыслу темы):
+     - .code-block        — SQL / Bash / YAML команды (с кнопкой копирования)
+     - .output-block      — результат работы запроса / вывод EXPLAIN ANALYZE
+     - .error-block       — пример ошибки PostgreSQL и разбор причины
+     - .compare-grid      — карточки «Как НЕ надо» vs «Как правильно»
+                            (переноси строки кода до ~36 символов или добавляй
+                            класс .compare-grid.stacked для длинных запросов)
+     - .diagram-box       — схемы Mermaid (<div class="mermaid">) или SVG
+                            (подписи узлов с пробелами/спецсимволами бери
+                            в кавычки: A["Текст узла"])
+     - .callout (.warn / .tip) — важные правила, частые ошибки и советы
+     - .task-card         — 3–4 практических задания со спойлерами решений
+  4. Оглавление (#toc) строится автоматически из всех заголовков <h2>.
+  =====================================================================
+-->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Урок X.Y: Название темы урока</title>
+
+  <!-- Локальные шрифты: Inter для комфортного чтения и JetBrains Mono для кода -->
+  <link rel="stylesheet" href="../assets/vendor/fonts/fonts.css" />
+
+  <!-- Highlight.js: тема github-dark -->
+  <link rel="stylesheet" href="../assets/vendor/highlightjs/github-dark.min.css" />
+  <!-- Общие стили для диаграмм и уроков -->
+  <link rel="stylesheet" href="../assets/css/diagrams.css" />
+  <link rel="stylesheet" href="../assets/css/lesson.css" />
+</head>
+<body>
+  <article class="lecture">
+
+    <nav class="course-nav" aria-label="Навигация по курсу">
+      <a class="course-nav-btn primary" href="../index.html">← Содержание курса</a>
+      <div class="course-nav-links">
+        <a class="course-nav-btn" href="../slides/module-1.html#1.1" target="_blank" rel="noopener noreferrer">Слайды урока</a>
+      </div>
+    </nav>
+
+    <!-- ==================== 1. ШАПКА УРОКА ==================== -->
+    <header class="lecture-header">
+      <div class="meta-pills">
+        <span class="pill pill-primary">Модуль X · Название модуля из программы</span>
+        <span class="pill pill-neutral">Урок X.Y</span>
+        <span class="pill pill-neutral">PostgreSQL 16 · Docker Compose</span>
+      </div>
+      <h1>Название урока X.Y</h1>
+
+      <!-- Карточка целей урока (3–4 конкретных результата) -->
+      <div class="focus-box">
+        <div class="focus-title">Главное в этом уроке</div>
+        <ul>
+          <li>Ключевая концепция или навык №1 с упоминанием терминов (<code>SQL</code>, <code>WHERE</code>).</li>
+          <li>Ключевая концепция или навык №2 — на что обратить особое внимание.</li>
+          <li>Практический результат, который ученик получит к концу лекции.</li>
+        </ul>
+      </div>
+
+      <!-- Автоматически заполняется скриптом из всех <h2> -->
+      <nav class="toc-box" id="toc" aria-label="Содержание урока"></nav>
+    </header>
+
+    <!-- ==================== 2. ОСНОВНЫЕ РАЗДЕЛЫ ЛЕКЦИИ ==================== -->
+    <section>
+      <h2><span class="sec-num">01</span> Первый смысловой блок (аналогия + схема)</h2>
+      <p>
+        Доступное объяснение концепции на примере из жизни. Используйте <strong>жирное выделение</strong> для главных мыслей и <code>инлайн-код</code> для команд, типов данных, имён таблиц и параметров.
+      </p>
+
+      <!-- Схема Mermaid (отлично подходит для архитектуры, связей таблиц, B-Tree, WAL, репликации) -->
+      <figure class="diagram-box">
+        <div class="mermaid">
+          flowchart LR
+            A["Клиент: psql / Сайт"] -->|SQL-запрос| B[("Сервер PostgreSQL")]
+            B -->|Готовая таблица| A
+        </div>
+        <figcaption class="diagram-caption">Рис. 1. Пример блок-схемы — редактируется простым текстом в Mermaid.</figcaption>
+      </figure>
+
+      <!-- Информационная выноска -->
+      <aside class="callout">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Простая аналогия:</strong> Короткая формулировка правила, которое легко запомнить.
+        </div>
+      </aside>
+    </section>
+
+    <section>
+      <h2><span class="sec-num">02</span> Практика в SQL, вывод консоли и разбор ошибок</h2>
+      <p>
+        Пояснение перед примером кода: какую задачу решаем и какой результат ожидаем увидеть.
+      </p>
+
+      <!-- Блок SQL-кода -->
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL · Пример запроса</span>
+          <button class="copy-btn" type="button">Копировать</button>
+        </div>
+        <pre><code class="language-sql">SELECT id, title, price
+FROM products
+WHERE price &gt; 1000
+ORDER BY price DESC;</code></pre>
+      </div>
+
+      <!-- Блок вывода PostgreSQL (визуально пристыкован к блоку кода выше) -->
+      <div class="output-block">
+        <div class="output-label">Ответ PostgreSQL</div>
+        <pre> id |        title         |  price
+----+----------------------+----------
+  1 | Худи «SQL Master»    | 14500.00
+  4 | Термокружка кодера   |  6900.00
+  2 | Стикерпак «Postgres» |  1200.50
+(3 rows)</pre>
+      </div>
+
+      <!-- Блок ошибки PostgreSQL -->
+      <div class="error-block standalone">
+        <div class="output-label">Ошибка PostgreSQL</div>
+        <pre>ERROR:  new row for relation "products" violates check constraint "products_price_check"
+DETAIL:  Failing row contains (5, Баг, -500.00, 1).</pre>
+      </div>
+
+      <!-- Сетка сравнения «Как НЕ надо / Как правильно» -->
+      <div class="compare-grid">
+        <div class="compare-card bad">
+          <div class="compare-head">✗ Как НЕ надо</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT * FROM customers
+WHERE age = NULL;</code></pre>
+            </div>
+            <p>Всегда вернёт <strong>0 строк</strong>! Пустоту нельзя сравнивать через знак равно.</p>
+          </div>
+        </div>
+        <div class="compare-card good">
+          <div class="compare-head">✓ Как правильно</div>
+          <div class="compare-body">
+            <div class="code-block">
+              <pre><code class="language-sql">SELECT * FROM customers
+WHERE age IS NULL;</code></pre>
+            </div>
+            <p>Оператор <code>IS NULL</code> корректно найдёт всех клиентов с незаполненным возрастом.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Предупреждение о частых ошибках -->
+      <aside class="callout warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="callout-body">
+          <strong>Частая ошибка:</strong> Описание типичного антипаттерна, из-за которого запрос тормозит или даёт неверный результат.
+        </div>
+      </aside>
+
+      <!-- Практический совет -->
+      <aside class="callout tip">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="callout-body">
+          <strong>Совет на будущее:</strong> Как сделать надёжнее, быстрее или безопаснее в реальной системе.
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== 3. БЛОК САМОПРОВЕРКИ ==================== -->
+    <section>
+      <h2><span class="sec-num">03</span> Мини-практикум для закрепления</h2>
+      <p>
+        Выполни задания в своей базе <code>learning_db</code> (запущенной через <code>docker compose up -d</code>), прежде чем открывать эталонное решение.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">Задание 1. Формулировка практической задачи</div>
+        <p style="margin-bottom: 0;">
+          Условие задачи с указанием таблиц, колонок и ожидаемого результата.
+        </p>
+        <details class="solution">
+          <summary>Показать решение</summary>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SQL</span>
+              <button class="copy-btn" type="button">Копировать</button>
+            </div>
+            <pre><code class="language-sql">-- Эталонный запрос решения
+SELECT now();</code></pre>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== 4. ИТОГ УРОКА ==================== -->
+    <div class="takeaway">
+      <span class="takeaway-label">Итог урока</span>
+      Краткое резюме в 2–3 предложения: что именно мы разобрали в этом уроке и как этот материал связывается со следующей темой курса.
+    </div>
+
+    <nav class="lesson-pager" aria-label="Переход между уроками">
+      <a class="pager-link prev" href="../index.html">
+        <span class="pager-dir">← Предыдущий урок</span>
+        <span class="pager-title">Урок X.Y</span>
+      </a>
+      <a class="pager-link center" href="../index.html">☰ Все уроки</a>
+      <a class="pager-link next" href="../index.html">
+        <span class="pager-dir">Следующий урок →</span>
+        <span class="pager-title">Урок X.Z</span>
+      </a>
+    </nav>
+
+  </article>
+
+  <!-- Highlight.js, Mermaid и общие скрипты урока (локально, офлайн) -->
+  <script src="../assets/vendor/highlightjs/highlight.min.js"></script>
+  <script src="../assets/vendor/mermaid/mermaid.min.js"></script>
+  <script src="../assets/js/diagrams.js" defer></script>
+  <script src="../assets/js/lesson.js" defer></script>
+</body>
+</html>

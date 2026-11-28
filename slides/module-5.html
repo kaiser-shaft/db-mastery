@@ -1471,7 +1471,7 @@
               </div>
 
               <div class="svg-card fragment">
-                <svg viewBox="0 0 1120 175" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Схема кластера Primary и Hot Standby">
+                <svg viewBox="0 0 1120 175" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема кластера Primary и Hot Standby">
                   <defs>
                     <marker id="l5-1-arrIndigo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
@@ -1583,7 +1583,7 @@ LOG:  started streaming WAL from primary at 0/3000000 on timeline 1</pre>
             </div>
             <div class="slide-body">
               <div class="svg-card">
-                <svg viewBox="0 0 1120 225" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Архитектура Streaming Replication: walsender, walreceiver, WAL Replay">
+                <svg viewBox="0 0 1120 225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Архитектура Streaming Replication: walsender, walreceiver, WAL Replay">
                   <defs>
                     <marker id="l5-1-arrFlow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
@@ -2787,7 +2787,7 @@ ORDER BY total_revenue DESC;
             </div>
             <div class="slide-body">
               <div class="svg-card">
-                <svg viewBox="0 0 1120 205" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Сравнение момента ответа COMMIT при асинхронной и синхронной репликации">
+                <svg viewBox="0 0 1120 205" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Сравнение момента ответа COMMIT при асинхронной и синхронной репликации">
                   <defs>
                     <marker id="l5-2-arrIndigo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
@@ -3421,7 +3421,7 @@ SELECT
               <p style="font-size:15.5px;">На Primary сборщик мусора <code class="inline">VACUUM</code> <strong>не знает</strong> про 5-минутный отчёт на Standby, удаляет старые версии строк и шлёт об этом WAL. Через <code class="inline">30s</code> Standby спасает репликацию и отменяет запрос!</p>
 
               <div class="svg-card">
-                <svg viewBox="0 0 1120 220" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Схема возникновения Recovery Conflict на Hot Standby и двух исходов">
+                <svg viewBox="0 0 1120 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема возникновения Recovery Conflict на Hot Standby и двух исходов">
                   <defs>
                     <marker id="l5-2-arrDark2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
@@ -4079,7 +4079,7 @@ SELECT
             </div>
             <div class="slide-body">
               <div class="svg-card">
-                <svg viewBox="0 0 1120 175" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Схема логической репликации между Publisher и Subscriber">
+                <svg viewBox="0 0 1120 175" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема логической репликации между Publisher и Subscriber">
                   <defs>
                     <marker id="l5-3-arrPub" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
@@ -4576,7 +4576,7 @@ HINT:   To enable updating the table, set REPLICA IDENTITY using ALTER TABLE.</p
             </div>
             <div class="slide-body">
               <div class="svg-card">
-                <svg viewBox="0 0 1120 225" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Разветвление Timeline 1 в Timeline 2 при Failover и риск Split-Brain">
+                <svg viewBox="0 0 1120 225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Разветвление Timeline 1 в Timeline 2 при Failover и риск Split-Brain">
                   <defs>
                     <marker id="l5-3-arrT1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
@@ -5524,7 +5524,7 @@ docker exec course_pg_primary psql -U student -d learning_db \
             </div>
             <div class="slide-body">
               <div class="svg-card">
-                <svg viewBox="0 0 1120 220" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Схема работы PITR: базовый бэкап плюс архив WAL с остановкой за 2 секунды до DROP TABLE">
+                <svg viewBox="0 0 1120 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема работы PITR: базовый бэкап плюс архив WAL с остановкой за 2 секунды до DROP TABLE">
                   <defs>
                     <marker id="l5-4-arrIndigo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
@@ -5821,7 +5821,7 @@ WARNING: archiving write-ahead log file "00000001...0006"
               </div>
 
               <div class="svg-card fragment">
-                <svg viewBox="0 0 1120 180" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Мультиплексирование 200 клиентских подключений через PgBouncer в 10 процессов PostgreSQL">
+                <svg viewBox="0 0 1120 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Мультиплексирование 200 клиентских подключений через PgBouncer в 10 процессов PostgreSQL">
                   <defs>
                     <marker id="l5-4-arrPb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />

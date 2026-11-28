@@ -6,3 +6,7 @@
 # OS files
 .DS_Store
 Thumbs.db
+
+# Docker runtime backups / WAL archives (Урок 5.4 PITR)
+backups/
+

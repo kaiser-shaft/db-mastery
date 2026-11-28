@@ -1448,7 +1448,7 @@
             </div>
             <div class="slide-body">
               <div class="svg-card">
-                <svg viewBox="0 0 1120 185" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Жизненный цикл транзакции: BEGIN, выполнение SQL, проверка успеха, COMMIT или ROLLBACK">
+                <svg viewBox="0 0 1120 185" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Жизненный цикл транзакции: BEGIN, выполнение SQL, проверка успеха, COMMIT или ROLLBACK">
                   <defs>
                     <marker id="l4-1-arrIndigo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
@@ -2100,7 +2100,7 @@ DETAIL:  Failing row contains (3, Щит новичка, 300.00, -1).</pre>
             <div class="slide-body">
               <div class="grid-45-55" style="flex:1;">
                 <div class="svg-card">
-                  <svg viewBox="0 0 510 385" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Диаграмма последовательности Non-Repeatable Read между Терминалом 1, PostgreSQL и Терминалом 2">
+                  <svg viewBox="0 0 510 385" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Диаграмма последовательности Non-Repeatable Read между Терминалом 1, PostgreSQL и Терминалом 2">
                     <defs>
                       <marker id="l4-1-seqIndigo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
                         <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
@@ -2781,7 +2781,7 @@ ON CONFLICT (owner) DO UPDATE SET balance = EXCLUDED.balance;
               <p style="font-size:15.5px;">Золотое правило PostgreSQL: <strong>читатели никогда не блокируют писателей, а писатели не блокируют читателей</strong>. При <code class="inline">UPDATE</code> старая версия остаётся на диске, а рядом рождается новая:</p>
 
               <div class="svg-card">
-                <svg viewBox="0 0 1120 215" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Как PostgreSQL выполняет UPDATE под капотом: старая версия помечается xmax, а рядом создаётся новая версия с новым ctid">
+                <svg viewBox="0 0 1120 215" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Как PostgreSQL выполняет UPDATE под капотом: старая версия помечается xmax, а рядом создаётся новая версия с новым ctid">
                   <defs>
                     <marker id="l4-2-arrAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#D97706" />
@@ -3162,7 +3162,7 @@ FROM pg_stat_user_tables WHERE relname = 'bloat_lab';</pre>
             </div>
             <div class="slide-body">
               <div class="svg-card">
-                <svg viewBox="0 0 1120 272" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Сравнение обычного VACUUM (не блокирует, освобождает слоты внутри файла) и VACUUM FULL (жёсткий замок, возвращает место ОС)">
+                <svg viewBox="0 0 1120 272" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Сравнение обычного VACUUM (не блокирует, освобождает слоты внутри файла) и VACUUM FULL (жёсткий замок, возвращает место ОС)">
                   <defs>
                     <marker id="l4-2-vacGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#059669" />
@@ -4325,7 +4325,7 @@ ROLLBACK;</pre>
             </div>
             <div class="slide-body">
               <div class="svg-card">
-                <svg viewBox="0 0 1120 225" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Три стратегии поведения Терминала 2 при попытке забрать занятое место: FOR UPDATE ждёт, NOWAIT выдаёт ошибку, SKIP LOCKED берёт следующее свободное место">
+                <svg viewBox="0 0 1120 225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Три стратегии поведения Терминала 2 при попытке забрать занятое место: FOR UPDATE ждёт, NOWAIT выдаёт ошибку, SKIP LOCKED берёт следующее свободное место">
                   <defs>
                     <marker id="l4-3-arrAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#D97706" />
@@ -4514,7 +4514,7 @@ FOR UPDATE SKIP LOCKED;
               <div class="grid-45-55" style="flex:1;">
                 <div style="min-width:0; display:flex; flex-direction:column; gap:12px;">
                   <div class="svg-card">
-                    <svg viewBox="0 0 490 270" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Классический цикл Deadlock: Терминал 1 держит счёт Алисы и ждёт счёт Боба, Терминал 2 держит счёт Боба и ждёт счёт Алисы">
+                    <svg viewBox="0 0 490 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Классический цикл Deadlock: Терминал 1 держит счёт Алисы и ждёт счёт Боба, Терминал 2 держит счёт Боба и ждёт счёт Алисы">
                       <defs>
                         <marker id="l4-3-dlSolid" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
                           <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
@@ -5324,7 +5324,7 @@ INSERT INTO task4_orders VALUES (1, 'новый');
             </div>
             <div class="slide-body">
               <div class="svg-card">
-                <svg viewBox="0 0 1120 245" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Сравнение поиска по вторичному индексу в PostgreSQL (через ctid в Heap) и MySQL InnoDB (через PK в Clustered Index)">
+                <svg viewBox="0 0 1120 245" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Сравнение поиска по вторичному индексу в PostgreSQL (через ctid в Heap) и MySQL InnoDB (через PK в Clustered Index)">
                   <defs>
                     <marker id="l4-4-arrIndigo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
@@ -5458,7 +5458,7 @@ SELECT ctid, id, email, name FROM duel_users;</pre>
             </div>
             <div class="slide-body">
               <div class="svg-card">
-                <svg viewBox="0 0 1120 232" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" role="img" aria-label="Сравнение механизма MVCC при UPDATE: PostgreSQL дописывает новую версию в Heap и чистит через Autovacuum, MySQL InnoDB перезаписывает строку на месте и выносит старую версию в Undo Log">
+                <svg viewBox="0 0 1120 232" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Сравнение механизма MVCC при UPDATE: PostgreSQL дописывает новую версию в Heap и чистит через Autovacuum, MySQL InnoDB перезаписывает строку на месте и выносит старую версию в Undo Log">
                   <defs>
                     <marker id="l4-4-mvccPg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#4338CA" />
