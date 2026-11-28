@@ -20,7 +20,7 @@
 - **6 презентаций** ([`slides/`](slides/)) — слайды к каждому модулю для быстрого обзора и повторения.
 - **6 практических модулей** ([`practice/`](practice/)) — задания в формате [`practice.html`](practice/module_1/practice.html) и SQL-скрипты инициализации стенда (`init.sql`, `init_mysql.sql`, `init_clickhouse.sql`).
 - **Главная страница** ([`index.html`](index.html)) — оглавление курса, поиск по урокам и отслеживание прогресса.
-- **Справочник** ([`cheatsheet.html`](cheatsheet.html)) — шпаргалка по PostgreSQL, MySQL/InnoDB, ClickHouse и проектированию DWH.
+- **Справочник** ([`handout.html`](handout.html)) — шпаргалка по PostgreSQL, MySQL/InnoDB, ClickHouse и проектированию DWH.
 - **Гид по стенду** ([`docker_guide.html`](docker_guide.html)) — подробная инструкция по Docker-окружению и диагностике проблем.
 
 ---
@@ -194,7 +194,7 @@ postgresql://student:student_pass@localhost:5432/learning_db
 ```text
 db-mastery/
 ├── index.html             # Главная страница курса (оглавление, поиск, прогресс)
-├── cheatsheet.html        # Сводный справочник (PostgreSQL, MySQL, ClickHouse, DWH)
+├── handout.html           # Сводный справочник (PostgreSQL, MySQL, ClickHouse, DWH)
 ├── docker_guide.html      # Подробный гид по Docker-стенду и отладке
 ├── docker-compose.yaml    # Конфигурация контейнеров, профилей и volumes
 ├── lessons/               # 26 HTML-уроков (lesson_1_1.html … lesson_6_5.html) + template.html
